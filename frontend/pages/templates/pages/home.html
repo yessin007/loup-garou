@@ -1,0 +1,46 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="fr">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#080d12" />
+    <title>Connexion | Loup Garou</title>
+    <link rel="icon" href="{% static 'images/favicon-wolf.png' %}" type="image/png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+  </head>
+  <body class="login-page">
+    <main class="login-shell">
+      <section class="login-content" aria-labelledby="game-title">
+        <p class="eyebrow">La nuit tombe sur le village</p>
+        <h1 id="game-title"><span>Loup</span> Garou</h1>
+        <p class="tagline">Entrez dans la partie. Observez. Doutez. Survivez.</p>
+
+        <form class="login-card" method="post" novalidate>
+          {% csrf_token %}
+          <div class="form-heading">
+            <p class="form-kicker">Espace joueur</p>
+            <h2>Se connecter</h2>
+          </div>
+
+          {% if error %}
+            <p class="form-error" role="alert">{{ error }}</p>
+          {% endif %}
+
+          <label for="username">Nom d'utilisateur</label>
+          <input id="username" name="username" type="text" inputmode="numeric" autocomplete="username" placeholder="Votre identifiant" required autofocus />
+
+          <label for="password">Mot de passe</label>
+          <input id="password" name="password" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Votre mot de passe" required />
+
+          <button type="submit">Entrer dans le village <span aria-hidden="true">&#8594;</span></button>
+          <p class="demo-hint">Accès temporaire : <strong>123 / 123</strong></p>
+        </form>
+      </section>
+      <p class="chapter">Chapitre I <span></span> Le village s'endort</p>
+    </main>
+  </body>
+</html>

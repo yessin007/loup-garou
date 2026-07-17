@@ -100,6 +100,10 @@
               <div class="role-mark">PU</div><div class="role-copy"><strong>{{ role_text.prostitutes.0 }}</strong><span>{{ role_text.prostitutes.1 }}</span></div>
               <div class="counter"><button type="button" data-step="-1">−</button><input name="prostitutes" type="number" min="0" max="1" value="0" readonly /><button type="button" data-step="1">+</button></div>
             </article>
+            <article class="role-row" data-role="servants">
+              <div class="role-mark">SE</div><div class="role-copy"><strong>{{ role_text.servants.0 }}</strong><span>{{ role_text.servants.1 }}</span></div>
+              <div class="counter"><button type="button" data-step="-1">−</button><input name="servants" type="number" min="0" max="1" value="0" readonly /><button type="button" data-step="1">+</button></div>
+            </article>
             <article class="role-row villager-role" data-role="villagers">
               <div class="role-mark">VI</div><div class="role-copy"><strong>{{ role_text.villagers.0 }}</strong><span>{{ role_text.villagers.1 }}</span></div>
               <div class="counter"><button type="button" data-step="-1">−</button><input name="villagers" type="number" min="0" value="5" readonly /><button type="button" data-step="1">+</button></div>
@@ -152,6 +156,7 @@
         inputFor("barbers").value = 0;
         inputFor("aliens").value = 0;
         inputFor("prostitutes").value = 0;
+        inputFor("servants").value = 0;
         inputFor("villagers").value = players - wolves - specials;
         updateTotal();
       }

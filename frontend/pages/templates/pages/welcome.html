@@ -1,11 +1,11 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ language_code }}" dir="{{ language_dir }}">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#080d12" />
-    <title>Préparer la partie | Loup Garou</title>
+    <title>{{ ui.setup_title }} | Loup Garou</title>
     <link rel="icon" href="{% static 'images/favicon-wolf.png' %}" type="image/png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -16,16 +16,17 @@
     <header class="setup-header">
       <a class="brand" href="{% url 'welcome' %}">Loup <span>Garou</span></a>
       <div>
-        <span class="narrator-badge">Mode narrateur</span>
-        <a class="text-link" href="{% url 'logout' %}">Déconnexion</a>
+        {% include "pages/_language_selector.html" %}
+        <span class="narrator-badge">{{ ui.narrator_mode }}</span>
+        <a class="text-link" href="{% url 'logout' %}">{{ ui.logout }}</a>
       </div>
     </header>
 
     <main class="setup-shell">
       <section class="setup-intro">
-        <p class="eyebrow">Nouvelle partie</p>
-        <h1>Composez<br />votre village</h1>
-        <p>Indiquez le nombre de joueurs. Nous proposons une composition équilibrée, puis vous gardez le dernier mot.</p>
+        <p class="eyebrow">{{ ui.new_game }}</p>
+        <h1>{{ ui.compose|safe }}</h1>
+        <p>{{ ui.compose_help }}</p>
       </section>
 
       <section class="setup-panel">
@@ -35,55 +36,79 @@
 
           <div class="players-row">
             <div>
-              <span class="step-label">01 — Participants</span>
-              <h2>Nombre de joueurs</h2>
-              <p>Le narrateur n'est pas compté.</p>
+              <span class="step-label">01 — {{ ui.participants }}</span>
+              <h2>{{ ui.player_count }}</h2>
+              <p>{{ ui.narrator_not_counted }}</p>
             </div>
             <div class="player-input-wrap">
-              <button class="small-stepper" type="button" data-player-step="-1" aria-label="Retirer un joueur">−</button>
+              <button class="small-stepper" type="button" data-player-step="-1" aria-label="{{ ui.remove_player }}">−</button>
               <input id="player-count" name="player_count" type="number" min="8" max="30" value="10" required />
-              <button class="small-stepper" type="button" data-player-step="1" aria-label="Ajouter un joueur">+</button>
+              <button class="small-stepper" type="button" data-player-step="1" aria-label="{{ ui.add_player }}">+</button>
             </div>
           </div>
 
           <div class="roles-heading">
             <div>
-              <span class="step-label">02 — Distribution</span>
-              <h2>Rôles proposés</h2>
+              <span class="step-label">02 — {{ ui.distribution }}</span>
+              <h2>{{ ui.suggested_roles }}</h2>
             </div>
-            <button id="suggest-button" class="ghost-button" type="button">Recalculer</button>
+            <button id="suggest-button" class="ghost-button" type="button">{{ ui.recalculate }}</button>
           </div>
 
           <div class="roles-list">
             <article class="role-row wolf-role" data-role="infecting_fathers">
-              <div class="role-mark">LP</div><div class="role-copy"><strong>Loup-Père infect</strong><span>Peut transformer une victime en loup</span></div>
+              <div class="role-mark">LP</div><div class="role-copy"><strong>{{ role_text.infecting_fathers.0 }}</strong><span>{{ role_text.infecting_fathers.1 }}</span></div>
               <div class="counter"><button type="button" data-step="-1">−</button><input name="infecting_fathers" type="number" min="0" value="1" readonly /><button type="button" data-step="1">+</button></div>
             </article>
+            <article class="role-row wolf-role" data-role="cerberus_wolves">
+              <div class="role-mark">LC</div><div class="role-copy"><strong>{{ role_text.cerberus_wolves.0 }}</strong><span>{{ role_text.cerberus_wolves.1 }}</span></div>
+              <div class="counter"><button type="button" data-step="-1">−</button><input name="cerberus_wolves" type="number" min="0" max="1" value="1" readonly /><button type="button" data-step="1">+</button></div>
+            </article>
+            <article class="role-row wolf-role" data-role="black_wolves">
+              <div class="role-mark">LN</div><div class="role-copy"><strong>{{ role_text.black_wolves.0 }}</strong><span>{{ role_text.black_wolves.1 }}</span></div>
+              <div class="counter"><button type="button" data-step="-1">−</button><input name="black_wolves" type="number" min="0" max="1" value="0" readonly /><button type="button" data-step="1">+</button></div>
+            </article>
+            <article class="role-row wolf-role" data-role="talkative_wolves">
+              <div class="role-mark">LB</div><div class="role-copy"><strong>{{ role_text.talkative_wolves.0 }}</strong><span>{{ role_text.talkative_wolves.1 }}</span></div>
+              <div class="counter"><button type="button" data-step="-1">−</button><input name="talkative_wolves" type="number" min="0" max="1" value="0" readonly /><button type="button" data-step="1">+</button></div>
+            </article>
             <article class="role-row wolf-role" data-role="simple_wolves">
-              <div class="role-mark">LG</div><div class="role-copy"><strong>Loup-Garou simple</strong><span>Se réveille et chasse avec la meute</span></div>
+              <div class="role-mark">LG</div><div class="role-copy"><strong>{{ role_text.simple_wolves.0 }}</strong><span>{{ role_text.simple_wolves.1 }}</span></div>
               <div class="counter"><button type="button" data-step="-1">−</button><input name="simple_wolves" type="number" min="0" value="1" readonly /><button type="button" data-step="1">+</button></div>
             </article>
             <article class="role-row" data-role="seers">
-              <div class="role-mark">VO</div><div class="role-copy"><strong>Voyante</strong><span>Découvre le rôle d'un joueur chaque nuit</span></div>
+              <div class="role-mark">VO</div><div class="role-copy"><strong>{{ role_text.seers.0 }}</strong><span>{{ role_text.seers.1 }}</span></div>
               <div class="counter"><button type="button" data-step="-1">−</button><input name="seers" type="number" min="0" value="1" readonly /><button type="button" data-step="1">+</button></div>
             </article>
             <article class="role-row" data-role="witches">
-              <div class="role-mark">SO</div><div class="role-copy"><strong>Sorcière</strong><span>Possède une potion de vie et une de mort</span></div>
+              <div class="role-mark">SO</div><div class="role-copy"><strong>{{ role_text.witches.0 }}</strong><span>{{ role_text.witches.1 }}</span></div>
               <div class="counter"><button type="button" data-step="-1">−</button><input name="witches" type="number" min="0" value="1" readonly /><button type="button" data-step="1">+</button></div>
             </article>
             <article class="role-row" data-role="protectors">
-              <div class="role-mark">PR</div><div class="role-copy"><strong>Protecteur / Salvateur</strong><span>Protège une personne pendant la nuit</span></div>
+              <div class="role-mark">PR</div><div class="role-copy"><strong>{{ role_text.protectors.0 }}</strong><span>{{ role_text.protectors.1 }}</span></div>
               <div class="counter"><button type="button" data-step="-1">−</button><input name="protectors" type="number" min="0" value="1" readonly /><button type="button" data-step="1">+</button></div>
             </article>
+            <article class="role-row" data-role="barbers">
+              <div class="role-mark">BA</div><div class="role-copy"><strong>{{ role_text.barbers.0 }}</strong><span>{{ role_text.barbers.1 }}</span></div>
+              <div class="counter"><button type="button" data-step="-1">−</button><input name="barbers" type="number" min="0" max="1" value="0" readonly /><button type="button" data-step="1">+</button></div>
+            </article>
+            <article class="role-row" data-role="aliens">
+              <div class="role-mark">AL</div><div class="role-copy"><strong>{{ role_text.aliens.0 }}</strong><span>{{ role_text.aliens.1 }}</span></div>
+              <div class="counter"><button type="button" data-step="-1">−</button><input name="aliens" type="number" min="0" max="1" value="0" readonly /><button type="button" data-step="1">+</button></div>
+            </article>
+            <article class="role-row" data-role="prostitutes">
+              <div class="role-mark">PU</div><div class="role-copy"><strong>{{ role_text.prostitutes.0 }}</strong><span>{{ role_text.prostitutes.1 }}</span></div>
+              <div class="counter"><button type="button" data-step="-1">−</button><input name="prostitutes" type="number" min="0" max="1" value="0" readonly /><button type="button" data-step="1">+</button></div>
+            </article>
             <article class="role-row villager-role" data-role="villagers">
-              <div class="role-mark">VI</div><div class="role-copy"><strong>Simple Villageois</strong><span>Observe, débat et vote pendant la journée</span></div>
+              <div class="role-mark">VI</div><div class="role-copy"><strong>{{ role_text.villagers.0 }}</strong><span>{{ role_text.villagers.1 }}</span></div>
               <div class="counter"><button type="button" data-step="-1">−</button><input name="villagers" type="number" min="0" value="5" readonly /><button type="button" data-step="1">+</button></div>
             </article>
           </div>
 
           <div class="setup-footer">
-            <div class="total-status"><span id="assigned-count">10</span> / <span id="target-count">10</span><small>rôles attribués</small></div>
-            <button id="start-button" class="start-button" type="submit">Commencer le jeu <span>→</span></button>
+            <div class="total-status"><span id="assigned-count">10</span> / <span id="target-count">10</span><small>{{ ui.assigned_roles }}</small></div>
+            <button id="start-button" class="start-button" type="submit">{{ ui.start_game }} <span>→</span></button>
           </div>
           <p id="count-message" class="count-message" aria-live="polite"></p>
         </form>
@@ -107,7 +132,7 @@
         targetNode.textContent = target;
         const difference = target - assigned;
         startButton.disabled = difference !== 0;
-        countMessage.textContent = difference > 0 ? `${difference} rôle(s) restent à attribuer.` : difference < 0 ? `${Math.abs(difference)} rôle(s) en trop.` : "La composition est prête.";
+        countMessage.textContent = difference > 0 ? `${difference} {{ ui.remaining|escapejs }}` : difference < 0 ? `${Math.abs(difference)} {{ ui.too_many|escapejs }}` : "{{ ui.ready|escapejs }}";
         countMessage.className = `count-message ${difference === 0 ? "ready" : "warning"}`;
       }
 
@@ -117,10 +142,16 @@
         const wolves = players <= 11 ? 2 : players <= 16 ? 3 : Math.ceil(players / 5);
         const specials = players >= 10 ? 3 : 2;
         inputFor("infecting_fathers").value = 1;
-        inputFor("simple_wolves").value = Math.max(1, wolves - 1);
+        inputFor("cerberus_wolves").value = 1;
+        inputFor("black_wolves").value = 0;
+        inputFor("talkative_wolves").value = 0;
+        inputFor("simple_wolves").value = Math.max(0, wolves - 2);
         inputFor("seers").value = 1;
         inputFor("witches").value = 1;
         inputFor("protectors").value = specials === 3 ? 1 : 0;
+        inputFor("barbers").value = 0;
+        inputFor("aliens").value = 0;
+        inputFor("prostitutes").value = 0;
         inputFor("villagers").value = players - wolves - specials;
         updateTotal();
       }
@@ -131,7 +162,8 @@
       }));
       document.querySelectorAll(".counter button").forEach(button => button.addEventListener("click", () => {
         const input = button.parentElement.querySelector("input");
-        input.value = Math.max(0, Number(input.value) + Number(button.dataset.step));
+        const maximum = input.max ? Number(input.max) : Infinity;
+        input.value = Math.max(0, Math.min(maximum, Number(input.value) + Number(button.dataset.step)));
         updateTotal();
       }));
       playerInput.addEventListener("change", suggestRoles);

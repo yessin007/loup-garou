@@ -1,0 +1,10 @@
+<form class="language-selector" method="post" action="{% url 'set_language' %}">
+  {% csrf_token %}
+  <input type="hidden" name="next" value="{{ request.get_full_path }}" />
+  <label class="sr-only" for="language-select">Language</label>
+  <select id="language-select" name="language" onchange="this.form.submit()" aria-label="Language">
+    {% for code, language in languages.items %}
+      <option value="{{ code }}" {% if code == language_code %}selected{% endif %}>{{ language.flag }} {{ language.name }}</option>
+    {% endfor %}
+  </select>
+</form>

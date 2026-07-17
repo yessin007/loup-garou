@@ -1,14 +1,34 @@
 from django.shortcuts import redirect, render
+from django.urls import reverse
+from django.utils.http import url_has_allowed_host_and_scheme
+
+from .translations import LANGUAGES, ROLES, UI
 
 
-ROLE_LABELS = {
-    "simple_wolves": "Loups-Garous simples",
-    "infecting_fathers": "Loups-Pères infects",
-    "seers": "Voyantes",
-    "witches": "Sorcières",
-    "protectors": "Protecteurs / Salvateurs",
-    "villagers": "Simples Villageois",
-}
+ROLE_KEYS = tuple(ROLES["fr"])
+WOLF_ROLE_KEYS = (
+    "simple_wolves",
+    "infecting_fathers",
+    "cerberus_wolves",
+    "black_wolves",
+    "talkative_wolves",
+)
+
+
+def current_language(request):
+    code = request.session.get("language", "fr")
+    return code if code in LANGUAGES else "fr"
+
+
+def set_language(request):
+    if request.method == "POST":
+        code = request.POST.get("language", "fr")
+        if code in LANGUAGES:
+            request.session["language"] = code
+    target = request.POST.get("next", reverse("home"))
+    if not url_has_allowed_host_and_scheme(target, allowed_hosts={request.get_host()}):
+        target = reverse("home")
+    return redirect(target)
 
 
 def home(request):
@@ -24,7 +44,7 @@ def home(request):
             request.session["authenticated"] = True
             return redirect("welcome")
 
-        error = "Nom d'utilisateur ou mot de passe incorrect."
+        error = UI[current_language(request)]["auth_error"]
 
     return render(request, "pages/home.html", {"error": error})
 
@@ -38,19 +58,19 @@ def welcome(request):
         try:
             player_count = int(request.POST.get("player_count", 0))
             composition = {
-                role: int(request.POST.get(role, 0)) for role in ROLE_LABELS
+                role: int(request.POST.get(role, 0)) for role in ROLE_KEYS
             }
         except (TypeError, ValueError):
-            error = "La configuration contient une valeur invalide."
+            error = UI[current_language(request)]["invalid_setup"]
         else:
             if not 8 <= player_count <= 30:
-                error = "Le nombre de joueurs doit être compris entre 8 et 30."
+                error = UI[current_language(request)]["player_range"]
             elif any(count < 0 for count in composition.values()):
-                error = "Le nombre de rôles ne peut pas être négatif."
+                error = UI[current_language(request)]["negative_roles"]
             elif sum(composition.values()) != player_count:
-                error = "La somme des rôles doit correspondre au nombre de joueurs."
-            elif composition["simple_wolves"] + composition["infecting_fathers"] < 1:
-                error = "La partie doit contenir au moins un loup."
+                error = UI[current_language(request)]["roles_sum"]
+            elif sum(composition[role] for role in WOLF_ROLE_KEYS) < 1:
+                error = UI[current_language(request)]["wolf_required"]
             else:
                 request.session["game_setup"] = {
                     "player_count": player_count,
@@ -69,8 +89,9 @@ def game(request):
     if not setup:
         return redirect("welcome")
 
+    role_labels = {key: values[0] for key, values in ROLES[current_language(request)].items()}
     roles = [
-        {"label": ROLE_LABELS[key], "count": count}
+        {"label": role_labels[key], "count": count}
         for key, count in setup["composition"].items()
         if count > 0
     ]
@@ -82,12 +103,15 @@ def game(request):
             "roles": roles,
             "game_setup": {
                 **setup,
-                "role_labels": ROLE_LABELS,
+                "role_labels": role_labels,
+                "role_descriptions": {key: values[1] for key, values in ROLES[current_language(request)].items()},
             },
         },
     )
 
 
 def logout_view(request):
+    language = current_language(request)
     request.session.flush()
+    request.session["language"] = language
     return redirect("home")

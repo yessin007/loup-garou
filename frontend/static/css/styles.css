@@ -10,6 +10,37 @@
 
 * { box-sizing: border-box; }
 
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; margin: -1px; padding: 0; border: 0; clip: rect(0, 0, 0, 0); white-space: nowrap; }
+.language-selector { margin: 0; }
+.language-selector select {
+  width: auto;
+  min-width: 122px;
+  margin: 0;
+  padding: 8px 30px 8px 10px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 3px;
+  outline: none;
+  color: var(--ivory);
+  font: 600 .72rem "DM Sans", sans-serif;
+  background: #111920;
+  cursor: pointer;
+}
+.language-selector select:focus { border-color: var(--ember); }
+.floating-language { position: fixed; z-index: 30; top: 22px; right: 25px; }
+.narrator-actions { display: flex; align-items: center; justify-self: end; gap: 10px; }
+.narrator-actions button.header-action { justify-self: auto; }
+
+html[dir="rtl"] body { font-family: "DM Sans", Tahoma, Arial, sans-serif; }
+html[dir="rtl"] .floating-language { right: auto; left: 25px; }
+html[dir="rtl"] .form-error,
+html[dir="rtl"] .seer-prompt,
+html[dir="rtl"] .final-vision,
+html[dir="rtl"] .seer-summary,
+html[dir="rtl"] .verdict-card { border-left-width: 1px; border-right: 3px solid var(--ember); }
+html[dir="rtl"] .single-name,
+html[dir="rtl"] .setup-intro > p:last-child,
+html[dir="rtl"] .scene-lead { text-align: right; }
+
 html, body { min-height: 100%; }
 
 body {
@@ -144,6 +175,8 @@ button:hover, .logout-link:hover { filter: brightness(1.08); }
   .login-card { padding: 21px; background: rgba(7, 13, 18, .88); }
   .form-heading { align-items: start; flex-direction: column; gap: 4px; }
   .chapter { display: none; }
+  .floating-language { top: 14px; right: 14px; }
+  html[dir="rtl"] .floating-language { right: auto; left: 14px; }
   .welcome-shell { padding: 32px 20px; }
 }
 
@@ -263,6 +296,8 @@ button.start-button:disabled { opacity: .38; cursor: not-allowed; filter: graysc
 @media (max-width: 560px) {
   .setup-header { width: calc(100% - 28px); }
   .setup-header .narrator-badge { display: none; }
+  .setup-header > div { gap: 10px; }
+  .setup-header .language-selector select { min-width: 48px; max-width: 115px; }
   .setup-shell { width: 100%; padding: 35px 14px 45px; gap: 32px; }
   .setup-panel { padding: 20px 15px; }
   .players-row { align-items: flex-end; }
@@ -406,6 +441,25 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .speaker-card { display: flex; align-items: center; justify-content: space-between; max-width: 600px; padding: 18px 22px; border-left: 2px solid var(--ember); background: rgba(199,139,69,.07); }
 .speaker-card span { color: #8c989d; font-size: .72rem; }.speaker-card strong { font: 600 1rem "Cinzel", serif; }
 
+.day-effects { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; max-width: 680px; margin: 22px 0; }
+.day-effect-card { padding: 20px 22px; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.025); }
+.day-effect-card span, .day-effect-card strong { display: block; }
+.day-effect-card span { color: #d98273; font-size: .58rem; letter-spacing: .16em; text-transform: uppercase; }
+.day-effect-card strong { margin-top: 9px; font: 600 .95rem "Cinzel", serif; }
+.day-effect-card p { margin: 9px 0 0; color: #8e9a9f; font-size: .7rem; line-height: 1.55; }
+.day-effect-card.silence { border-left: 3px solid #a84b40; }
+.day-effect-card.word { border-left: 3px solid var(--ember); }
+.day-effect-card.word span { color: var(--ember-light); }
+
+.alien-guess-list { display: grid; gap: 8px; max-width: 720px; margin: 28px 0; }
+.alien-guess-row { display: grid; grid-template-columns: 22px minmax(150px, 1fr) minmax(190px, .8fr); align-items: center; gap: 13px; margin: 0; padding: 12px 14px; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.025); }
+.alien-guess-row > input { width: 18px; accent-color: var(--ember); }
+.alien-guess-row span strong, .alien-guess-row span small { display: block; }
+.alien-guess-row span strong { font: 600 .78rem "Cinzel", serif; }
+.alien-guess-row span small { margin-top: 4px; color: #6f7c82; font-size: .58rem; }
+.scene-panel .alien-guess-row select { width: 100%; margin: 0; padding: 10px 12px; font-size: .7rem; }
+.alien-guess-row:has(input:checked) { border-color: rgba(199,139,69,.35); background: rgba(199,139,69,.06); }
+
 .vote-board { display: grid; gap: 7px; margin-top: 32px; }
 .vote-row { display: grid; grid-template-columns: 38px 1fr auto; align-items: center; gap: 13px; padding: 11px 14px; border: 1px solid rgba(255,255,255,.07); background: rgba(255,255,255,.025); }
 .vote-avatar { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; color: var(--ember-light); background: rgba(199,139,69,.12); }
@@ -472,6 +526,9 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .day-mode .seer-summary { border-left-color: #4f8eaf; background: rgba(81,145,178,.12); }.day-mode .seer-summary span { color: #467f9e; }.day-mode .seer-summary strong { color: #343b3d; }.day-mode .seer-summary p { color: #626f74; }
 .day-mode .speaker-card { color: #34342f; border-color: #b8752d; background: rgba(190,127,53,.1); }
 .day-mode .speaker-card span { color: #716d64; }
+.day-mode .day-effect-card { border-color: rgba(74,54,32,.14); background: rgba(255,255,255,.38); }
+.day-mode .day-effect-card strong { color: #34342f; }
+.day-mode .day-effect-card p { color: #6d6b64; }
 .day-mode .vote-row { border-color: rgba(65,49,31,.12); background: rgba(255,255,255,.42); }
 .day-mode .vote-row > strong { color: #363732; }.day-mode .vote-row > strong small { color: #817b70; }
 .day-mode .vote-counter button { border-color: rgba(65,49,31,.18); color: #383833; background: rgba(255,255,255,.3); }
@@ -483,6 +540,7 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .end-emblem span { font: 700 1.4rem "Cinzel", serif; }
 .end-emblem.wolf { border-color: rgba(181,62,48,.4); color: #b64a3c; background: rgba(174,55,42,.1); box-shadow: 0 0 55px rgba(174,55,42,.13); }
 .end-score { display: grid; grid-template-columns: repeat(2, minmax(130px, 220px)); gap: 1px; width: fit-content; margin: 35px 0; border: 1px solid rgba(65,49,31,.13); background: rgba(65,49,31,.1); }
+.end-score.three { grid-template-columns: repeat(3, minmax(130px, 190px)); }
 .end-score > div { padding: 20px 28px; background: rgba(255,255,255,.35); }
 .end-score strong, .end-score span { display: block; }.end-score strong { color: #8c5d29; font: 700 2rem "Cinzel", serif; }.end-score span { margin-top: 4px; color: #746e65; font-size: .62rem; text-transform: uppercase; letter-spacing: .08em; }
 .final-roster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; max-width: 680px; }
@@ -492,10 +550,14 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 
 @media (max-width: 540px) {
   .end-score, .final-roster { grid-template-columns: 1fr; width: 100%; }
+  .end-score.three { grid-template-columns: 1fr; }
+  .alien-guess-row { grid-template-columns: 22px 1fr; }
+  .alien-guess-row select { grid-column: 1 / -1; }
 }
 
 @media (max-width: 800px) {
   .narrator-header { grid-template-columns: 1fr auto; }
+  .narrator-actions .language-selector select { min-width: 48px; max-width: 115px; }
   .phase-indicator { grid-row: 2; grid-column: 1 / -1; justify-content: center; padding: 11px; border-top: 1px solid rgba(255,255,255,.06); }
   .narrator-layout { grid-template-columns: 1fr; }
   .player-sidebar { position: relative; padding: 12px; border-right: 0; border-bottom: 1px solid rgba(255,255,255,.08); }
@@ -510,7 +572,9 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 
 @media (max-width: 540px) {
   .narrator-header { min-height: 62px; padding: 12px 14px 0; }
-  .name-grid, .reveal-grid, .potion-grid, .night-report { grid-template-columns: 1fr; }
+  .narrator-actions { gap: 6px; }
+  .narrator-actions button.header-action { padding: 8px; }
+  .name-grid, .reveal-grid, .potion-grid, .night-report, .day-effects { grid-template-columns: 1fr; }
   .scene-panel h1 { font-size: clamp(2.8rem, 15vw, 4.5rem); }
   .scene-actions { align-items: stretch; flex-direction: column; }
   button.scene-action { width: 100%; }

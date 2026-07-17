@@ -1,11 +1,11 @@
 {% load static %}
 <!DOCTYPE html>
-<html lang="fr">
+<html lang="{{ language_code }}" dir="{{ language_dir }}">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#080d12" />
-    <title>Connexion | Loup Garou</title>
+    <title>{{ ui.login_title }} | Loup Garou</title>
     <link rel="icon" href="{% static 'images/favicon-wolf.png' %}" type="image/png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -13,34 +13,35 @@
     <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
   </head>
   <body class="login-page">
+    <div class="floating-language">{% include "pages/_language_selector.html" %}</div>
     <main class="login-shell">
       <section class="login-content" aria-labelledby="game-title">
-        <p class="eyebrow">La nuit tombe sur le village</p>
+        <p class="eyebrow">{{ ui.login_eyebrow }}</p>
         <h1 id="game-title"><span>Loup</span> Garou</h1>
-        <p class="tagline">Entrez dans la partie. Observez. Doutez. Survivez.</p>
+        <p class="tagline">{{ ui.tagline }}</p>
 
         <form class="login-card" method="post" novalidate>
           {% csrf_token %}
           <div class="form-heading">
-            <p class="form-kicker">Espace joueur</p>
-            <h2>Se connecter</h2>
+            <p class="form-kicker">{{ ui.player_area }}</p>
+            <h2>{{ ui.login }}</h2>
           </div>
 
           {% if error %}
             <p class="form-error" role="alert">{{ error }}</p>
           {% endif %}
 
-          <label for="username">Nom d'utilisateur</label>
-          <input id="username" name="username" type="text" inputmode="numeric" autocomplete="username" placeholder="Votre identifiant" required autofocus />
+          <label for="username">{{ ui.username }}</label>
+          <input id="username" name="username" type="text" inputmode="numeric" autocomplete="username" placeholder="{{ ui.username_placeholder }}" required autofocus />
 
-          <label for="password">Mot de passe</label>
-          <input id="password" name="password" type="password" inputmode="numeric" autocomplete="current-password" placeholder="Votre mot de passe" required />
+          <label for="password">{{ ui.password }}</label>
+          <input id="password" name="password" type="password" inputmode="numeric" autocomplete="current-password" placeholder="{{ ui.password_placeholder }}" required />
 
-          <button type="submit">Entrer dans le village <span aria-hidden="true">&#8594;</span></button>
-          <p class="demo-hint">Accès temporaire : <strong>123 / 123</strong></p>
+          <button type="submit">{{ ui.enter }} <span aria-hidden="true">&#8594;</span></button>
+          <p class="demo-hint">{{ ui.temporary_access }} : <strong>123 / 123</strong></p>
         </form>
       </section>
-      <p class="chapter">Chapitre I <span></span> Le village s'endort</p>
+      <p class="chapter">{{ ui.chapter }} <span></span> {{ ui.village_sleeps }}</p>
     </main>
   </body>
 </html>

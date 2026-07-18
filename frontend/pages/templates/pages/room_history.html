@@ -1,0 +1,30 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="{{ language_code }}" dir="{{ language_dir }}">
+  <head>
+    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ room.history }} | {{ game_room.code }}</title><link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+  </head>
+  <body class="room-page">
+    {{ history_labels|json_script:"history-detail-labels" }}
+    <header class="guide-header"><a class="brand" href="{% url 'room_portal' %}">Loup <span>Garou</span></a><div class="guide-header-actions"><span>{{ room.refreshing }}</span><strong class="room-code-chip">{{ game_room.code }}</strong></div></header>
+    <main class="room-shell">
+      <section class="room-hero"><p class="eyebrow">{{ game_room.code }}</p><h1>{{ room.history }}</h1></section>
+      <div id="history-timeline" class="history-timeline"><p class="history-empty">{{ room.history_empty }}</p></div>
+    </main>
+    <script>
+      const timeline = document.getElementById("history-timeline");
+      const labels = {night: "{{ room.night|escapejs }}", day: "{{ room.day|escapejs }}"};
+      const detailLabels = JSON.parse(document.getElementById("history-detail-labels").textContent);
+      function safe(value) { const node = document.createElement("span"); node.textContent = value; return node.innerHTML; }
+      function display(value) { if (Array.isArray(value)) return value.length ? value.join(", ") : "—"; if (value === true) return "Oui"; if (value === false) return "Non"; return value ?? "—"; }
+      async function refreshHistory() {
+        const response = await fetch("{% url 'room_history_api' game_room.code %}", {cache:"no-store"}); if (!response.ok) return;
+        const data = await response.json();
+        if (!data.events.length) return;
+        timeline.innerHTML = data.events.map(event => `<article class="history-event ${event.type}"><div><span>${labels[event.type]}</span><strong>${event.round}</strong></div><ul>${Object.entries(event.details).map(([key,value]) => `<li><span>${detailLabels[key] || key}</span><strong>${safe(display(value))}</strong></li>`).join("")}</ul></article>`).join("");
+      }
+      refreshHistory(); setInterval(refreshHistory, 2000);
+    </script>
+  </body>
+</html>

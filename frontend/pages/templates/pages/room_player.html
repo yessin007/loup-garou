@@ -1,0 +1,35 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="{{ language_code }}" dir="{{ language_dir }}">
+  <head>
+    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{{ joined_player.name }} | {{ game_room.code }}</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+  </head>
+  <body class="room-page">
+    <header class="guide-header"><a class="brand" href="{% url 'home' %}">Loup <span>Garou</span></a><strong class="room-code-chip">{{ game_room.code }}</strong></header>
+    <main class="room-shell compact-room-shell">
+      <section id="player-room-card" class="player-secret-card waiting">
+        <p class="eyebrow">{{ room.joined }}</p><h1>{{ joined_player.name }}</h1>
+        <div class="waiting-orbit"><span>…</span></div>
+        <h2>{{ room.waiting }}</h2><p>{{ room.waiting_help }}</p>
+        <small id="room-count">{{ game_room.room_players.count }} / {{ game_room.player_count }} {{ room.players_joined }}</small>
+      </section>
+      <a class="history-room-link" href="{% url 'room_history' game_room.code %}">{{ room.history }} <span>→</span></a>
+    </main>
+    <script>
+      const card = document.getElementById("player-room-card");
+      async function refreshRoom() {
+        const response = await fetch("{% url 'room_player_api' game_room.code %}", {cache: "no-store"});
+        if (!response.ok) return;
+        const data = await response.json();
+        document.getElementById("room-count")?.replaceChildren(`${data.joined_count} / ${data.player_count} {{ room.players_joined|escapejs }}`);
+        if (data.role && !card.classList.contains("revealed")) {
+          card.className = "player-secret-card revealed";
+          card.innerHTML = `<p class="eyebrow">{{ room.your_role|escapejs }}</p><h1>${data.role.name}</h1><p>${data.role.description}</p><strong>{{ room.keep_secret|escapejs }}</strong>`;
+        }
+      }
+      refreshRoom(); setInterval(refreshRoom, 2000);
+    </script>
+  </body>
+</html>

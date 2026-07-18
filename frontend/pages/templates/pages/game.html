@@ -18,7 +18,7 @@
     <header class="narrator-header">
       <a class="brand" href="{% url 'welcome' %}">Loup <span>Garou</span></a>
       <div class="phase-indicator"><span id="cycle-label">{{ ui.preparation }}</span><strong id="phase-label">{{ ui.players }}</strong></div>
-      <div class="narrator-actions">{% include "pages/_language_selector.html" %}<button id="reset-game" class="header-action" type="button">{{ ui.restart }}</button></div>
+      <div class="narrator-actions"><strong class="room-code-chip" title="Room">{{ room_code }}</strong><a class="header-action history-header-link" href="{% url 'room_history' room_code %}" target="_blank">Historique</a>{% include "pages/_language_selector.html" %}<button id="reset-game" class="header-action" type="button">{{ ui.restart }}</button></div>
     </header>
 
     <main id="game-app" class="narrator-layout">
@@ -29,10 +29,12 @@
     <script>
       const setup = JSON.parse(document.getElementById("game-setup").textContent);
       const L = JSON.parse(document.getElementById("game-translations").textContent);
+      const roomCode = "{{ room_code|escapejs }}";
+      const csrfToken = "{{ csrf_token }}";
       function t(key, values = {}) {
         return Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, value), L[key]);
       }
-      const storageKey = `loup-garou-game-v2-${JSON.stringify(setup.composition)}`;
+      const storageKey = `loup-garou-game-v3-${roomCode}`;
       const roleMeta = {
         infecting_fathers: { short: "LPI", name: setup.role_labels.infecting_fathers, faction: "wolf", description: setup.role_descriptions.infecting_fathers },
         simple_wolves: { short: "LG", name: setup.role_labels.simple_wolves, faction: "wolf", description: setup.role_descriptions.simple_wolves },
@@ -63,7 +65,7 @@
 
       function freshState() {
         return {
-          stage: "roster", round: 1, players: [], protectedId: null,
+          stage: "roster", round: 1, players: [], protectedId: null, lastProtectedId: null, roomStarted: false,
           wolfTargetId: null, wolfInitialTargetId: null, wolfTargetChanged: false, prostituteTargetId: null, blockedPlayerId: null, silencedPlayerId: null,
           infectionAvailable: true, infectionAttempted: false, infectionSucceeded: false, infectedPlayerId: null,
           talkativePlayerId: null, assignedWord: "", witchSave: false, witchKillId: null,
@@ -96,13 +98,20 @@
       if (state.ankouGhost === undefined) state.ankouGhost = null;
       if (state.wolfInitialTargetId === undefined) state.wolfInitialTargetId = null;
       if (state.wolfTargetChanged === undefined) state.wolfTargetChanged = false;
+      if (state.lastProtectedId === undefined) state.lastProtectedId = null;
+      if (state.roomStarted === undefined) state.roomStarted = state.players.length > 0;
 
       const scene = document.getElementById("scene");
       const sidebar = document.getElementById("player-sidebar");
       const cycleLabel = document.getElementById("cycle-label");
       const phaseLabel = document.getElementById("phase-label");
 
-      function save() { localStorage.setItem(storageKey, JSON.stringify(state)); }
+      let syncTimer = null;
+      function save() {
+        localStorage.setItem(storageKey, JSON.stringify(state));
+        clearTimeout(syncTimer);
+        syncTimer = setTimeout(() => fetch(`/api/rooms/${roomCode}/sync/`, {method: "POST", headers: {"Content-Type": "application/json", "X-CSRFToken": csrfToken}, body: JSON.stringify(state)}).catch(() => {}), 120);
+      }
       function alive() { return state.players.filter(player => player.alive); }
       function player(id) { return state.players.find(item => item.id === Number(id)); }
       function hasAliveRole(role) { return alive().some(item => item.role === role); }
@@ -250,8 +259,9 @@
       }
       function escapeHtml(value) { const div = document.createElement("div"); div.textContent = value; return div.innerHTML; }
       function shuffle(items) { return [...items].sort(() => Math.random() - .5); }
-      function options(players, placeholder = L.choose_probe, showRole = true) {
-        return `<option value="">${placeholder}</option>${players.map(item => `<option value="${item.id}">#${String(item.id).padStart(2, "0")} — ${escapeHtml(item.name)}${showRole ? ` — ${roleMeta[item.role].name}` : ""}</option>`).join("")}`;
+      function options(players, placeholder = L.choose_probe, showRole = true, disabledIds = []) {
+        const disabled = new Set(disabledIds.map(Number));
+        return `<option value="">${placeholder}</option>${players.map(item => `<option value="${item.id}" ${disabled.has(item.id) ? "disabled" : ""}>#${String(item.id).padStart(2, "0")} — ${escapeHtml(item.name)}${showRole ? ` — ${roleMeta[item.role].name}` : ""}${disabled.has(item.id) ? ` — ${L.protected_previous_target}` : ""}</option>`).join("")}`;
       }
       function actionButton(label, action, disabled = false, secondary = false) {
         return `<button class="scene-action ${secondary ? "secondary" : ""}" type="button" data-action="${action}" ${disabled ? "disabled" : ""}>${label}<span>→</span></button>`;
@@ -281,10 +291,42 @@
       function renderRoster() {
         const number = state.players.length + 1;
         setHeading(L.distribution, t("player", {n: String(number).padStart(2, "0")}));
+        if (!state.roomStarted) {
+          scene.innerHTML = `<div class="scene-kicker">Room · ${roomCode}</div><h1>Lobby joueurs</h1><p class="scene-lead">Les joueurs entrent le code <strong>${roomCode}</strong> et leur prénom sur leur téléphone. Lance la distribution quand ceux qui veulent se connecter sont présents.</p><div id="online-player-list" class="online-player-list"><p>Chargement…</p></div><div class="scene-actions">${actionButton("Lancer la distribution", "start-room")}</div>`;
+          refreshLobby();
+          return;
+        }
         scene.innerHTML = `<div class="pass-player-number">${String(number).padStart(2, "0")}</div><div class="scene-kicker">${t("phone_player", {n: number})}</div><h1>${L.first_name_q}</h1>
-          <p class="scene-lead">${L.name_help}</p>
+          <p class="scene-lead">${L.name_help} · ${state.players.length} joueur(s) ont reçu leur rôle en ligne.</p>
           <label class="single-name"><span>${t("player_name", {n: String(number).padStart(2, "0")})}</span><input id="current-player-name" type="text" placeholder="${L.your_name}" autocomplete="off" autofocus></label>
           ${actionButton(L.discover_role, "register-player")}`;
+      }
+
+      let lobbyRefreshTimer = null;
+      async function refreshLobby() {
+        if (state.stage !== "roster" || state.roomStarted) return;
+        try {
+          const response = await fetch(`/api/rooms/${roomCode}/lobby/`, {cache: "no-store"});
+          if (!response.ok) return;
+          const data = await response.json();
+          const list = document.getElementById("online-player-list");
+          if (list) list.innerHTML = data.players.length ? data.players.map(item => `<span>#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)}</span>`).join("") : `<p>Aucun joueur connecté. Tu peux quand même lancer puis saisir tous les joueurs manuellement.</p>`;
+        } finally {
+          clearTimeout(lobbyRefreshTimer);
+          if (state.stage === "roster" && !state.roomStarted) lobbyRefreshTimer = setTimeout(refreshLobby, 2000);
+        }
+      }
+
+      async function startRoomDistribution(button) {
+        button.disabled = true;
+        const response = await fetch(`/api/rooms/${roomCode}/start/`, {method: "POST", headers: {"X-CSRFToken": csrfToken}});
+        if (!response.ok) { button.disabled = false; return; }
+        const data = await response.json();
+        state.players = data.assignments.map((item, index) => ({id: index + 1, roomPlayerId: item.room_player_id, name: item.name, role: item.role, alive: true}));
+        state.roleDeck = [...data.assignments.map(item => item.role), ...data.remaining_roles];
+        state.roomStarted = true;
+        state.stage = state.players.length === setup.player_count ? "roles" : "roster";
+        save(); render();
       }
 
       function renderPlayerReveal() {
@@ -366,7 +408,9 @@
 
       function renderProtector() {
         setHeading(t("night", {n: state.round}), L.protector);
-        scene.innerHTML = nightFrame(L.village_sleeps, L.protector_wake, L.protect_q, `<select id="night-select">${options(alive(), L.choose_protected, false)}</select>`, actionButton(L.confirm_protection, "confirm-protector", true));
+        const previous = player(state.lastProtectedId);
+        const previousNotice = previous?.alive ? `<div class="protector-lock-note"><span>${L.protected_previous_target}</span><strong>#${String(previous.id).padStart(2, "0")} · ${escapeHtml(previous.name)}</strong><small>${L.protector_no_repeat}</small></div>` : "";
+        scene.innerHTML = nightFrame(L.village_sleeps, L.protector_wake, L.protect_q, `${previousNotice}<select id="night-select">${options(alive(), L.choose_protected, false, previous?.alive ? [previous.id] : [])}</select>`, actionButton(L.confirm_protection, "confirm-protector", true));
       }
 
       function renderProstitute() {
@@ -817,7 +861,9 @@
         const button = event.target.closest("[data-action]");
         if (!button) return;
         const action = button.dataset.action;
-        if (action === "register-player") {
+        if (action === "start-room") {
+          startRoomDistribution(button); return;
+        } else if (action === "register-player") {
           const name = document.getElementById("current-player-name").value.trim();
           if (!name) { alert(L.name_required); return; }
           if (state.players.some(item => item.name.toLowerCase() === name.toLowerCase())) { alert(L.name_used); return; }
@@ -856,7 +902,11 @@
           state.wildChildLinked = true;
           nextNightStage("wild_child"); return;
         } else if (action === "confirm-protector") {
-          state.protectedId = Number(document.getElementById("night-select").value); nextNightStage("protector"); return;
+          const targetId = Number(document.getElementById("night-select").value);
+          if (!targetId || targetId === state.lastProtectedId) return;
+          state.protectedId = targetId;
+          state.lastProtectedId = targetId;
+          nextNightStage("protector"); return;
         } else if (action === "confirm-prostitute") {
           state.prostituteTargetId = Number(document.getElementById("night-select").value); nextNightStage("prostitute"); return;
         } else if (action === "confirm-wolves") {
@@ -1060,7 +1110,7 @@
         } else if (action === "show-game-over") {
           state.stage = "game_over";
         } else if (action === "new-game") {
-          state = freshState(); save(); render(); return;
+          window.location.href = "{% url 'welcome' %}"; return;
         } else if (action === "back-setup") {
           window.location.href = "{% url 'welcome' %}"; return;
         }
@@ -1068,7 +1118,7 @@
       });
 
       document.getElementById("reset-game").addEventListener("click", () => {
-        if (confirm(L.restart_confirm)) { state = freshState(); save(); render(); }
+        if (confirm(L.restart_confirm)) window.location.href = "{% url 'welcome' %}";
       });
       render();
     </script>

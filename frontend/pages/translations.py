@@ -23,7 +23,7 @@ UI = {
         "ready": "La composition est prête.", "invalid_setup": "La configuration contient une valeur invalide.",
         "player_range": "Le nombre de joueurs doit être compris entre 8 et 30.", "negative_roles": "Le nombre de rôles ne peut pas être négatif.",
         "roles_sum": "La somme des rôles doit correspondre au nombre de joueurs.", "wolf_required": "La partie doit contenir au moins un loup.",
-        "game_title": "Table du narrateur", "preparation": "Préparation", "players": "Les joueurs", "restart": "Recommencer",
+        "game_title": "Table du narrateur", "preparation": "Préparation", "players": "Les joueurs", "restart": "Recommencer", "room_access": "Rejoindre une room / historique",
     },
     "en": {
         "login_title": "Sign in", "login_eyebrow": "Night falls over the village",
@@ -41,7 +41,7 @@ UI = {
         "ready": "The setup is ready.", "invalid_setup": "The setup contains an invalid value.",
         "player_range": "The number of players must be between 8 and 30.", "negative_roles": "Role counts cannot be negative.",
         "roles_sum": "The total number of roles must match the number of players.", "wolf_required": "The game must contain at least one wolf.",
-        "game_title": "Narrator table", "preparation": "Setup", "players": "Players", "restart": "Restart",
+        "game_title": "Narrator table", "preparation": "Setup", "players": "Players", "restart": "Restart", "room_access": "Join a room / history",
     },
     "tn": {
         "login_title": "Connexion", "login_eyebrow": "El lil habet 3al village", "tagline": "Od5ol lel game. Ra9eb. Chok. W ab9a 7ay.",
@@ -58,7 +58,7 @@ UI = {
         "invalid_setup": "Fel composition fama valeur 8alta.", "player_range": "3dad el joueurs lezem ykoun bin 8 w 30.",
         "negative_roles": "3dad el roles ma ynajjemch ykoun negatif.", "roles_sum": "Total el roles lezem ysewi 3dad el joueurs.",
         "wolf_required": "Lezem fel game fama loup wa7ed 3al a9al.", "game_title": "Table du narrateur",
-        "preparation": "Preparation", "players": "El joueurs", "restart": "3awed mel lowel",
+        "preparation": "Preparation", "players": "El joueurs", "restart": "3awed mel lowel", "room_access": "Od5ol room / historique",
     },
 }
 
@@ -158,7 +158,7 @@ GAME = {
         "return_narrator": "Rendre le téléphone au narrateur", "pass_next": "Masquer et passer au joueur suivant", "preparation": "Préparation",
         "distributed": "Composition distribuée", "roles_assigned": "Les rôles<br>sont attribués", "roles_help": "Le narrateur peut vérifier la distribution avant de poser l’écran. Chaque joueur découvre ensuite son rôle.", "begin_night": "La nuit peut tomber",
         "night": "Nuit {n}", "protector": "Le Protecteur", "village_sleeps": "Le village dort", "protector_wake": "Protecteur,<br>réveille-toi",
-        "protect_q": "Qui souhaites-tu protéger cette nuit ?", "choose_protected": "Choisir la personne protégée", "confirm_protection": "Confirmer la protection",
+        "protect_q": "Qui souhaites-tu protéger cette nuit ?", "choose_protected": "Choisir la personne protégée", "confirm_protection": "Confirmer la protection", "protected_previous_target": "Protégé la nuit précédente", "protector_no_repeat": "Cette personne redevient disponible la nuit prochaine.",
         "pack": "La meute", "pack_member": "Membre de la meute", "shadows": "Les ombres s'agitent", "wolves_wake": "Loups-Garous,<br>réveillez-vous", "wolves_q": "Mettez-vous d'accord. Qui la meute va-t-elle attaquer ?", "choose_victim": "Choisir la victime de la meute", "wolves_sleep": "La meute se rendort",
         "wolves_initial_victim": "Première victime choisie", "wolves_change_target": "Les loups veulent changer de cible", "wolves_change_target_help": "Cochez si les loups ont vu quelqu'un regarder. Le narrateur ne confirme jamais son rôle et la nouvelle cible remplace entièrement la première.", "wolves_replacement_victim": "Nouvelle victime choisie",
         "white_wolf": "Le Loup Blanc", "white_wolf_night": "La nuit du Loup Blanc", "white_wolf_wake": "Loup Blanc,<br>réveille-toi seul", "white_wolf_help": "Cette nuit, tu peux éliminer un autre membre de la meute ou passer.", "white_wolf_alone": "Identité secrète", "choose_wolf_target": "Choisir un loup", "white_wolf_kill": "Éliminer ce loup", "white_wolf_pass": "Passer cette nuit",
@@ -194,7 +194,7 @@ GAME = {
         "registered": "players registered", "village": "The village", "alive_count": "{n} alive", "alive": "Alive", "eliminated": "Eliminated",
         "distribution": "Distribution", "player": "Player {n}", "phone_player": "The phone is with player {n}", "first_name_q": "What is<br>your name?", "name_help": "Enter your name, then discover your role away from prying eyes.", "player_name": "Player #{n}'s name", "your_name": "Your name", "discover_role": "Discover my role",
         "secret_distribution": "Secret distribution", "nobody_look": "{name}, nobody else should look", "sealed": "Your role<br>is sealed", "alone_help": "Make sure you are the only one who can see the screen before continuing.", "reveal_role": "Reveal my role", "you_are": "You are", "return_narrator": "Return the phone to the narrator", "pass_next": "Hide and pass to the next player", "preparation": "Setup", "distributed": "Roles distributed", "roles_assigned": "The roles<br>are assigned", "roles_help": "The narrator can check the distribution before putting the screen down. Each player then discovers their role.", "begin_night": "Let night fall",
-        "night": "Night {n}", "protector": "The Protector", "village_sleeps": "The village sleeps", "protector_wake": "Protector,<br>wake up", "protect_q": "Who do you want to protect tonight?", "choose_protected": "Choose the protected player", "confirm_protection": "Confirm protection",
+        "night": "Night {n}", "protector": "The Protector", "village_sleeps": "The village sleeps", "protector_wake": "Protector,<br>wake up", "protect_q": "Who do you want to protect tonight?", "choose_protected": "Choose the protected player", "confirm_protection": "Confirm protection", "protected_previous_target": "Protected last night", "protector_no_repeat": "This player will be available again next night.",
         "pack": "The pack", "pack_member": "Pack member", "shadows": "Shadows are stirring", "wolves_wake": "Werewolves,<br>wake up", "wolves_q": "Agree on a target. Who will the pack attack?", "choose_victim": "Choose the pack's victim", "wolves_sleep": "The pack goes back to sleep",
         "wolves_initial_victim": "Initially chosen victim", "wolves_change_target": "The Wolves want to change targets", "wolves_change_target_help": "Check this if the Wolves saw someone peeking. The narrator never confirms that player's role, and the new target fully replaces the first.", "wolves_replacement_victim": "New chosen victim",
         "white_wolf": "The White Wolf", "white_wolf_night": "The White Wolf's night", "white_wolf_wake": "White Wolf,<br>wake up alone", "white_wolf_help": "Tonight, you may eliminate another pack member or pass.", "white_wolf_alone": "Secret identity", "choose_wolf_target": "Choose a wolf", "white_wolf_kill": "Eliminate this wolf", "white_wolf_pass": "Pass tonight",
@@ -226,7 +226,7 @@ GAME = {
         "registered": "joueurs msajlin", "village": "El village", "alive_count": "{n} 3aychin", "alive": "3ayech", "eliminated": "5raj",
         "distribution": "Distribution", "player": "Joueur {n}", "phone_player": "El telephone 3and joueur {n}", "first_name_q": "Chnouwa<br>esmek?", "name_help": "Ekteb esmek, ba3d odkhol chouf role mte3ek bel sir.", "player_name": "Esm joueur #{n}", "your_name": "Esmek", "discover_role": "Nchouf role mte3i",
         "secret_distribution": "Distribution bel sir", "nobody_look": "{name}, 7ad ma ychouf", "sealed": "Role mte3ek<br>me5bi", "alone_help": "T2akked elli enti wa7dek tchouf fel ecran 9bal ma tkammel.", "reveal_role": "Nekchef role mte3i", "you_are": "Enti", "return_narrator": "Rajja3 el telephone lel narrateur", "pass_next": "5abbi w 3addi lel joueur elli ba3dek", "preparation": "Preparation", "distributed": "El composition twaz3et", "roles_assigned": "El roles<br>twaz3ou", "roles_help": "El narrateur ynajjem yetthabet fel distribution. Ba3d kol joueur ychouf role mte3ou bel sir.", "begin_night": "5alli el lil yhabt",
-        "night": "Lil {n}", "protector": "El 7ares", "village_sleeps": "El village yor9od", "protector_wake": "Ya 7ares,<br>fi9", "protect_q": "Chkoun t7eb ta7mi ellila?", "choose_protected": "E5tar chkoun ta7mi", "confirm_protection": "Thabet el protection",
+        "night": "Lil {n}", "protector": "El 7ares", "village_sleeps": "El village yor9od", "protector_wake": "Ya 7ares,<br>fi9", "protect_q": "Chkoun t7eb ta7mi ellila?", "choose_protected": "E5tar chkoun ta7mi", "confirm_protection": "Thabet el protection", "protected_previous_target": "T7ama ellila elli fetet", "protector_no_repeat": "El joueur he4a yarja3 disponible ellila jeya.",
         "pack": "El loups", "pack_member": "Membre mel meute", "shadows": "El 5yalet tet7arrek", "wolves_wake": "Ya loups,<br>fi9ou", "wolves_q": "Etfehmou: chkoun bech tehjmou 3lih?", "choose_victim": "E5tarou el victime", "wolves_sleep": "El loups yarj3ou yor9dou",
         "wolves_initial_victim": "Victime loula elli e5tarouha", "wolves_change_target": "El loups y7ebbou ybadlou cible", "wolves_change_target_help": "Cochi ken el loups chefou joueur yetfarrej. El narrateur ma y9oulhomch role mte3ou, w cible jdida tna77i cible loula jemla.", "wolves_replacement_victim": "Victime jdida elli e5tarouha",
         "white_wolf": "Loup Blanc", "white_wolf_night": "Lilet Loup Blanc", "white_wolf_wake": "Ya Loup Blanc,<br>fi9 wa7dek", "white_wolf_help": "Ellila tnajem to9tel loup e5er mel meute wala ta3mel passe.", "white_wolf_alone": "Identite bel sir", "choose_wolf_target": "E5tar loup", "white_wolf_kill": "O9tel el loup hedha", "white_wolf_pass": "Passe ellila",

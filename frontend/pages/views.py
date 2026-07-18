@@ -1,8 +1,14 @@
+import json
+import secrets
+
+from django.db import transaction
 from django.http import JsonResponse
-from django.shortcuts import redirect, render
+from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
+from django.views.decorators.http import require_GET, require_POST
 
+from .models import GameRoom, RoomEvent, RoomPlayer
 from .role_guides import ROLE_CAMPS, ROLE_CODES, ROLE_GUIDES
 from .translations import LANGUAGES, ROLES, UI
 
@@ -18,6 +24,24 @@ WOLF_ROLE_KEYS = (
     "white_wolves",
 )
 
+ROOM_TEXT = {
+    "fr": {
+        "room_title": "Rejoindre une partie", "room_intro": "Entre le code affiché sur le téléphone du narrateur.", "room_code": "Code de la room", "player_name": "Ton prénom", "join": "Rejoindre", "history": "Historique", "open_history": "Voir l'historique", "waiting": "En attente du narrateur", "waiting_help": "Ton rôle apparaîtra ici quand le narrateur lancera la distribution.", "your_role": "Ton rôle secret", "keep_secret": "Garde cet écran secret.", "joined": "Tu as rejoint la room", "players_joined": "joueur(s) connecté(s)", "invalid_room": "Room introuvable.", "room_started": "Cette partie a déjà commencé.", "name_used": "Ce prénom est déjà utilisé dans cette room.", "room_full": "La room est complète.", "history_empty": "Aucun jour ou aucune nuit terminé pour le moment.", "night": "Nuit", "day": "Jour", "back": "Retour", "refreshing": "Mise à jour automatique", "room_access": "Rejoindre une room / historique",
+    },
+    "en": {
+        "room_title": "Join a game", "room_intro": "Enter the code displayed on the narrator's phone.", "room_code": "Room code", "player_name": "Your name", "join": "Join", "history": "History", "open_history": "View history", "waiting": "Waiting for the narrator", "waiting_help": "Your role will appear here when the narrator starts distribution.", "your_role": "Your secret role", "keep_secret": "Keep this screen private.", "joined": "You joined the room", "players_joined": "connected player(s)", "invalid_room": "Room not found.", "room_started": "This game has already started.", "name_used": "This name is already used in this room.", "room_full": "The room is full.", "history_empty": "No completed day or night yet.", "night": "Night", "day": "Day", "back": "Back", "refreshing": "Updates automatically", "room_access": "Join a room / history",
+    },
+    "tn": {
+        "room_title": "Od5ol lel game", "room_intro": "Da5el el code eli thaher fi telephone mta3 el narrateur.", "room_code": "Code mta3 el room", "player_name": "Esmek", "join": "Od5ol", "history": "Historique", "open_history": "Chouf el historique", "waiting": "Nestannew fel narrateur", "waiting_help": "Role mte3ek yodhher houni ki narrateur yabda el distribution.", "your_role": "Role mte3ek bel sir", "keep_secret": "Ma twarrich el ecran l 7ad.", "joined": "D5alt lel room", "players_joined": "joueur(s) connectes", "invalid_room": "El room mawjoudach.", "room_started": "El game hedhi bdet deja.", "name_used": "El esm hedha mesta3mel fel room.", "room_full": "El room kemlet.", "history_empty": "Mezel ma fama 7atta lil wala nhar kemel.", "night": "Lil", "day": "Nhar", "back": "Erja3", "refreshing": "Updates automatiquement", "room_access": "Od5ol room / historique",
+    },
+}
+
+ROOM_DETAIL_LABELS = {
+    "fr": {"deaths": "Victimes", "protected": "Protection", "wolves_target": "Cible des loups", "blocked": "Pouvoir bloqué", "redirected_to": "Redirection", "infection_attempted": "Infection tentée", "infection_succeeded": "Infection réussie", "witch_saved": "Potion de vie", "witch_target": "Potion de mort", "bear_growled": "Ours", "seer_target": "Vision de la Voyante", "seer_role": "Rôle aperçu", "eliminated": "Éliminé par vote", "vote_outcome": "Résultat", "winner": "Vainqueur"},
+    "en": {"deaths": "Victims", "protected": "Protection", "wolves_target": "Wolves' target", "blocked": "Blocked power", "redirected_to": "Redirected to", "infection_attempted": "Infection attempted", "infection_succeeded": "Infection succeeded", "witch_saved": "Life potion", "witch_target": "Death potion", "bear_growled": "Bear", "seer_target": "Seer's vision", "seer_role": "Role seen", "eliminated": "Voted out", "vote_outcome": "Result", "winner": "Winner"},
+    "tn": {"deaths": "Eli metou", "protected": "Protection", "wolves_target": "Cible mta3 el loups", "blocked": "Pouvoir bloque", "redirected_to": "Redirection", "infection_attempted": "Jarbet infection", "infection_succeeded": "Infection nej7et", "witch_saved": "Potion de vie", "witch_target": "Potion de mort", "bear_growled": "Ours", "seer_target": "Vision mta3 el 3arrafa", "seer_role": "Role eli chefetou", "eliminated": "5raj bel vote", "vote_outcome": "Resultat", "winner": "Eli rba7"},
+}
+
 
 def health(request):
     return JsonResponse(
@@ -31,6 +55,56 @@ def health(request):
 def current_language(request):
     code = request.session.get("language", "fr")
     return code if code in LANGUAGES else "fr"
+
+
+def room_text(request):
+    return ROOM_TEXT[current_language(request)]
+
+
+def room_for_narrator(request, code):
+    if not request.session.get("authenticated"):
+        return None
+    setup = request.session.get("game_setup", {})
+    if setup.get("room_code") != code:
+        return None
+    return GameRoom.objects.filter(code=code).first()
+
+
+def player_label(state, player_id):
+    try:
+        wanted = int(player_id)
+    except (TypeError, ValueError):
+        return None
+    item = next((entry for entry in state.get("players", []) if entry.get("id") == wanted), None)
+    return item.get("name") if item else None
+
+
+def public_event_details(state, event_type):
+    if event_type == "night":
+        death_names = []
+        for entry in state.get("deaths", []):
+            name = entry.get("name") if isinstance(entry, dict) else player_label(state, entry)
+            if name:
+                death_names.append(name)
+        return {
+            "deaths": death_names,
+            "protected": player_label(state, state.get("protectedId")),
+            "wolves_target": player_label(state, state.get("wolfTargetId")),
+            "blocked": player_label(state, state.get("blockedPlayerId")),
+            "redirected_to": player_label(state, state.get("prostituteTargetId")),
+            "infection_attempted": bool(state.get("infectionAttempted")),
+            "infection_succeeded": bool(state.get("infectionSucceeded")),
+            "witch_saved": bool(state.get("witchSave")),
+            "witch_target": player_label(state, state.get("witchKillId")),
+            "bear_growled": state.get("bearGrowled"),
+            "seer_target": player_label(state, state.get("seerTargetId")),
+            "seer_role": state.get("seerDisplayedRole"),
+        }
+    return {
+        "eliminated": player_label(state, state.get("lastVote")),
+        "vote_outcome": state.get("voteOutcome"),
+        "winner": state.get("winner"),
+    }
 
 
 def set_language(request):
@@ -78,6 +152,50 @@ def roles_guide(request):
     return render(request, "pages/roles_guide.html", {"role_guides": guides})
 
 
+def room_portal(request):
+    text = room_text(request)
+    error = None
+    if request.method == "POST":
+        action = request.POST.get("action", "join")
+        code = request.POST.get("room_code", "").strip().upper()
+        room = GameRoom.objects.filter(code=code).first()
+        if not room:
+            error = text["invalid_room"]
+        elif action == "history":
+            return redirect("room_history", code=room.code)
+        elif room.status != GameRoom.Status.WAITING:
+            error = text["room_started"]
+        elif room.room_players.count() >= room.player_count:
+            error = text["room_full"]
+        else:
+            name = request.POST.get("player_name", "").strip()[:40]
+            if not name:
+                error = text["player_name"]
+            elif room.room_players.filter(name__iexact=name).exists():
+                error = text["name_used"]
+            else:
+                joined = RoomPlayer.objects.create(room=room, name=name)
+                tokens = request.session.get("room_player_tokens", {})
+                tokens[room.code] = str(joined.token)
+                request.session["room_player_tokens"] = tokens
+                return redirect("room_player", code=room.code)
+    return render(request, "pages/room_portal.html", {"room": text, "error": error})
+
+
+def room_player(request, code):
+    room = get_object_or_404(GameRoom, code=code.upper())
+    token = request.session.get("room_player_tokens", {}).get(room.code)
+    joined = room.room_players.filter(token=token).first()
+    if not joined:
+        return redirect("room_portal")
+    return render(request, "pages/room_player.html", {"game_room": room, "joined_player": joined, "room": room_text(request)})
+
+
+def room_history(request, code):
+    room = get_object_or_404(GameRoom, code=code.upper())
+    return render(request, "pages/room_history.html", {"game_room": room, "room": room_text(request), "history_labels": ROOM_DETAIL_LABELS[current_language(request)]})
+
+
 def welcome(request):
     if not request.session.get("authenticated"):
         return redirect("home")
@@ -101,9 +219,11 @@ def welcome(request):
             elif sum(composition[role] for role in WOLF_ROLE_KEYS) < 1:
                 error = UI[current_language(request)]["wolf_required"]
             else:
+                room = GameRoom.objects.create(player_count=player_count, composition=composition)
                 request.session["game_setup"] = {
                     "player_count": player_count,
                     "composition": composition,
+                    "room_code": room.code,
                 }
                 return redirect("game")
 
@@ -117,6 +237,12 @@ def game(request):
     setup = request.session.get("game_setup")
     if not setup:
         return redirect("welcome")
+    if not setup.get("room_code"):
+        room = GameRoom.objects.create(
+            player_count=setup["player_count"], composition=setup["composition"]
+        )
+        setup["room_code"] = room.code
+        request.session["game_setup"] = setup
 
     role_labels = {key: values[0] for key, values in ROLES[current_language(request)].items()}
     roles = [
@@ -135,8 +261,86 @@ def game(request):
                 "role_labels": role_labels,
                 "role_descriptions": {key: values[1] for key, values in ROLES[current_language(request)].items()},
             },
+            "room_code": setup["room_code"],
         },
     )
+
+
+@require_GET
+def room_lobby_api(request, code):
+    room = room_for_narrator(request, code.upper())
+    if not room:
+        return JsonResponse({"error": "forbidden"}, status=403)
+    return JsonResponse({"code": room.code, "status": room.status, "player_count": room.player_count, "players": [{"id": item.id, "name": item.name} for item in room.room_players.all()]})
+
+
+@require_POST
+@transaction.atomic
+def room_start_api(request, code):
+    room = room_for_narrator(request, code.upper())
+    if not room:
+        return JsonResponse({"error": "forbidden"}, status=403)
+    room = GameRoom.objects.select_for_update().get(code=room.code)
+    if room.status != GameRoom.Status.WAITING:
+        return JsonResponse({"error": "already_started"}, status=409)
+    joined = list(room.room_players.select_for_update().all())
+    roles = [role for role, count in room.composition.items() for _ in range(count)]
+    secrets.SystemRandom().shuffle(roles)
+    assignments = []
+    for index, joined_player in enumerate(joined):
+        joined_player.role = roles[index]
+        joined_player.save(update_fields=["role"])
+        assignments.append({"room_player_id": joined_player.id, "name": joined_player.name, "role": joined_player.role})
+    room.status = GameRoom.Status.ACTIVE
+    room.save(update_fields=["status", "updated_at"])
+    return JsonResponse({"assignments": assignments, "remaining_roles": roles[len(joined):]})
+
+
+@require_POST
+def room_sync_api(request, code):
+    room = room_for_narrator(request, code.upper())
+    if not room:
+        return JsonResponse({"error": "forbidden"}, status=403)
+    try:
+        state = json.loads(request.body)
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({"error": "invalid_json"}, status=400)
+    room.game_state = state
+    if state.get("stage") == "game_over":
+        room.status = GameRoom.Status.FINISHED
+    room.save(update_fields=["game_state", "status", "updated_at"])
+    round_number = max(1, int(state.get("round", 1)))
+    event_type = "night" if state.get("stage") == "dawn" else "day" if state.get("stage") == "day_end" else None
+    if event_type:
+        RoomEvent.objects.get_or_create(
+            room=room,
+            marker=f"{event_type}-{round_number}",
+            defaults={"event_type": event_type, "round_number": round_number, "details": public_event_details(state, event_type)},
+        )
+    return JsonResponse({"status": "ok"})
+
+
+@require_GET
+def room_player_api(request, code):
+    room = get_object_or_404(GameRoom, code=code.upper())
+    token = request.session.get("room_player_tokens", {}).get(room.code)
+    joined = room.room_players.filter(token=token).first()
+    if not joined:
+        return JsonResponse({"error": "forbidden"}, status=403)
+    language = current_language(request)
+    role = joined.role
+    return JsonResponse({
+        "status": room.status,
+        "joined_count": room.room_players.count(),
+        "player_count": room.player_count,
+        "role": {"code": role, "name": ROLES[language][role][0], "description": ROLES[language][role][1]} if role else None,
+    })
+
+
+@require_GET
+def room_history_api(request, code):
+    room = get_object_or_404(GameRoom, code=code.upper())
+    return JsonResponse({"status": room.status, "events": [{"type": event.event_type, "round": event.round_number, "details": event.details, "created_at": event.created_at.isoformat()} for event in room.events.all()]})
 
 
 def logout_view(request):

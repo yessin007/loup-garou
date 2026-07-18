@@ -441,6 +441,12 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .speaker-card { display: flex; align-items: center; justify-content: space-between; max-width: 600px; padding: 18px 22px; border-left: 2px solid var(--ember); background: rgba(199,139,69,.07); }
 .speaker-card span { color: #8c989d; font-size: .72rem; }.speaker-card strong { font: 600 1rem "Cinzel", serif; }
 
+.protector-lock-note { max-width: 680px; margin: 22px 0 12px; padding: 15px 17px; border-left: 3px solid #6f7f87; background: rgba(255,255,255,.035); }
+.protector-lock-note span, .protector-lock-note strong, .protector-lock-note small { display: block; }
+.protector-lock-note span { color: #839198; font-size: .58rem; letter-spacing: .12em; text-transform: uppercase; }
+.protector-lock-note strong { margin-top: 6px; font: 600 .82rem "Cinzel", serif; }
+.protector-lock-note small { margin-top: 5px; color: #68767c; font-size: .65rem; }
+
 .day-effects { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; max-width: 680px; margin: 22px 0; }
 .day-effect-card { padding: 20px 22px; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.025); }
 .day-effect-card span, .day-effect-card strong { display: block; }
@@ -603,6 +609,46 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
   transition: border-color .2s, background .2s;
 }
 .role-guide-link:hover { border-color: rgba(199,139,69,.55); background: rgba(199,139,69,.09); }
+.room-entry-link { border-color: rgba(199,139,69,.38); background: rgba(199,139,69,.08); }
+
+/* Shared rooms */
+.room-page { min-height: 100vh; color: var(--ivory); background: radial-gradient(circle at 80% 0, rgba(199,139,69,.15), transparent 30%), #070d12; }
+.room-shell { width: min(960px, calc(100% - 32px)); margin: 0 auto; padding: clamp(45px, 8vw, 90px) 0; }
+.compact-room-shell { width: min(620px, calc(100% - 28px)); }
+.room-hero { max-width: 680px; margin-bottom: 38px; }
+.room-hero h1 { margin: 9px 0 14px; font-size: clamp(2.5rem, 7vw, 5rem); }
+.room-hero > p:last-child { color: #8e9ba1; line-height: 1.7; }
+.room-portals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.room-card { display: flex; flex-direction: column; padding: clamp(22px, 4vw, 36px); border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.025); }
+.room-card > span { color: var(--ember); font: 700 .7rem "Cinzel", serif; }
+.room-card h2 { margin: 9px 0 25px; font-size: 1.5rem; }
+.room-card label { margin-top: 13px; color: #9ba7ac; font-size: .7rem; }
+.room-card input { margin-top: 7px; text-transform: uppercase; }
+.room-card button { margin-top: auto; padding-top: 15px; padding-bottom: 15px; }
+.room-code-chip { display: inline-grid; place-items: center; min-height: 34px; padding: 6px 11px; border: 1px solid rgba(199,139,69,.4); color: var(--ember-light); font: 700 .75rem "Cinzel", serif; letter-spacing: .15em; background: rgba(199,139,69,.08); }
+.player-secret-card { padding: clamp(28px, 7vw, 55px); border: 1px solid rgba(255,255,255,.1); text-align: center; background: rgba(255,255,255,.025); }
+.player-secret-card h1 { margin: 10px 0 25px; font-size: clamp(2.5rem, 10vw, 5.5rem); }
+.player-secret-card h2 { margin-top: 25px; }
+.player-secret-card > p:not(.eyebrow) { color: #91a0a7; line-height: 1.7; }
+.player-secret-card > strong { display: block; margin-top: 28px; color: var(--ember-light); }
+.waiting-orbit { display: grid; place-items: center; width: 100px; height: 100px; margin: 32px auto; border: 1px solid rgba(199,139,69,.3); border-radius: 50%; animation: room-pulse 1.8s infinite; }
+.waiting-orbit span { color: var(--ember-light); font-size: 2rem; }
+@keyframes room-pulse { 50% { box-shadow: 0 0 40px rgba(199,139,69,.2); transform: scale(1.04); } }
+.history-room-link { display: flex; justify-content: space-between; margin-top: 12px; padding: 16px 18px; border: 1px solid rgba(255,255,255,.1); color: #aeb8bd; text-decoration: none; }
+.history-timeline { display: grid; gap: 12px; }
+.history-empty { padding: 35px; border: 1px dashed rgba(255,255,255,.12); color: #7e8b91; text-align: center; }
+.history-event { display: grid; grid-template-columns: 110px 1fr; border: 1px solid rgba(255,255,255,.09); background: rgba(255,255,255,.025); }
+.history-event > div { display: grid; place-items: center; align-content: center; border-right: 1px solid rgba(255,255,255,.08); color: var(--ember-light); }
+.history-event > div span { font-size: .62rem; letter-spacing: .12em; text-transform: uppercase; }
+.history-event > div strong { font: 700 2.3rem "Cinzel", serif; }
+.history-event ul { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); margin: 0; padding: 12px; list-style: none; }
+.history-event li { padding: 10px 12px; }
+.history-event li span, .history-event li strong { display: block; }
+.history-event li span { color: #718087; font-size: .58rem; text-transform: uppercase; }
+.history-event li strong { margin-top: 4px; font-size: .72rem; }
+.online-player-list { display: flex; flex-wrap: wrap; gap: 8px; max-width: 720px; margin: 25px 0; }
+.online-player-list span, .online-player-list p { padding: 12px 14px; border: 1px solid rgba(199,139,69,.24); color: #aeb9be; background: rgba(199,139,69,.05); }
+.history-header-link { display: inline-flex; align-items: center; color: #9aa7ad; text-decoration: none; }
 
 .roles-guide-page {
   min-height: 100vh;
@@ -670,6 +716,9 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .guide-no-result { padding: 45px 20px; border: 1px dashed rgba(255,255,255,.12); color: #849197; text-align: center; }
 
 @media (max-width: 760px) {
+  .room-portals { grid-template-columns: 1fr; }
+  .history-event { grid-template-columns: 72px 1fr; }
+  .history-event ul { grid-template-columns: 1fr; }
   .guide-header { align-items: flex-start; min-height: 96px; padding: 12px 14px; }
   .guide-header-actions { align-items: flex-end; flex-direction: column; gap: 6px; }
   .guide-header .language-selector select { min-width: 48px; max-width: 126px; }

@@ -1,0 +1,103 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="{{ language_code }}" dir="{{ language_dir }}">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#080d12" />
+    <title>{{ ui.roles_guide_title }} | Loup Garou</title>
+    <link rel="icon" href="{% static 'images/favicon-wolf.png' %}" type="image/png" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+  </head>
+  <body class="roles-guide-page">
+    <header class="guide-header">
+      <a class="brand" href="{% url 'home' %}">Loup <span>Garou</span></a>
+      <div class="guide-header-actions">
+        {% include "pages/_language_selector.html" %}
+        <a class="guide-back" href="{% url 'home' %}">{{ ui.roles_guide_back }}</a>
+      </div>
+    </header>
+
+    <main class="guide-shell">
+      <section class="guide-hero" aria-labelledby="guide-title">
+        <p class="eyebrow">{{ ui.roles_guide_eyebrow }}</p>
+        <h1 id="guide-title">{{ ui.roles_guide_title }}</h1>
+        <p>{{ ui.roles_guide_intro }}</p>
+      </section>
+
+      <section class="guide-tools" aria-label="{{ ui.roles_guide_search }}">
+        <label class="guide-search">
+          <span class="sr-only">{{ ui.roles_guide_search }}</span>
+          <input id="role-guide-search" type="search" placeholder="{{ ui.roles_guide_search }}" autocomplete="off" />
+        </label>
+        <div class="guide-filters" role="group" aria-label="{{ ui.roles_guide_camp }}">
+          <button class="is-active" type="button" data-guide-filter="all">{{ ui.roles_guide_all }}</button>
+          <button type="button" data-guide-filter="wolf">{{ ui.roles_guide_wolves }}</button>
+          <button type="button" data-guide-filter="village">{{ ui.roles_guide_village }}</button>
+          <button type="button" data-guide-filter="solo">{{ ui.roles_guide_solo }}</button>
+        </div>
+      </section>
+
+      <section id="role-guide-grid" class="role-guide-grid">
+        {% for guide in role_guides %}
+          <details class="role-guide-card camp-{{ guide.camp }}" data-guide-camp="{% if guide.camp == 'variable' %}solo{% else %}{{ guide.camp }}{% endif %}">
+            <summary>
+              <span class="guide-role-code">{{ guide.code }}</span>
+              <span class="guide-role-heading">
+                <strong>{{ guide.name }}</strong>
+                <small>{{ guide.summary }}</small>
+              </span>
+              <span class="guide-camp-badge">
+                {% if guide.camp == "wolf" %}{{ ui.roles_guide_wolves }}
+                {% elif guide.camp == "village" %}{{ ui.roles_guide_village }}
+                {% else %}{{ ui.roles_guide_solo }}{% endif %}
+              </span>
+              <span class="guide-chevron" aria-hidden="true">+</span>
+            </summary>
+            <div class="guide-role-body">
+              <p class="guide-rules-label">{{ ui.roles_guide_rules }}</p>
+              <ul>
+                {% for rule in guide.rules %}<li>{{ rule }}</li>{% endfor %}
+              </ul>
+            </div>
+          </details>
+        {% endfor %}
+      </section>
+      <p id="guide-no-result" class="guide-no-result" hidden>{{ ui.roles_guide_no_result }}</p>
+    </main>
+
+    <script>
+      const search = document.getElementById("role-guide-search");
+      const cards = [...document.querySelectorAll(".role-guide-card")];
+      const filters = [...document.querySelectorAll("[data-guide-filter]")];
+      const noResult = document.getElementById("guide-no-result");
+      let activeFilter = "all";
+
+      function normalize(value) {
+        return value.toLocaleLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+      }
+
+      function filterGuides() {
+        const query = normalize(search.value.trim());
+        let visible = 0;
+        cards.forEach(card => {
+          const matchesCamp = activeFilter === "all" || card.dataset.guideCamp === activeFilter;
+          const matchesSearch = !query || normalize(card.textContent).includes(query);
+          card.hidden = !(matchesCamp && matchesSearch);
+          if (!card.hidden) visible += 1;
+        });
+        noResult.hidden = visible !== 0;
+      }
+
+      search.addEventListener("input", filterGuides);
+      filters.forEach(button => button.addEventListener("click", () => {
+        activeFilter = button.dataset.guideFilter;
+        filters.forEach(item => item.classList.toggle("is-active", item === button));
+        filterGuides();
+      }));
+    </script>
+  </body>
+</html>

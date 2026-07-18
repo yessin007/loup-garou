@@ -1,0 +1,210 @@
+"""Detailed, player-facing rules for the role guide page."""
+
+
+ROLE_CAMPS = {
+    "simple_wolves": "wolf", "infecting_fathers": "wolf", "cerberus_wolves": "wolf",
+    "black_wolves": "wolf", "talkative_wolves": "wolf", "blue_wolves": "wolf",
+    "white_wolves": "solo", "aliens": "solo", "angels": "solo",
+    "barbers": "village", "prostitutes": "village", "servants": "village",
+    "ancients": "village", "hunters": "village", "bears": "village",
+    "shepherds": "village", "cupids": "village", "judges": "village",
+    "wild_children": "variable", "ankous": "village", "little_girls": "village",
+    "seers": "village", "witches": "village", "protectors": "village",
+    "villagers": "village",
+}
+
+
+ROLE_CODES = {
+    "simple_wolves": "LG", "infecting_fathers": "LPI", "cerberus_wolves": "LC",
+    "black_wolves": "LN", "talkative_wolves": "LB", "blue_wolves": "BL",
+    "white_wolves": "LW", "barbers": "BA", "aliens": "AL", "prostitutes": "PU",
+    "servants": "SE", "ancients": "AN", "hunters": "CH", "bears": "OU",
+    "shepherds": "BE", "cupids": "CU", "judges": "JU", "wild_children": "ES",
+    "angels": "AG", "ankous": "AK", "little_girls": "PF", "seers": "VO",
+    "witches": "SO", "protectors": "PR", "villagers": "VI",
+}
+
+
+ROLE_GUIDES = {
+    "fr": {
+        "simple_wolves": (
+            "Se réveille avec la meute chaque nuit. La meute choisit une seule cible non-loup.",
+            "Si les loups voient quelqu'un regarder, ils peuvent remplacer leur première cible par cette personne. Le narrateur ne confirme jamais son rôle.",
+            "Le blocage du Loup Cerbère n'enlève aucune capacité spéciale au Loup simple. Infecté ou amoureux, son clan est recalculé selon les règles de l'infection et du Couple.",
+        ),
+        "infecting_fathers": (
+            "Chasse avec la meute et possède une seule cartouche d'infection pour toute la partie. Il décide après le choix final des loups.",
+            "Toute tentative consomme la cartouche, même si elle échoue. Protection, première vie de l'Ancien, Pute non bloquée, Alien et Servante font échouer l'infection.",
+            "Le Cerbère bloque son tour d'infection sans consommer la cartouche. Une cible infectée devient Loup simple, sauf l'Ours qui garde son rôle et rejoint secrètement la meute.",
+        ),
+        "cerberus_wolves": (
+            "Après l'attaque de la meute, choisit un autre joueur dont le pouvoir est bloqué pour la nuit en cours.",
+            "Il annule notamment protection, redirection de la Pute, potions, infection, tir du Loup Blanc, silence, mot imposé, Ours, Berger et Juge. La Voyante bloquée ne voit que le Loup Cerbère.",
+            "Il ne retire pas les capacités passives absolues de l'Alien, de la Servante, de l'Ancien, du Chasseur, de l'Ankou ou de l'Ange. Il reste un loup normal pour les clans et les Couples.",
+        ),
+        "black_wolves": (
+            "Se réveille seul chaque nuit et désigne le joueur réduit au silence le lendemain.",
+            "Le joueur doit dire « Passe » pendant la parole et les accusations, et son vote ne compte pas.",
+            "S'il est bloqué par le Cerbère, aucun silence n'est imposé. Il chasse toujours normalement avec la meute et suit les règles de clan du Couple.",
+        ),
+        "talkative_wolves": (
+            "Se réveille seul, choisit un joueur et lui impose un mot à prononcer pendant sa prise de parole du lendemain.",
+            "Le narrateur affiche le joueur et le mot pendant la journée. Le rôle ne tue personne directement.",
+            "Le Cerbère annule le mot de cette nuit. Il reste membre physique de la meute pour l'Ours, le Berger, le Juge et les Couples.",
+        ),
+        "blue_wolves": (
+            "Chasse normalement avec la meute, mais trompe la Voyante.",
+            "Quand la Voyante le vise, l'interface affiche un rôle aléatoire parmi tous les rôles, y compris Loup Bleu.",
+            "Bloquer le Loup Bleu ne retire pas son camouflage. Si la Voyante elle-même est bloquée, elle voit le Cerbère. Il appartient au clan loup sauf changement par Couple Alien ou mixte.",
+        ),
+        "white_wolves": (
+            "Chasse avec la meute toutes les nuits. Les sous-rôles des loups restent cachés pendant leur discussion.",
+            "Les nuits 2, 4, 6… il se réveille seul et peut tuer directement un autre membre physique de la meute, ou passer. Le Cerbère annule ce tir pour la nuit.",
+            "Il est vu comme loup par le Juge, l'Ours et le Berger, mais gagne seul s'il reste le dernier survivant. Un Couple mixte ou Alien peut remplacer cet objectif de clan.",
+        ),
+        "barbers": (
+            "La première nuit, convient d'un clin d'œil avec le narrateur. Pendant un jour, il peut utiliser une seule cartouche sur un joueur.",
+            "Si la cible appartient physiquement aux loups, elle meurt. Sinon personne ne meurt, la cartouche est perdue et le Barbier devient Simple Villageois.",
+            "Le Cerbère bloque son action pendant la journée concernée. Une infection le transforme en Loup simple. En Couple, son pouvoir reste disponible tant que son clan le permet.",
+        ),
+        "aliens": (
+            "Joue en solo. Après son signal, il peut attribuer un rôle à un ou plusieurs joueurs : une seule erreur le tue, les réponses correctes restent acquises.",
+            "Il gagne s'il découvre tous les rôles requis ou s'il reste le dernier survivant. Les attaques de la meute et l'infection échouent toujours sur lui, mais la Sorcière peut le tuer.",
+            "Le Cerbère bloque sa tentative de devinette, pas ses immunités. Tout Couple contenant un Alien rejoint le clan Alien, même avec un villageois ou un loup.",
+        ),
+        "prostitutes": (
+            "Chaque nuit, choisit un autre joueur. Si la meute la cible, l'attaque est redirigée vers ce joueur.",
+            "Elle résiste normalement à l'infection, mais la Sorcière peut la tuer directement. La cible redirigée peut encore être sauvée par sa propre protection.",
+            "Si le Cerbère la bloque, redirection et immunité à l'infection disparaissent pour cette nuit : les loups peuvent alors la tuer ou l'infecter. En Couple, elle garde son pouvoir.",
+        ),
+        "servants": (
+            "Après une élimination par vote et avant l'annonce publique, peut prendre secrètement le rôle du joueur éliminé ou rester Servante.",
+            "Si elle accepte, le village apprend que la Servante est morte et elle continue avec le nouveau rôle. Son lien amoureux reste attaché au joueur et le clan est recalculé.",
+            "Elle ne peut jamais être infectée. Le Cerbère n'annule pas son choix après le vote. Prendre Ankou, Chasseur, Alien ou loup donne les règles complètes du nouveau rôle.",
+        ),
+        "ancients": (
+            "Possède deux vies uniquement contre l'attaque normale de la meute. La première attaque enlève une vie, la seconde le tue.",
+            "Potion de mort, tir du Chasseur, Barbier et autres morts directes le tuent immédiatement. S'il meurt par vote, tous les pouvoirs villageois vivants disparaissent sauf celui du Chasseur.",
+            "La première tentative d'infection est absorbée comme une première attaque et consomme la cartouche ; une tentative après cette première vie peut réussir. Le Cerbère ne retire pas ses vies.",
+        ),
+        "hunters": (
+            "Quand il meurt de nuit, par vote ou par le tir d'un autre Chasseur, il choisit un joueur vivant à emporter avec lui.",
+            "Les tirs peuvent former une chaîne de Chasseurs. Il conserve son rôle même si l'Ancien meurt par vote.",
+            "Le Cerbère n'annule pas son dernier tir. Une infection le transforme en Loup simple et retire le pouvoir. En Couple, le tir reste déclenché à sa mort.",
+        ),
+        "bears": (
+            "Chaque nuit, le narrateur vérifie ses deux voisins vivants les plus proches autour de la table. Il grogne si au moins un est membre physique de la meute.",
+            "Après une mort, les voisins sont recalculés : il peut continuer à grogner si le nouveau voisin est loup. Un Ours infecté garde son rôle mais ne grogne jamais à cause de lui-même.",
+            "Le Cerbère empêche le grognement de cette nuit. L'infection le fait rejoindre la meute sans perdre son pouvoir ; le Juge et le Berger le considèrent alors comme loup.",
+        ),
+        "shepherds": (
+            "Commence avec trois moutons. Chaque nuit, il peut en envoyer de un à trois vers des joueurs.",
+            "Un mouton revient si la cible n'est pas membre physique de la meute ; il est perdu définitivement si la cible est loup. À zéro mouton, le Berger ne se réveille plus.",
+            "Le Cerbère empêche tout envoi sans perdre de mouton. Une infection transforme le Berger en Loup simple. Son Couple change son clan, pas le résultat physique des moutons.",
+        ),
+        "cupids": (
+            "La première nuit, choisit deux joueurs différents et peut se choisir lui-même avec une autre personne.",
+            "Deux membres du même camp continuent avec ce camp. Villageois + loup forment un Couple indépendant. Tout Couple contenant un Alien rejoint le clan Alien.",
+            "Le Cerbère agit après Cupidon et ne peut donc pas annuler le lien déjà créé. Les pouvoirs individuels restent actifs et le clan du Couple est recalculé après infection ou transformation.",
+        ),
+        "judges": (
+            "Chaque nuit, compare deux joueurs différents et peut se choisir avec une autre personne. Il apprend seulement « même clan » ou « clans différents ».",
+            "Le résultat utilise les clans actuels : Village, Loups, Alien ou Couple indépendant. Infection, Enfant Sauvage transformé, Ange expiré et Couples sont donc pris en compte.",
+            "Le Cerbère annule entièrement le verdict de cette nuit. Une infection le transforme en Loup simple et lui retire ses comparaisons futures.",
+        ),
+        "wild_children": (
+            "La première nuit, choisit un autre joueur comme modèle.",
+            "Si ce modèle meurt pendant la nuit ou par le vote, l'Enfant Sauvage rejoint physiquement la meute tout en gardant son identité. Une autre cause de mort du modèle ne déclenche pas la transformation.",
+            "Transformé, il est détecté comme loup par Ours, Berger et Juge. Le Cerbère n'annule pas le choix déjà fait ; une infection préalable le transforme directement en Loup simple.",
+        ),
+        "angels": (
+            "Joue seul pendant le premier jour. S'il est l'unique éliminé par le vote final de ce jour, il gagne immédiatement seul.",
+            "Si un autre joueur sort, si le vote est à égalité ou s'il est passé, sa chance expire et il rejoint définitivement le Village. Mourir la première nuit ne donne aucune victoire.",
+            "Le Cerbère n'affecte pas cette condition. Une infection le transforme en Loup simple. Les règles Alien et Couple mixte peuvent recalculer son clan avant ou après l'expiration.",
+        ),
+        "ankous": (
+            "Après sa mort, ne parle plus mais conserve un vote par jour pendant exactement deux jours de vote.",
+            "Mort de nuit : il vote le jour même puis le suivant. Mort par vote : ses deux votes commencent les deux jours suivants. Un jour où le vote est passé consomme quand même une journée.",
+            "Le Cerbère n'annule pas ces votes posthumes. Une infection ou la perte des pouvoirs causée par l'Ancien le transforme en Loup simple/Villageois avant sa mort et retire donc l'effet Ankou.",
+        ),
+        "little_girls": (
+            "Peut entrouvrir les yeux physiquement pendant le tour des loups pour tenter de les reconnaître, sans écran ni confirmation du narrateur.",
+            "Les loups choisissent d'abord une victime. S'ils voient quelqu'un regarder, ils peuvent choisir cette personne comme nouvelle cible, qu'elle soit réellement Petite Fille ou non. Une seule cible finale est attaquée.",
+            "Le Cerbère agit après ce moment et ne confirme ni n'annule l'observation. Infectée, elle devient Loup simple et ne joue plus ce pouvoir. Protection, Pute, Sorcière et infection utilisent la cible finale.",
+        ),
+        "seers": (
+            "Chaque nuit, choisit un autre joueur et découvre le rôle affiché par l'interface.",
+            "Le Loup Bleu renvoie un rôle entièrement aléatoire. Si la Voyante est bloquée par le Cerbère, elle ne voit que le Loup Cerbère, quelle que soit sa cible.",
+            "Une infection la transforme en Loup simple et retire ses visions. En Couple elle garde son pouvoir, mais gagne avec le clan recalculé du Couple.",
+        ),
+        "witches": (
+            "Après les loups, voit leur cible finale et possède une potion de vie et une potion de mort, utilisables une seule fois chacune.",
+            "La vie annule la mort de la cible. La mort tue directement une autre personne et peut tuer Alien, Pute ou Ancien dès le premier coup.",
+            "Le Cerbère fait sauter entièrement son tour sans consommer les potions. Une infection la transforme en Loup simple et lui retire les potions restantes. Son clan de Couple n'empêche pas ses choix.",
+        ),
+        "protectors": (
+            "Chaque nuit, choisit un joueur à protéger contre l'attaque de la meute. Il peut se choisir et répéter une protection.",
+            "La protection bloque aussi une tentative d'infection sur cette cible, mais la cartouche du Loup-Père est quand même consommée. Elle ne bloque pas potion de mort, Loup Blanc, Chasseur ou Barbier.",
+            "Si le Cerbère bloque le Protecteur, son choix n'a aucun effet cette nuit et infection/attaque peuvent passer. Une infection réussie le transforme en Loup simple.",
+        ),
+        "villagers": (
+            "N'a aucun pouvoir nocturne : il observe, discute, accuse et vote avec le Village.",
+            "Le Cerbère ne lui retire rien. Le Loup Noir peut annuler sa parole et son vote pour un jour, et le Loup Bavard peut lui imposer un mot.",
+            "Une infection le transforme en Loup simple. Avec un loup, il forme un Couple indépendant ; avec un Alien, il rejoint le clan Alien ; avec un villageois, il reste Village.",
+        ),
+    },
+    "en": {
+        "simple_wolves": ("Wakes with the pack every night; the pack attacks one non-wolf target.", "If the Wolves see someone peeking, they may replace their first target with that person. The narrator never confirms the person's role.", "A Cerberus block removes no special power from a regular Wolf. Infection and Couple rules can still recalculate its faction."),
+        "infecting_fathers": ("Hunts with the pack and owns one infection shot for the entire game, used after the pack's final choice.", "Every attempt spends the shot. Protection, the Elder's first life, an unblocked Escort, Alien and Servant make it fail.", "Cerberus skips the infection without spending the shot. A success creates a regular Wolf, except an infected Bear keeps the Bear role."),
+        "cerberus_wolves": ("After the pack attack, blocks one other player's power for the current night.", "It can cancel protection, Escort redirection, potions, infection, White Wolf shot, silence, required word, Bear, Shepherd and Judge. A blocked Seer sees Cerberus.", "It does not remove absolute passive effects belonging to Alien, Servant, Elder, Hunter, Ankou or Angel. It is otherwise a physical Wolf."),
+        "black_wolves": ("Wakes alone and silences one player for the following day.", "That player must answer “Pass” during discussion and accusations, and their vote is not counted.", "Cerberus cancels the silence for that night. The Black Wolf still hunts with the pack and follows Couple faction rules."),
+        "talkative_wolves": ("Wakes alone, chooses a player and gives them a word they must say during the next day's speech.", "The narrator displays the player and required word during the day; this power does not kill directly.", "Cerberus cancels the word. The Talkative Wolf remains a physical pack member for Bear, Shepherd, Judge and Couples."),
+        "blue_wolves": ("Hunts normally but deceives the Seer.", "When inspected, the interface displays a random role from every available role, including Blue Wolf.", "Blocking Blue Wolf does not remove the disguise; blocking the Seer shows Cerberus. Couple or Alien links may change its winning faction."),
+        "white_wolves": ("Hunts with the pack every night while exact wolf sub-roles stay hidden from the pack.", "On nights 2, 4, 6… it wakes alone and may directly kill another physical pack member or pass. Cerberus cancels this shot.", "Bear, Shepherd and Judge treat it as a Wolf, but it normally wins alone as the last survivor. Mixed or Alien Couple rules may replace that objective."),
+        "barbers": ("Agrees on a wink with the narrator on night one, then has one daytime shot against one player.", "A physical Wolf target dies. On a miss nobody dies, the shot is lost and the Barber becomes a Villager.", "Cerberus blocks the daytime action. Infection turns the Barber into a regular Wolf; a Couple keeps the power while changing the winning faction."),
+        "aliens": ("Plays solo and may assign roles to one or more players after giving the signal. One error kills the Alien; correct answers remain saved.", "Wins after discovering all required roles or as the last survivor. Pack attacks and infection always fail, but the Witch can kill it.", "Cerberus blocks the guessing action, not immunity. Any Couple containing Alien becomes part of the Alien faction."),
+        "prostitutes": ("Chooses another player nightly. If the pack targets the Escort, the attack is redirected to that player.", "Normally resists infection, while the Witch can kill directly. Protection is evaluated against the final redirected target.", "Cerberus removes redirection and infection immunity for that night, allowing a pack kill or infection. Couple membership does not remove the role."),
+        "servants": ("Before a voted player's role is announced, may secretly take that role or remain the Servant.", "On acceptance the village is told the Servant died, while the player continues with the new role. Lover status remains attached and the faction is recalculated.", "Can never be infected. Cerberus does not cancel the post-vote choice; taking Ankou, Hunter, Alien or Wolf grants the full new rules."),
+        "ancients": ("Has two lives only against normal pack attacks: the first removes one life and the second kills.", "Witch, Hunter, Barber and other direct deaths kill immediately. A vote death removes every living Village power except Hunter.", "The first infection attempt consumes the shot and the first life; a later attempt may work. Cerberus never removes these lives."),
+        "hunters": ("After dying at night, by vote or from another Hunter, chooses one living player to take along.", "Hunter shots can chain. Hunter keeps the role even when an Elder vote death removes other Village powers.", "Cerberus does not cancel the last shot. Infection creates a regular Wolf and removes the Hunter power; Couple membership keeps the death trigger."),
+        "bears": ("The narrator checks the two closest living neighbours around the table; the Bear growls when at least one is a physical Wolf.", "Neighbours are recalculated after deaths. An infected Bear keeps the role, joins the pack, and never growls because of itself.", "Cerberus prevents that night's growl. An infected Bear is treated as Wolf by Judge and Shepherd."),
+        "shepherds": ("Starts with three sheep and may send one to three of them to players each night.", "A sheep returns from a non-pack target and is permanently lost against a physical Wolf. At zero sheep the Shepherd no longer wakes.", "Cerberus prevents all sending without losing sheep. Infection turns Shepherd into a regular Wolf; Couple changes faction, not sheep results."),
+        "cupids": ("On night one, links two different players and may include Cupid in the pair.", "Same-faction lovers stay in that faction; Village + Wolf creates an independent Couple; any pair containing Alien joins Alien.", "Cerberus acts later and cannot cancel the link. Individual powers remain and the Couple faction is recalculated after infection or transformation."),
+        "judges": ("Compares two different players nightly and may choose self plus another player; only learns same or different faction.", "Uses current Village, Wolf, Alien or independent Couple factions, including infection, transformed Wild Child and expired Angel.", "Cerberus removes the verdict for that night. Infection turns Judge into a regular Wolf and ends future comparisons."),
+        "wild_children": ("Chooses another player as a role model on the first night.", "Joins the physical pack if the model dies at night or by vote. Other causes of the model's death do not trigger the change.", "After changing, Bear, Shepherd and Judge detect a Wolf. Cerberus does not cancel the saved model; prior infection creates a regular Wolf."),
+        "angels": ("Plays solo on day one and wins alone if uniquely eliminated by that day's final vote.", "If someone else leaves, the vote ties, or voting is skipped, the chance expires and Angel permanently joins Village. A night-one death is not a win.", "Cerberus does not affect the condition. Infection creates a regular Wolf, while Alien or mixed Couple rules may recalculate the faction."),
+        "ankous": ("After death, cannot speak but keeps one vote per day for exactly two voting days.", "A night death allows votes that day and the next; a vote death starts on the following two days. A skipped vote still consumes a day.", "Cerberus does not cancel ghost votes. Infection or loss of powers from Elder changes the role before death and therefore removes the Ankou effect."),
+        "little_girls": ("May physically peek during the Wolves' turn to identify them, without screen help or narrator confirmation.", "Wolves first choose a victim, then may replace it with anyone they saw peeking, whether that person is really Little Girl or not. Only the final target is attacked.", "Cerberus acts later and neither confirms nor cancels peeking. Infection creates a regular Wolf; protection, Escort, Witch and infection use the final target."),
+        "seers": ("Inspects another player every night and sees the role displayed by the interface.", "Blue Wolf produces a completely random role. A Seer blocked by Cerberus sees only Cerberus regardless of the selected target.", "Infection creates a regular Wolf and removes visions. A Couple keeps the power but changes the winning faction."),
+        "witches": ("Acts after the Wolves, sees their final target, and owns one life potion plus one death potion.", "Life cancels the target's death. Death directly kills another player and can kill Alien, Escort or Elder on the first hit.", "Cerberus skips the whole turn without spending potions. Infection creates a regular Wolf and removes remaining potions; Couple faction does not remove choices."),
+        "protectors": ("Protects one player from the pack each night and may protect self or repeat a target.", "Also stops infection on that target, although the Alpha's shot is still consumed. It does not stop Witch, White Wolf, Hunter or Barber deaths.", "Cerberus makes that night's protection ineffective. A successful infection creates a regular Wolf."),
+        "villagers": ("Has no night power; watches, discusses, accuses and votes with Village.", "Cerberus removes nothing. Black Wolf can remove speech and vote for a day, while Talkative Wolf can impose a word.", "Infection creates a regular Wolf. Pairing with Wolf creates an independent Couple, with Alien joins Alien, and with Village remains Village."),
+    },
+    "tn": {
+        "simple_wolves": ("Yfi9 m3a el meute kol lil w ya5tarou cible wa7da moch loup.", "Ken chefou joueur yetfarrej, ynajmou ybadlou cible loula bih. El narrateur ma yconfirmi 7atta role.", "Blocage Cerbere ma yna77ilou 7atta pouvoir special. Infection w Couple ynajmou ybadlou clan mte3ou."),
+        "infecting_fathers": ("Ysayyed m3a el meute w 3andou kartoucha infection wa7da fel game, ba3d choix final mta3 loups.", "Ay tentative tconsumi kartoucha. Protection, awel vie mta3 Ancien, Pute moch bloquee, Alien w Servante yfachelou infection.", "Cerbere yblocki tour infection ama kartoucha tab9a. Infection t7awwel cible Loup 3adi, ken Ours yeb9a b role mte3ou w yod5ol lel meute."),
+        "cerberus_wolves": ("Ba3d attaque mta3 meute, yblocki pouvoir mta3 joueur e5er lel lila hedhi.", "Ynajem yna77i protection, renvoi Pute, potions, infection, tir Loup Blanc, silence, kelma, Ours, Berger w Juge. Voyante bloquee tchouf Cerbere bark.", "Ma yna77ich immunites absolues mta3 Alien, Servante, Ancien, Chasseur, Ankou wala Ange. Houwa loup physique normal."),
+        "black_wolves": ("Yfi9 wa7dou w ysakket joueur lel nhar elli ba3dou.", "Joueur y9oul ken Passe fel parole w accusations, w vote mte3ou ma yet7sebch.", "Cerbere yfas5 silence mta3 ellila. Loup Noir ykammel ysayyed m3a meute w yetba3 regles Couple."),
+        "talkative_wolves": ("Yfi9 wa7dou, ya5tar joueur w ya3tih kelma lezem y9oulha 8odwa fi klemou.", "El narrateur ywarrri joueur w kelma fel nhar; pouvoir hedha ma yo9telch direct.", "Cerbere yfas5 kelma. Houwa membre physique mel meute lel Ours, Berger, Juge w Couples."),
+        "blue_wolves": ("Ysayyed normal m3a meute ama y8alet el Voyante.", "Ki Voyante ta5tarou, interface twarri role random men les roles lkol, inclus Loup Bleu.", "Blocage mta3 Loup Bleu ma yna77ich camouflage; ken Voyante bloquee tchouf Cerbere. Couple wala Alien ynajem ybaddel clan victoire."),
+        "white_wolves": ("Ysayyed m3a meute kol lil w sous-roles mta3 loups yab9aw me5byin fel discussion.", "Fel lil 2, 4, 6… yfi9 wa7dou, ynajem yo9tel membre physique mel meute wala passe. Cerbere yblocki tir hedha.", "Ours, Berger w Juge y7esbouh loup, ama normalement yerba7 wa7dou ken yab9a e5er 3ayech. Couple mixte wala Alien ynajem ybaddel objectif."),
+        "barbers": ("Awel lil yetfehem 3la 8amza m3a narrateur, w 3andou kartoucha wa7da fel nhar 3la joueur.", "Ken cible loup physique tmout. Ken moch loup, 7ad ma ymout, kartoucha tetna77a w Barbier ywali Villageois.", "Cerbere yblocki action fel nhar. Infection t7awlou Loup 3adi; Couple ybaddel clan ama pouvoir yab9a."),
+        "aliens": ("Yal3ab solo. Ba3d signal, yguessi role mta3 joueur wa7ed wala barcha; 8alta wa7da tmoutou w s7a7 yet7afdhoulou.", "Yerba7 ki yekchef roles elli lezem wala ki yab9a e5er 3ayech. Attaque loups w infection dima ma ynej7ouch, ama Sorciere tnajem to9tlou.", "Cerbere yblocki guess moch immunite. Ay Couple fih Alien ywali clan Alien."),
+        "prostitutes": ("Kol lil ta5tar joueur e5er. Ken meute ta5tarha, attaque temchi lel joueur hedheka.", "Normalement infection ma temchich fiha, ama Sorciere tnajem to9telha. Protection tet7seb 3la cible finale.", "Ken Cerbere blockeha, renvoi w immunite infection yetna77aw: loups ynajmou yo9tlouha wala yinfectiwha. Couple ma yna77ich pouvoir."),
+        "servants": ("9bal annonce mta3 joueur eli 5raj bel vote, tnajem te5ou role mte3ou bel sir wala tab9a Servante.", "Ken te5ouh, village yesma3 elli Servante metet w hiya tkammel b role jdid. Lien Couple yab9a w clan yet3awed yet7seb.", "Matetinfectech jemla. Cerbere ma yfas5ch choix ba3d vote; ken te5ou Ankou, Chasseur, Alien wala loup te5ou regles kemla."),
+        "ancients": ("3andou zouz vies ken contre attaque normale mta3 meute: loula tna77i vie w thenya to9tlou.", "Sorciere, Chasseur, Barbier w mawt direct yo9tlouh men awel marra. Ken ymout bel vote, pouvoirs Village lkol yetna77aw sauf Chasseur.", "Awel tentative infection tconsumi kartoucha w awel vie; ba3dha infection tnajem tenja7. Cerbere ma yna77ich vies."),
+        "hunters": ("Ki ymout fel lil, bel vote wala b tir Chasseur e5er, ya5tar joueur 3ayech yhezou m3ah.", "Tirs ynajmou ya3mlou chaine. Chasseur yeb9a b role mte3ou 7atta ken Ancien ymout bel vote.", "Cerbere ma yblockich e5er tir. Infection t7awlou Loup 3adi w yna77i pouvoir; Couple ma yfas5ch tir mta3 mawt."),
+        "bears": ("Narrateur ychouf a9reb zouz jiran 3aychin; Ours ygarger ken we7ed menhom loup physique.", "Ba3d mawt, jiran yetbadlou. Ours infecte yeb9a Ours, yod5ol meute w ma ygargerch 3la rou7ou.", "Cerbere ywa9ef gargar ellila. Ours infecte yet7seb loup 3and Juge w Berger."),
+        "shepherds": ("Yabda b 3 3lelech w ynajem yab3ath men 1 l 3 kol lil.", "3alouch yerja3 men cible moch loup w ydhi3 definitivement 3and loup physique. Ki youfaw, Berger ma3ach yfi9.", "Cerbere ywa9ef envoi bla ma ydhi3 3lelech. Infection t7awlou Loup 3adi; Couple ybaddel clan moch resultat mouton."),
+        "cupids": ("Awel lil yrabbet zouz joueurs mo5talfin w ynajem ya5tar rou7ou m3a joueur e5er.", "Nafs camp ykamlou m3ah; Village + loup ywali Couple independent; ay couple fih Alien ywali clan Alien.", "Cerbere yji ba3dou w ma ynajemch yfas5 lien. Pouvoirs individuels yab9aw w clan Couple yetbaddel ba3d infection wala transformation."),
+        "judges": ("Kol lil y9aren zouz joueurs mo5talfin w ynajem ya5tar rou7ou m3a we7ed; ya3ref bark nafs clan wala mo5talfin.", "Resultat yesta3mel clans taw: Village, Loups, Alien wala Couple independent, inclus infection, Enfant Sauvage w Ange ba3d expiration.", "Cerbere yfas5 verdict ellila. Infection t7awlou Loup 3adi w ma3ach y9aren."),
+        "wild_children": ("Awel lil ya5tar joueur e5er idole mte3ou.", "Ken idole ymout fel lil wala bel vote, Enfant Sauvage yod5ol physiquement lel meute. Cause mawt o5ra ma t7awwlouch.", "Ba3d transformation Ours, Berger w Juge y7esbouh loup. Cerbere ma yfas5ch idole; infection 9bal t7awlou Loup 3adi direct."),
+        "angels": ("Yal3ab solo nhar louel w yerba7 wa7dou ken houwa wa7dou yo5rej bel vote final.", "Ken joueur e5er yo5rej, vote egalite wala passe, chance toufa w Ange ywali m3a Village. Ken ymout awel lil ma yerba7ch.", "Cerbere ma y2atherch 3al condition. Infection t7awlou Loup 3adi; Couple Alien wala mixte ynajem ybaddel clan."),
+        "ankous": ("Ba3d ma ymout ma ya7kich, ama yo93od ysawwet marra kol nhar pendant zouz nharat vote.", "Ken met fel lil ysawwet nafs nhar w elli ba3dou; ken met bel vote yabda fel zouz nharat elli ba3d. Passe yconsumi nhar.", "Cerbere ma yfas5ch votes ba3d mawt. Infection wala perte pouvoirs mta3 Ancien tbaddel role 9bal mawt w effet Ankou ydhi3."),
+        "little_girls": ("Tnajem t7ell 3iniha chwaya physiquement waqt tour loups bech ta3refhom, bla ecran w bla confirmation narrateur.", "Loups ya5tarou victime loula, ba3d ynajmou ybadlouha b ay joueur chefouh yetfarrej, que ce soit Petite Fille wala le. Ken cible finale wa7da tetdhareb.", "Cerbere yji ba3d w ma yconfirmi ma yfas5 chay. Infection t7awwelha Loup 3adi; Protecteur, Pute, Sorciere w infection yesta3mlou cible finale."),
+        "seers": ("Kol lil ta5tar joueur e5er w tchouf role eli interface twarrih.", "Loup Bleu ywarrilha role random. Ken Cerbere blockeha, tchouf Loup Cerbere bark ay cible ta5tarha.", "Infection t7awwelha Loup 3adi w yna77i visions. Fel Couple pouvoir yab9a ama clan victoire yetbaddel."),
+        "witches": ("Ba3d loups tchouf cible finale, w 3andha potion vie w potion mort, kol wa7da marra bark.", "Vie tna77i mawt cible. Mort to9tel direct joueur e5er w tnajem to9tel Alien, Pute wala Ancien men awel dharba.", "Cerbere yfawwet tour kemel bla consommation potions. Infection t7awwelha Loup 3adi w yna77i potions; Couple ma ywa9efch choix."),
+        "protectors": ("Kol lil ya7mi joueur men attaque meute, w ynajem ya7mi rou7ou wala y3awed nafs cible.", "Protection twa9ef zeda infection 3al cible, ama kartoucha Loup-Pere tetconsuma. Ma twa9efch Sorciere, Loup Blanc, Chasseur wala Barbier.", "Ken Cerbere blockih, protection ma te5demch ellila. Infection s7i7a t7awlou Loup 3adi."),
+        "villagers": ("Ma 3andouch pouvoir fel lil; yra9eb, ya7ki, yethem w ysawwet m3a Village.", "Cerbere ma yna77ilou chay. Loup Noir ynajem yna77i klem w vote nhar, w Loup Bavard yefredh kelma.", "Infection t7awlou Loup 3adi. M3a loup ywali Couple independent, m3a Alien ywali Alien, w m3a Village yeb9a Village."),
+    },
+}

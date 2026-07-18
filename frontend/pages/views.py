@@ -1,7 +1,9 @@
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 
+from .role_guides import ROLE_CAMPS, ROLE_CODES, ROLE_GUIDES
 from .translations import LANGUAGES, ROLES, UI
 
 
@@ -12,7 +14,18 @@ WOLF_ROLE_KEYS = (
     "cerberus_wolves",
     "black_wolves",
     "talkative_wolves",
+    "blue_wolves",
+    "white_wolves",
 )
+
+
+def health(request):
+    return JsonResponse(
+        {
+            "service": "loup-garou-frontend",
+            "status": "ok",
+        }
+    )
 
 
 def current_language(request):
@@ -47,6 +60,22 @@ def home(request):
         error = UI[current_language(request)]["auth_error"]
 
     return render(request, "pages/home.html", {"error": error})
+
+
+def roles_guide(request):
+    language = current_language(request)
+    guides = [
+        {
+            "key": role,
+            "name": ROLES[language][role][0],
+            "summary": ROLES[language][role][1],
+            "code": ROLE_CODES[role],
+            "camp": ROLE_CAMPS[role],
+            "rules": ROLE_GUIDES[language][role],
+        }
+        for role in ROLE_KEYS
+    ]
+    return render(request, "pages/roles_guide.html", {"role_guides": guides})
 
 
 def welcome(request):

@@ -459,6 +459,8 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .alien-guess-row span small { margin-top: 4px; color: #6f7c82; font-size: .58rem; }
 .scene-panel .alien-guess-row select { width: 100%; margin: 0; padding: 10px 12px; font-size: .7rem; }
 .alien-guess-row:has(input:checked) { border-color: rgba(199,139,69,.35); background: rgba(199,139,69,.06); }
+.randomized-vision .vision-symbol { animation: blue-wolf-wheel .8s cubic-bezier(.2,.8,.2,1); }
+@keyframes blue-wolf-wheel { 0% { transform: rotate(-540deg) scale(.65); opacity: .25; } 100% { transform: rotate(0) scale(1); opacity: 1; } }
 
 .vote-board { display: grid; gap: 7px; margin-top: 32px; }
 .vote-row { display: grid; grid-template-columns: 38px 1fr auto; align-items: center; gap: 13px; padding: 11px 14px; border: 1px solid rgba(255,255,255,.07); background: rgba(255,255,255,.025); }
@@ -541,6 +543,7 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .end-emblem.wolf { border-color: rgba(181,62,48,.4); color: #b64a3c; background: rgba(174,55,42,.1); box-shadow: 0 0 55px rgba(174,55,42,.13); }
 .end-score { display: grid; grid-template-columns: repeat(2, minmax(130px, 220px)); gap: 1px; width: fit-content; margin: 35px 0; border: 1px solid rgba(65,49,31,.13); background: rgba(65,49,31,.1); }
 .end-score.three { grid-template-columns: repeat(3, minmax(130px, 190px)); }
+.end-score.four { grid-template-columns: repeat(4, minmax(120px, 175px)); }
 .end-score > div { padding: 20px 28px; background: rgba(255,255,255,.35); }
 .end-score strong, .end-score span { display: block; }.end-score strong { color: #8c5d29; font: 700 2rem "Cinzel", serif; }.end-score span { margin-top: 4px; color: #746e65; font-size: .62rem; text-transform: uppercase; letter-spacing: .08em; }
 .final-roster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 7px; max-width: 680px; }
@@ -550,7 +553,7 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 
 @media (max-width: 540px) {
   .end-score, .final-roster { grid-template-columns: 1fr; width: 100%; }
-  .end-score.three { grid-template-columns: 1fr; }
+  .end-score.three, .end-score.four { grid-template-columns: 1fr; }
   .alien-guess-row { grid-template-columns: 22px 1fr; }
   .alien-guess-row select { grid-column: 1 / -1; }
 }
@@ -580,4 +583,106 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
   button.scene-action { width: 100%; }
   .moon-orbit { right: -70px; width: 200px; height: 200px; }
   .role-copy span { display: none; }
+}
+
+/* Public role guide */
+.role-guide-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  margin-top: 10px;
+  padding: 13px 16px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 3px;
+  color: var(--ivory);
+  font-size: .82rem;
+  font-weight: 700;
+  text-decoration: none;
+  background: rgba(255,255,255,.045);
+  transition: border-color .2s, background .2s;
+}
+.role-guide-link:hover { border-color: rgba(199,139,69,.55); background: rgba(199,139,69,.09); }
+
+.roles-guide-page {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 82% 2%, rgba(199,139,69,.12), transparent 25%),
+    linear-gradient(rgba(5,10,14,.96), rgba(5,10,14,.99)),
+    url("../images/wolf-login.png") center/cover fixed;
+}
+.guide-header {
+  position: sticky;
+  z-index: 20;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 72px;
+  padding: 14px clamp(18px, 4vw, 58px);
+  border-bottom: 1px solid rgba(255,255,255,.09);
+  background: rgba(6,11,15,.88);
+  backdrop-filter: blur(18px);
+}
+.guide-header-actions { display: flex; align-items: center; gap: 10px; }
+.guide-back {
+  padding: 9px 12px;
+  border: 1px solid rgba(255,255,255,.13);
+  border-radius: 3px;
+  color: #aeb8bd;
+  font-size: .72rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+.guide-back:hover { color: var(--ivory); border-color: rgba(199,139,69,.4); }
+.guide-shell { width: min(1180px, calc(100% - 36px)); margin: 0 auto; padding: clamp(44px, 7vw, 90px) 0 90px; }
+.guide-hero { max-width: 790px; }
+.guide-hero h1 { font-size: clamp(2.8rem, 7vw, 6.2rem); line-height: .95; }
+.guide-hero > p:last-child { max-width: 720px; margin: 22px 0 0; color: #8f9ca2; line-height: 1.75; }
+.guide-tools { position: sticky; z-index: 10; top: 72px; display: grid; grid-template-columns: minmax(240px, 1fr) auto; gap: 16px; margin: 42px 0 24px; padding: 14px; border: 1px solid rgba(255,255,255,.09); background: rgba(8,14,19,.9); backdrop-filter: blur(16px); }
+.guide-search { margin: 0; }
+.guide-search input { height: 43px; padding: 10px 13px; }
+.guide-filters { display: flex; flex-wrap: wrap; gap: 7px; }
+.guide-filters button { width: auto; min-width: 72px; margin: 0; padding: 10px 13px; border: 1px solid rgba(255,255,255,.11); color: #89969c; font-size: .7rem; background: rgba(255,255,255,.035); }
+.guide-filters button.is-active { border-color: rgba(199,139,69,.45); color: var(--ember-light); background: rgba(199,139,69,.1); }
+.role-guide-grid { display: grid; gap: 10px; }
+.role-guide-card { border: 1px solid rgba(255,255,255,.09); background: rgba(255,255,255,.025); }
+.role-guide-card[hidden] { display: none; }
+.role-guide-card[open] { border-color: rgba(199,139,69,.28); background: rgba(199,139,69,.035); }
+.role-guide-card summary { display: grid; grid-template-columns: 48px minmax(0, 1fr) auto 28px; align-items: center; gap: 16px; padding: 18px 20px; cursor: pointer; list-style: none; }
+.role-guide-card summary::-webkit-details-marker { display: none; }
+.guide-role-code { display: grid; place-items: center; width: 44px; height: 44px; border: 1px solid rgba(199,139,69,.28); border-radius: 50%; color: var(--ember-light); font: 700 .66rem "Cinzel", serif; }
+.camp-wolf .guide-role-code { border-color: rgba(203,79,62,.4); color: #e78d7d; background: rgba(132,39,29,.1); }
+.camp-solo .guide-role-code, .camp-variable .guide-role-code { border-color: rgba(102,157,193,.4); color: #83b9d7; background: rgba(53,112,146,.1); }
+.guide-role-heading strong, .guide-role-heading small { display: block; }
+.guide-role-heading strong { font: 700 1rem "Cinzel", serif; }
+.guide-role-heading small { margin-top: 5px; color: #7f8c92; font-size: .72rem; line-height: 1.45; }
+.guide-camp-badge { padding: 6px 9px; border: 1px solid rgba(255,255,255,.1); color: #87949a; font-size: .6rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }
+.camp-wolf .guide-camp-badge { border-color: rgba(203,79,62,.26); color: #d67e6f; }
+.camp-solo .guide-camp-badge, .camp-variable .guide-camp-badge { border-color: rgba(102,157,193,.26); color: #78abc7; }
+.guide-chevron { color: #78858a; font-size: 1.4rem; text-align: center; transition: transform .2s; }
+.role-guide-card[open] .guide-chevron { transform: rotate(45deg); }
+.guide-role-body { padding: 0 24px 24px 84px; }
+.guide-rules-label { margin: 0 0 10px; color: var(--ember-light); font-size: .62rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.guide-role-body ul { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }
+.guide-role-body li { position: relative; padding: 11px 14px 11px 28px; color: #a4afb4; font-size: .78rem; line-height: 1.65; background: rgba(255,255,255,.025); }
+.guide-role-body li::before { position: absolute; top: 18px; left: 13px; width: 5px; height: 5px; border-radius: 50%; background: var(--ember); content: ""; }
+.guide-no-result { padding: 45px 20px; border: 1px dashed rgba(255,255,255,.12); color: #849197; text-align: center; }
+
+@media (max-width: 760px) {
+  .guide-header { align-items: flex-start; min-height: 96px; padding: 12px 14px; }
+  .guide-header-actions { align-items: flex-end; flex-direction: column; gap: 6px; }
+  .guide-header .language-selector select { min-width: 48px; max-width: 126px; }
+  .guide-back { padding: 5px 8px; font-size: .62rem; }
+  .guide-shell { width: min(100% - 24px, 1180px); padding-top: 38px; }
+  .guide-tools { top: 96px; grid-template-columns: 1fr; margin-top: 30px; }
+  .guide-filters { display: grid; grid-template-columns: repeat(2, 1fr); }
+  .guide-filters button { width: 100%; }
+  .role-guide-card summary { grid-template-columns: 40px minmax(0, 1fr) 22px; gap: 10px; padding: 15px 13px; }
+  .guide-role-code { width: 38px; height: 38px; }
+  .guide-camp-badge { grid-column: 2; width: fit-content; margin-top: -5px; }
+  .guide-chevron { grid-column: 3; grid-row: 1 / span 2; }
+  .guide-role-body { padding: 0 13px 16px; }
+  .guide-role-heading strong { font-size: .83rem; }
+  .guide-role-heading small { font-size: .67rem; }
 }

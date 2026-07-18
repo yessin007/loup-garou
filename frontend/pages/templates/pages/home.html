@@ -38,6 +38,7 @@
           <input id="password" name="password" type="password" inputmode="numeric" autocomplete="current-password" placeholder="{{ ui.password_placeholder }}" required />
 
           <button type="submit">{{ ui.enter }} <span aria-hidden="true">&#8594;</span></button>
+          <a class="role-guide-link" href="{% url 'roles_guide' %}">{{ ui.roles_guide_link }} <span aria-hidden="true">&#8594;</span></a>
           <p class="demo-hint">{{ ui.temporary_access }} : <strong>123 / 123</strong></p>
         </form>
       </section>

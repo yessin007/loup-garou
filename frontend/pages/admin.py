@@ -23,6 +23,7 @@ class RoomEventAdmin(SuperuserDeleteOnlyMixin, admin.ModelAdmin):
     list_display = ("room", "event_type", "round_number", "created_at")
     list_filter = ("event_type", "created_at")
     search_fields = ("room__code", "marker")
+    list_select_related = ("room",)
     readonly_fields = ("room", "marker", "event_type", "round_number", "details", "created_at")
 
 
@@ -30,4 +31,5 @@ class RoomEventAdmin(SuperuserDeleteOnlyMixin, admin.ModelAdmin):
 class RoomPlayerAdmin(SuperuserDeleteOnlyMixin, admin.ModelAdmin):
     list_display = ("name", "room", "role", "joined_at")
     search_fields = ("name", "room__code")
+    list_select_related = ("room",)
     readonly_fields = ("room", "name", "token", "role", "joined_at")

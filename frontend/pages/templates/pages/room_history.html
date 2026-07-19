@@ -18,14 +18,22 @@
       const labels = {night: "{{ room.night|escapejs }}", day: "{{ room.day|escapejs }}"};
       const detailLabels = JSON.parse(document.getElementById("history-detail-labels").textContent);
       function safe(value) { const node = document.createElement("span"); node.textContent = value; return node.innerHTML; }
-      function display(value) { if (Array.isArray(value)) return value.length ? value.join(", ") : "—"; if (value === true) return "Oui"; if (value === false) return "Non"; return value ?? "—"; }
+      let historyTimer = null;
+      function display(value) { if (Array.isArray(value)) return value.length ? value.join(", ") : "—"; if (value === true) return "{{ room.yes|escapejs }}"; if (value === false) return "{{ room.no|escapejs }}"; return value ?? "—"; }
+      function scheduleHistory() { clearTimeout(historyTimer); historyTimer = setTimeout(refreshHistory, 2500); }
       async function refreshHistory() {
-        const response = await fetch("{% url 'room_history_api' game_room.code %}", {cache:"no-store"}); if (!response.ok) return;
-        const data = await response.json();
-        if (!data.events.length) return;
-        timeline.innerHTML = data.events.map(event => `<article class="history-event ${event.type}"><div><span>${labels[event.type]}</span><strong>${event.round}</strong></div><ul>${Object.entries(event.details).map(([key,value]) => `<li><span>${detailLabels[key] || key}</span><strong>${safe(display(value))}</strong></li>`).join("")}</ul></article>`).join("");
+        clearTimeout(historyTimer);
+        if (document.hidden) { scheduleHistory(); return; }
+        try {
+          const response = await fetch("{% url 'room_history_api' game_room.code %}", {cache:"no-store"});
+          if (!response.ok) throw new Error("history unavailable");
+          const data = await response.json();
+          if (data.events.length) timeline.innerHTML = data.events.map(event => `<article class="history-event ${event.type}"><div><span>${labels[event.type]}</span><strong>${event.round}</strong></div><ul>${Object.entries(event.details).map(([key,value]) => `<li><span>${detailLabels[key] || key}</span><strong>${safe(display(value))}</strong></li>`).join("")}</ul></article>`).join("");
+          if (data.status !== "finished") scheduleHistory();
+        } catch (error) { scheduleHistory(); }
       }
-      refreshHistory(); setInterval(refreshHistory, 2000);
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshHistory(); });
+      refreshHistory();
     </script>
   </body>
 </html>

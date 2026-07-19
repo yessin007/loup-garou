@@ -1,4 +1,4 @@
-const CACHE_NAME = "loup-garou-shell-v1";
+const CACHE_NAME = "loup-garou-shell-v2";
 const STATIC_ASSETS = [
   "/static/css/styles.css",
   "/static/images/favicon-wolf.png",
@@ -22,14 +22,13 @@ self.addEventListener("fetch", event => {
   if (event.request.method !== "GET") return;
   const url = new URL(event.request.url);
   if (url.origin !== self.location.origin || !url.pathname.startsWith("/static/")) return;
-  event.respondWith(
-    caches.open(CACHE_NAME).then(async cache => {
-      const cached = await cache.match(event.request);
-      const network = fetch(event.request).then(response => {
-        if (response.ok) cache.put(event.request, response.clone());
-        return response;
-      });
-      return cached || network;
-    })
-  );
+  const networkUpdate = fetch(event.request).then(async response => {
+    if (response.ok) {
+      const cache = await caches.open(CACHE_NAME);
+      await cache.put(event.request, response.clone());
+    }
+    return response;
+  });
+  event.waitUntil(networkUpdate.catch(() => undefined));
+  event.respondWith(caches.match(event.request).then(cached => cached || networkUpdate));
 });

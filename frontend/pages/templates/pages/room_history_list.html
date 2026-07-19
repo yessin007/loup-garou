@@ -12,7 +12,7 @@
       <section class="room-hero"><p class="eyebrow">Archive</p><h1>{{ room.all_histories }}</h1><p>{{ room.history_intro }}</p></section>
       <div class="history-room-list">
         {% for game_room in history_rooms %}
-          <a class="history-room-link" href="{% url 'room_history' game_room.code %}"><span><strong>Room {{ game_room.code }}</strong><small>{{ game_room.events.count }} événement(s) · {{ game_room.updated_at|date:"d/m/Y H:i" }}</small></span><span>→</span></a>
+          <a class="history-room-link" href="{% url 'room_history' game_room.code %}"><span><strong>Room {{ game_room.code }}</strong><small>{{ game_room.event_count }} {{ room.events }} · {{ game_room.updated_at|date:"d/m/Y H:i" }}</small></span><span>→</span></a>
         {% empty %}
           <p class="history-empty">{{ room.history_empty }}</p>
         {% endfor %}

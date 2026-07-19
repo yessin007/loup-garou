@@ -20,17 +20,29 @@
     </main>
     <script>
       const card = document.getElementById("player-room-card");
+      let roomTimer = null;
+      function safe(value) { const node = document.createElement("span"); node.textContent = value; return node.innerHTML; }
+      function scheduleRoom() { clearTimeout(roomTimer); roomTimer = setTimeout(refreshRoom, 2500); }
       async function refreshRoom() {
-        const response = await fetch("{% url 'room_player_api' game_room.code %}", {cache: "no-store"});
-        if (!response.ok) return;
-        const data = await response.json();
-        document.getElementById("room-count")?.replaceChildren(`${data.joined_count} / ${data.player_count} {{ room.players_joined|escapejs }}`);
-        if (data.role && !card.classList.contains("revealed")) {
-          card.className = "player-secret-card revealed";
-          card.innerHTML = `<p class="eyebrow">{{ room.your_role|escapejs }}</p><h1>${data.role.name}</h1><p>${data.role.description}</p><strong>{{ room.keep_secret|escapejs }}</strong>`;
-        }
+        clearTimeout(roomTimer);
+        if (document.hidden) { scheduleRoom(); return; }
+        try {
+          const response = await fetch("{% url 'room_player_api' game_room.code %}", {cache: "no-store"});
+          if (!response.ok) throw new Error("room unavailable");
+          const data = await response.json();
+          document.getElementById("room-count")?.replaceChildren(`${data.joined_count} / ${data.player_count} {{ room.players_joined|escapejs }}`);
+          if (data.role) {
+            if (!card.classList.contains("revealed")) {
+              card.className = "player-secret-card revealed";
+              card.innerHTML = `<p class="eyebrow">{{ room.your_role|escapejs }}</p><h1>${safe(data.role.name)}</h1><p>${safe(data.role.description)}</p><strong>{{ room.keep_secret|escapejs }}</strong>`;
+            }
+            return;
+          }
+          if (data.status !== "finished") scheduleRoom();
+        } catch (error) { scheduleRoom(); }
       }
-      refreshRoom(); setInterval(refreshRoom, 2000);
+      document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshRoom(); });
+      refreshRoom();
     </script>
   </body>
 </html>

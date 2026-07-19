@@ -28,6 +28,9 @@ class GameRoom(models.Model):
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
+    def __str__(self):
+        return self.code
+
 
 class RoomPlayer(models.Model):
     room = models.ForeignKey(GameRoom, related_name="room_players", on_delete=models.CASCADE)
@@ -41,6 +44,9 @@ class RoomPlayer(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["room", "name"], name="unique_room_player_name"),
         ]
+
+    def __str__(self):
+        return f"{self.name} · {self.room_id}"
 
 
 class RoomEvent(models.Model):
@@ -56,3 +62,6 @@ class RoomEvent(models.Model):
         constraints = [
             models.UniqueConstraint(fields=["room", "marker"], name="unique_room_event_marker"),
         ]
+
+    def __str__(self):
+        return f"{self.room_id} · {self.event_type} {self.round_number}"

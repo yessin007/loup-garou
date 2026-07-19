@@ -5,12 +5,13 @@ from io import BytesIO
 import qrcode
 from qrcode.image.svg import SvgPathImage
 from django.db import transaction
+from django.db.models import Count
 from django.conf import settings
 from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_POST, require_safe
 
 from .models import GameRoom, RoomEvent, RoomPlayer
 from .role_guides import ROLE_CAMPS, ROLE_CODES, ROLE_GUIDES
@@ -30,13 +31,13 @@ WOLF_ROLE_KEYS = (
 
 ROOM_TEXT = {
     "fr": {
-        "room_title": "Rejoindre une partie", "room_intro": "Entre le code affiché sur le téléphone du narrateur.", "room_code": "Code de la room", "player_name": "Ton prénom", "join": "Rejoindre", "history": "Historique", "all_histories": "Tous les historiques", "history_intro": "Consulte les parties précédentes sans saisir de code.", "open_history": "Voir l'historique", "scan_qr": "Scanner pour rejoindre", "qr_help": "Scanne le QR ou saisis le code sur ton téléphone.", "waiting": "En attente du narrateur", "waiting_help": "Ton rôle apparaîtra ici quand le narrateur lancera la distribution.", "your_role": "Ton rôle secret", "keep_secret": "Garde cet écran secret.", "joined": "Tu as rejoint la room", "players_joined": "joueur(s) connecté(s)", "invalid_room": "Room introuvable.", "invalid_code": "Le code doit contenir exactement 6 chiffres.", "room_started": "Cette partie a déjà commencé.", "name_used": "Ce prénom est déjà utilisé dans cette room.", "room_full": "La room est complète.", "history_empty": "Aucun jour ou aucune nuit terminé pour le moment.", "night": "Nuit", "day": "Jour", "back": "Retour", "refreshing": "Mise à jour automatique", "room_access": "Rejoindre une room / historique",
+        "room_title": "Rejoindre une partie", "room_intro": "Entre le code affiché sur le téléphone du narrateur.", "room_code": "Code de la room", "player_name": "Ton prénom", "join": "Rejoindre", "history": "Historique", "all_histories": "Tous les historiques", "history_intro": "Consulte les parties précédentes sans saisir de code.", "open_history": "Voir l'historique", "scan_qr": "Scanner pour rejoindre", "qr_help": "Scanne le QR ou saisis le code sur ton téléphone.", "waiting": "En attente du narrateur", "waiting_help": "Ton rôle apparaîtra ici quand le narrateur lancera la distribution.", "your_role": "Ton rôle secret", "keep_secret": "Garde cet écran secret.", "joined": "Tu as rejoint la room", "players_joined": "joueur(s) connecté(s)", "events": "événement(s)", "yes": "Oui", "no": "Non", "invalid_room": "Room introuvable.", "invalid_code": "Le code doit contenir exactement 6 chiffres.", "room_started": "Cette partie a déjà commencé.", "name_used": "Ce prénom est déjà utilisé dans cette room.", "room_full": "La room est complète.", "history_empty": "Aucun jour ou aucune nuit terminé pour le moment.", "night": "Nuit", "day": "Jour", "back": "Retour", "refreshing": "Mise à jour automatique", "room_access": "Rejoindre une room / historique",
     },
     "en": {
-        "room_title": "Join a game", "room_intro": "Enter the code displayed on the narrator's phone.", "room_code": "Room code", "player_name": "Your name", "join": "Join", "history": "History", "all_histories": "All histories", "history_intro": "View previous games without entering a code.", "open_history": "View history", "scan_qr": "Scan to join", "qr_help": "Scan the QR or enter the code on your phone.", "waiting": "Waiting for the narrator", "waiting_help": "Your role will appear here when the narrator starts distribution.", "your_role": "Your secret role", "keep_secret": "Keep this screen private.", "joined": "You joined the room", "players_joined": "connected player(s)", "invalid_room": "Room not found.", "invalid_code": "The code must contain exactly 6 digits.", "room_started": "This game has already started.", "name_used": "This name is already used in this room.", "room_full": "The room is full.", "history_empty": "No completed day or night yet.", "night": "Night", "day": "Day", "back": "Back", "refreshing": "Updates automatically", "room_access": "Join a room / history",
+        "room_title": "Join a game", "room_intro": "Enter the code displayed on the narrator's phone.", "room_code": "Room code", "player_name": "Your name", "join": "Join", "history": "History", "all_histories": "All histories", "history_intro": "View previous games without entering a code.", "open_history": "View history", "scan_qr": "Scan to join", "qr_help": "Scan the QR or enter the code on your phone.", "waiting": "Waiting for the narrator", "waiting_help": "Your role will appear here when the narrator starts distribution.", "your_role": "Your secret role", "keep_secret": "Keep this screen private.", "joined": "You joined the room", "players_joined": "connected player(s)", "events": "event(s)", "yes": "Yes", "no": "No", "invalid_room": "Room not found.", "invalid_code": "The code must contain exactly 6 digits.", "room_started": "This game has already started.", "name_used": "This name is already used in this room.", "room_full": "The room is full.", "history_empty": "No completed day or night yet.", "night": "Night", "day": "Day", "back": "Back", "refreshing": "Updates automatically", "room_access": "Join a room / history",
     },
     "tn": {
-        "room_title": "Od5ol lel game", "room_intro": "Da5el el code eli thaher fi telephone mta3 el narrateur.", "room_code": "Code mta3 el room", "player_name": "Esmek", "join": "Od5ol", "history": "Historique", "all_histories": "Les historiques lkol", "history_intro": "Chouf les games eli fetou blech ma tda5el code.", "open_history": "Chouf el historique", "scan_qr": "Scanni bch tod5ol", "qr_help": "Scanni el QR wala da5el el code fi telephone mte3ek.", "waiting": "Nestannew fel narrateur", "waiting_help": "Role mte3ek yodhher houni ki narrateur yabda el distribution.", "your_role": "Role mte3ek bel sir", "keep_secret": "Ma twarrich el ecran l 7ad.", "joined": "D5alt lel room", "players_joined": "joueur(s) connectes", "invalid_room": "El room mawjoudach.", "invalid_code": "El code lezem ykoun 6 ar9am bark.", "room_started": "El game hedhi bdet deja.", "name_used": "El esm hedha mesta3mel fel room.", "room_full": "El room kemlet.", "history_empty": "Mezel ma fama 7atta lil wala nhar kemel.", "night": "Lil", "day": "Nhar", "back": "Erja3", "refreshing": "Updates automatiquement", "room_access": "Od5ol room / historique",
+        "room_title": "Od5ol lel game", "room_intro": "Da5el el code eli thaher fi telephone mta3 el narrateur.", "room_code": "Code mta3 el room", "player_name": "Esmek", "join": "Od5ol", "history": "Historique", "all_histories": "Les historiques lkol", "history_intro": "Chouf les games eli fetou blech ma tda5el code.", "open_history": "Chouf el historique", "scan_qr": "Scanni bch tod5ol", "qr_help": "Scanni el QR wala da5el el code fi telephone mte3ek.", "waiting": "Nestannew fel narrateur", "waiting_help": "Role mte3ek yodhher houni ki narrateur yabda el distribution.", "your_role": "Role mte3ek bel sir", "keep_secret": "Ma twarrich el ecran l 7ad.", "joined": "D5alt lel room", "players_joined": "joueur(s) connectes", "events": "event(s)", "yes": "Ey", "no": "Le", "invalid_room": "El room mawjoudach.", "invalid_code": "El code lezem ykoun 6 ar9am bark.", "room_started": "El game hedhi bdet deja.", "name_used": "El esm hedha mesta3mel fel room.", "room_full": "El room kemlet.", "history_empty": "Mezel ma fama 7atta lil wala nhar kemel.", "night": "Lil", "day": "Nhar", "back": "Erja3", "refreshing": "Updates automatiquement", "room_access": "Od5ol room / historique",
     },
 }
 
@@ -239,7 +240,7 @@ def room_history(request, code):
     return render(request, "pages/room_history.html", {"game_room": room, "room": room_text(request), "history_labels": ROOM_DETAIL_LABELS[current_language(request)]})
 
 
-@require_GET
+@require_safe
 def room_qr(request, code):
     room = get_object_or_404(GameRoom, code=code)
     join_path = f"{reverse('room_portal')}?code={room.code}"
@@ -254,7 +255,11 @@ def room_qr(request, code):
 
 
 def room_history_list(request):
-    rooms = GameRoom.objects.filter(events__isnull=False).distinct().order_by("-updated_at")
+    rooms = (
+        GameRoom.objects.annotate(event_count=Count("events"))
+        .filter(event_count__gt=0)
+        .order_by("-updated_at")
+    )
     return render(request, "pages/room_history_list.html", {"history_rooms": rooms, "room": room_text(request)})
 
 

@@ -86,6 +86,7 @@ class RoomFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertEqual(response["Content-Type"], "image/svg+xml")
         self.assertIn(b"<svg", response.content)
+        self.assertEqual(Client().head(reverse("room_qr", args=[room.code])).status_code, 200)
 
         portal = Client().get(reverse("room_portal"), {"code": room.code})
         self.assertContains(portal, f'value="{room.code}"')
@@ -118,7 +119,7 @@ class PwaTests(TestCase):
         worker = self.client.get(reverse("service_worker"))
         self.assertEqual(worker.status_code, 200)
         self.assertEqual(worker["Service-Worker-Allowed"], "/")
-        self.assertContains(worker, "loup-garou-shell-v1")
+        self.assertContains(worker, "loup-garou-shell-v2")
 
         home = self.client.get(reverse("home"))
         self.assertContains(home, reverse("pwa_manifest"))

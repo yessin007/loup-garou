@@ -42,9 +42,9 @@ ROOM_TEXT = {
 }
 
 ROOM_DETAIL_LABELS = {
-    "fr": {"deaths": "Victimes", "protected": "Protection", "wolves_target": "Cible des loups", "blocked": "Pouvoir bloqué", "redirected_to": "Redirection", "infection_attempted": "Infection tentée", "infection_succeeded": "Infection réussie", "witch_saved": "Potion de vie", "witch_target": "Potion de mort", "bear_growled": "Ours", "seer_target": "Vision de la Voyante", "seer_role": "Rôle aperçu", "eliminated": "Éliminé par vote", "vote_outcome": "Résultat", "winner": "Vainqueur"},
-    "en": {"deaths": "Victims", "protected": "Protection", "wolves_target": "Wolves' target", "blocked": "Blocked power", "redirected_to": "Redirected to", "infection_attempted": "Infection attempted", "infection_succeeded": "Infection succeeded", "witch_saved": "Life potion", "witch_target": "Death potion", "bear_growled": "Bear", "seer_target": "Seer's vision", "seer_role": "Role seen", "eliminated": "Voted out", "vote_outcome": "Result", "winner": "Winner"},
-    "tn": {"deaths": "Eli metou", "protected": "Protection", "wolves_target": "Cible mta3 el loups", "blocked": "Pouvoir bloque", "redirected_to": "Redirection", "infection_attempted": "Jarbet infection", "infection_succeeded": "Infection nej7et", "witch_saved": "Potion de vie", "witch_target": "Potion de mort", "bear_growled": "Ours", "seer_target": "Vision mta3 el Voyante", "seer_role": "Role eli chefetou", "eliminated": "5raj bel vote", "vote_outcome": "Resultat", "winner": "Eli rba7"},
+    "fr": {"deaths": "Victimes", "protected": "Protection", "wolves_target": "Cible des loups", "blocked": "Pouvoir bloqué", "redirected_to": "Redirection", "infection_attempted": "Infection tentée", "infection_succeeded": "Infection réussie", "witch_saved": "Potion de vie", "witch_target": "Potion de mort", "bear_growled": "Ours", "judge_first": "Premier choix du Juge", "judge_second": "Deuxième choix du Juge", "judge_same_clan": "Même clan", "seer_target": "Vision de la Voyante", "seer_role": "Rôle aperçu", "eliminated": "Éliminé par vote", "vote_outcome": "Résultat", "winner": "Vainqueur"},
+    "en": {"deaths": "Victims", "protected": "Protection", "wolves_target": "Wolves' target", "blocked": "Blocked power", "redirected_to": "Redirected to", "infection_attempted": "Infection attempted", "infection_succeeded": "Infection succeeded", "witch_saved": "Life potion", "witch_target": "Death potion", "bear_growled": "Bear", "judge_first": "Judge's first choice", "judge_second": "Judge's second choice", "judge_same_clan": "Same faction", "seer_target": "Seer's vision", "seer_role": "Role seen", "eliminated": "Voted out", "vote_outcome": "Result", "winner": "Winner"},
+    "tn": {"deaths": "Eli metou", "protected": "Protection", "wolves_target": "Cible mta3 el loups", "blocked": "Pouvoir bloque", "redirected_to": "Redirection", "infection_attempted": "Jarbet infection", "infection_succeeded": "Infection nej7et", "witch_saved": "Potion de vie", "witch_target": "Potion de mort", "bear_growled": "Ours", "judge_first": "Choix louel mta3 Juge", "judge_second": "Choix theni mta3 Juge", "judge_same_clan": "Nafs el clan", "seer_target": "Vision mta3 el Voyante", "seer_role": "Role eli chefetou", "eliminated": "5raj bel vote", "vote_outcome": "Resultat", "winner": "Eli rba7"},
 }
 
 
@@ -139,6 +139,9 @@ def public_event_details(state, event_type):
             "witch_saved": bool(state.get("witchSave")),
             "witch_target": player_label(state, state.get("witchKillId")),
             "bear_growled": state.get("bearGrowled"),
+            "judge_first": player_label(state, state.get("judgeFirstId")),
+            "judge_second": player_label(state, state.get("judgeSecondId")),
+            "judge_same_clan": state.get("judgeSameClan"),
             "seer_target": player_label(state, state.get("seerTargetId")),
             "seer_role": state.get("seerDisplayedRole"),
         }

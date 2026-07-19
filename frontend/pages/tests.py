@@ -56,8 +56,14 @@ class RoomFlowTests(TestCase):
         self.narrator.post(reverse("room_start_api", args=[room.code]))
         state = {
             "stage": "dawn", "round": 1,
-            "players": [{"id": 1, "name": "Ahmed", "alive": False}],
+            "players": [
+                {"id": 1, "name": "Ahmed", "alive": False},
+                {"id": 2, "name": "Sarra", "alive": True},
+            ],
             "deaths": [1], "wolfTargetId": 1,
+            "bearGrowled": True,
+            "judgeFirstId": 1, "judgeSecondId": 2, "judgeSameClan": False,
+            "seerTargetId": 2, "seerDisplayedRole": "villagers",
         }
         sync_url = reverse("room_sync_api", args=[room.code])
         self.narrator.post(sync_url, json.dumps(state), content_type="application/json")
@@ -68,6 +74,13 @@ class RoomFlowTests(TestCase):
         self.assertEqual(RoomEvent.objects.filter(room=room).count(), 2)
         history = Client().get(reverse("room_history_api", args=[room.code])).json()
         self.assertEqual([event["type"] for event in history["events"]], ["night", "day"])
+        night = history["events"][0]["details"]
+        self.assertTrue(night["bear_growled"])
+        self.assertEqual(night["judge_first"], "Ahmed")
+        self.assertEqual(night["judge_second"], "Sarra")
+        self.assertFalse(night["judge_same_clan"])
+        self.assertEqual(night["seer_target"], "Sarra")
+        self.assertEqual(night["seer_role"], "villagers")
 
         public_list = Client().get(reverse("room_history_list"))
         self.assertContains(public_list, room.code)

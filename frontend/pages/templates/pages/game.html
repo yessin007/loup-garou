@@ -772,6 +772,11 @@
         const ancientReport = resistedAncient?.alive ? `<div class="seer-summary"><span>${L.ancient_resisted}</span><strong>#${String(resistedAncient.id).padStart(2, "0")} · ${escapeHtml(resistedAncient.name)}</strong><p>${L.ancient_one_life_left}</p></div>` : "";
         const nightBear = player(state.bearPlayerId);
         const bearReport = nightBear?.alive ? `<div class="seer-summary"><span>${state.bearGrowled ? L.bear_growls : L.bear_silent}</span><strong>#${String(nightBear.id).padStart(2, "0")} · ${escapeHtml(nightBear.name)}</strong><p>${state.bearGrowled ? L.bear_day_growl : L.bear_day_silent}</p></div>` : "";
+        const judgeFirst = player(state.judgeFirstId);
+        const judgeSecond = player(state.judgeSecondId);
+        const judgeReport = judgeFirst && judgeSecond && state.judgeSameClan !== null
+          ? `<div class="seer-summary"><span>${L.judge_result}</span><strong>#${String(judgeFirst.id).padStart(2, "0")} · ${escapeHtml(judgeFirst.name)} / #${String(judgeSecond.id).padStart(2, "0")} · ${escapeHtml(judgeSecond.name)}</strong><p>${state.judgeSameClan ? L.judge_same_clan : L.judge_different_clans}</p></div>`
+          : "";
         const speaker = player(state.speakerId);
         const seerTarget = player(state.seerTargetId);
         const seerRole = state.seerDisplayedRole || seerTarget?.role;
@@ -780,7 +785,7 @@
         const finalVision = deadSeers.length && seerTarget ? `<div class="final-vision"><span>${L.last_vision}</span><h2>${t("seer_died", {name: deadNames})}</h2><p>${L.before_dying} <strong>#${String(seerTarget.id).padStart(2, "0")} · ${escapeHtml(seerTarget.name)}</strong> ${L.is_role} <strong>${roleMeta[seerRole].name}</strong>.</p></div>` : "";
         const seerReport = seerTarget && !deadSeers.length ? `<div class="seer-summary"><span>${L.seer_vision}</span><strong>${t("seer_saw", {id: String(seerTarget.id).padStart(2, "0"), name: escapeHtml(seerTarget.name)})}</strong><p>${t("role_is", {role: roleMeta[seerRole].name})}</p></div>` : "";
         const dayAction = state.winner ? actionButton(L.winners, "show-game-over") : `${actionButton(L.open_accusations, "begin-accusation")}${daySpecialActions()}`;
-        scene.innerHTML = `<div class="sunrise-line"></div><div class="scene-kicker">${L.day_rises}</div><h1>${L.villagers_wake}</h1><p class="scene-lead">${L.night_report}</p><div class="night-report">${report}</div>${hunterShotReport("night")}${ancientReport}${bearReport}${dayConstraints()}${finalVision}${seerReport}${!state.winner && speaker ? `<div class="speaker-card"><span>${L.speaking_starts}</span><strong>#${String(speaker.id).padStart(2, "0")} · ${escapeHtml(speaker.name)}</strong></div>` : ""}<div class="scene-actions">${dayAction}</div>`;
+        scene.innerHTML = `<div class="sunrise-line"></div><div class="scene-kicker">${L.day_rises}</div><h1>${L.villagers_wake}</h1><p class="scene-lead">${L.night_report}</p><div class="night-report">${report}</div>${hunterShotReport("night")}${ancientReport}${bearReport}${judgeReport}${dayConstraints()}${finalVision}${seerReport}${!state.winner && speaker ? `<div class="speaker-card"><span>${L.speaking_starts}</span><strong>#${String(speaker.id).padStart(2, "0")} · ${escapeHtml(speaker.name)}</strong></div>` : ""}<div class="scene-actions">${dayAction}</div>`;
       }
 
       function voteBoard(candidates) {

@@ -506,6 +506,21 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 @keyframes blue-wolf-wheel { 0% { transform: rotate(-540deg) scale(.65); opacity: .25; } 100% { transform: rotate(0) scale(1); opacity: 1; } }
 
 .vote-board { display: grid; gap: 7px; margin-top: 32px; }
+.day-signal-dock { position: sticky; z-index: 9; top: calc(88px + var(--safe-top)); display: flex; align-items: center; justify-content: space-between; gap: 14px; width: min(100%, 720px); margin: -8px 0 28px; padding: 11px 12px; border: 1px solid rgba(199,139,69,.28); background: rgba(12,18,22,.94); box-shadow: 0 12px 35px rgba(0,0,0,.2); backdrop-filter: blur(16px); }
+.day-signal-dock > span { color: #89969c; font-size: .6rem; letter-spacing: .1em; text-transform: uppercase; }
+.day-signal-dock > div { display: flex; gap: 7px; }
+.day-signal-dock button.scene-action { width: auto; min-width: 170px; min-height: 42px; margin: 0; padding: 10px 13px; font-size: .68rem; }
+.accusation-board { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; max-width: 720px; margin-top: 28px; }
+.accused-card { position: relative; display: grid; grid-template-columns: 38px minmax(0, 1fr) 28px; align-items: center; gap: 12px; min-height: 68px; margin: 0; padding: 12px 14px; border: 1px solid rgba(255,255,255,.08); cursor: pointer; background: rgba(255,255,255,.025); transition: border-color .2s, background .2s, transform .2s; }
+.accused-card:hover { border-color: rgba(199,139,69,.32); transform: translateY(-1px); }
+.accused-card:has(input:focus-visible) { outline: 2px solid var(--ember-light); outline-offset: 2px; }
+.accused-card input { position: absolute; opacity: 0; pointer-events: none; }
+.accused-card strong, .accused-card small { display: block; min-width: 0; }
+.accused-card strong { font: 600 .78rem "Cinzel", serif; }
+.accused-card small { margin-top: 4px; color: #6f7c82; font: 400 .58rem "DM Sans", sans-serif; }
+.accused-card i { display: grid; place-items: center; width: 27px; height: 27px; border: 1px solid rgba(255,255,255,.12); border-radius: 50%; color: transparent; font-style: normal; transition: color .2s, border-color .2s, background .2s; }
+.accused-card:has(input:checked) { border-color: rgba(199,139,69,.55); background: rgba(199,139,69,.09); }
+.accused-card:has(input:checked) i { border-color: var(--ember); color: #171008; background: var(--ember-light); }
 .vote-row { display: grid; grid-template-columns: 38px 1fr auto; align-items: center; gap: 13px; padding: 11px 14px; border: 1px solid rgba(255,255,255,.07); background: rgba(255,255,255,.025); }
 .vote-avatar { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; color: var(--ember-light); background: rgba(199,139,69,.12); }
 .vote-row > strong { font: 600 .8rem "Cinzel", serif; }
@@ -577,6 +592,14 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .day-mode .day-effect-card strong { color: #34342f; }
 .day-mode .day-effect-card p { color: #6d6b64; }
 .day-mode .vote-row { border-color: rgba(65,49,31,.12); background: rgba(255,255,255,.42); }
+.day-mode .day-signal-dock { border-color: rgba(151,94,35,.25); background: rgba(248,243,233,.94); box-shadow: 0 12px 35px rgba(75,51,24,.1); }
+.day-mode .day-signal-dock > span { color: #786d60; }
+.day-mode .day-signal-dock button.scene-action { border-color: rgba(151,94,35,.34); color: #68431f; background: rgba(184,116,43,.1); }
+.day-mode .accused-card { border-color: rgba(65,49,31,.12); background: rgba(255,255,255,.42); }
+.day-mode .accused-card strong { color: #363732; }
+.day-mode .accused-card small { color: #817b70; }
+.day-mode .accused-card i { border-color: rgba(65,49,31,.18); }
+.day-mode .accused-card:has(input:checked) { border-color: rgba(151,94,35,.48); background: rgba(184,116,43,.13); }
 .day-mode .vote-row > strong { color: #363732; }.day-mode .vote-row > strong small { color: #817b70; }
 .day-mode .vote-counter button { border-color: rgba(65,49,31,.18); color: #383833; background: rgba(255,255,255,.3); }
 .day-mode .vote-avatar { color: #875827; background: rgba(183,116,43,.13); }
@@ -994,6 +1017,22 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
   .death-card, .peace-card, .verdict-card, .tie-card, .final-vision, .seer-summary { padding: 17px; }
   .speaker-card { padding: 15px 17px; }
   .vote-board { gap: 8px; margin-top: 22px; }
+  .day-signal-dock {
+    top: calc(92px + var(--safe-top));
+    align-items: stretch;
+    flex-direction: column;
+    gap: 7px;
+    width: 100%;
+    margin: -8px 0 20px;
+    padding: 9px;
+  }
+  .day-signal-dock > span { padding: 2px 3px; font-size: .56rem; }
+  .day-signal-dock > div { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; }
+  .day-signal-dock button.scene-action { width: 100%; min-width: 0; min-height: 46px; padding: 9px 7px; font-size: .63rem; line-height: 1.25; }
+  .accusation-board { grid-template-columns: 1fr; gap: 7px; margin-top: 22px; }
+  .accused-card { grid-template-columns: 34px minmax(0, 1fr) 30px; min-height: 66px; gap: 10px; padding: 10px 11px; }
+  .accused-card strong { font-size: .74rem; }
+  .accused-card small { font-size: .62rem; }
   .vote-row { grid-template-columns: 34px minmax(0, 1fr) auto; gap: 8px; padding: 9px; }
   .vote-avatar { width: 32px; height: 32px; }
   .vote-row > strong { min-width: 0; font-size: .74rem; }

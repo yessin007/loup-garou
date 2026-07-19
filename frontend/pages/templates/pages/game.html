@@ -107,6 +107,7 @@
           talkativePlayerId: null, assignedWord: "", witchSave: false, witchKillId: null,
           barberSignalReady: false, barberShotAvailable: true, barberPlayerId: null, barberTargetId: null, barberHit: null,
           alienSignalReady: false, alienCorrectGuesses: [], alienLastGuessCorrect: null, alienRemainingCount: null,
+          specialReturnStage: null,
           ancientWolfHits: {}, ancientResistedPlayerId: null, lostVillagePowerIds: [],
           pendingHunterId: null, pendingHunterSource: null, hunterShotRecords: [],
           bearPlayerId: null, bearGrowled: null, bearNeighborIds: [],
@@ -118,7 +119,7 @@
           ankouGhost: null,
           whiteWolfTargetId: null,
           lifePotion: true, deathPotion: true, seerTargetId: null, seerDisplayedRole: null,
-          deaths: [], speakerId: null, qualifiers: [], lastVote: null,
+          deaths: [], speakerId: null, qualifiers: [], accusationDraftIds: [], lastVote: null,
           roleDeck: [], revealVisible: false, voteOutcome: null, voteRevealedRole: null, servantAccepted: null, winner: null,
         };
       }
@@ -137,6 +138,8 @@
       if (state.lastProtectedId === undefined) state.lastProtectedId = null;
       if (state.roomStarted === undefined) state.roomStarted = state.players.length > 0;
       if (state.barberPlayerId === undefined) state.barberPlayerId = null;
+      if (state.specialReturnStage === undefined) state.specialReturnStage = null;
+      if (!Array.isArray(state.accusationDraftIds)) state.accusationDraftIds = [];
 
       function cloneState(value) { return JSON.parse(JSON.stringify(value)); }
       let undoStack = [];
@@ -156,6 +159,7 @@
       const undoToast = document.getElementById("undo-toast");
 
       let syncTimer = null;
+      let lastRenderedStage = null;
       function syncState(snapshot, isUndo = false) {
         return fetch(`/api/rooms/${roomCode}/sync/`, {
           method: "POST",
@@ -338,10 +342,12 @@
       }
       function finishHunterShotSequence() {
         const source = state.pendingHunterSource;
+        const specialReturnStage = state.specialReturnStage;
         state.pendingHunterId = null;
         state.pendingHunterSource = null;
         state.winner = checkWinner();
-        state.stage = source === "night" ? "dawn" : source === "barber" && !state.winner ? "accusation" : "day_end";
+        state.stage = source === "night" ? "dawn" : source === "barber" && !state.winner ? specialReturnStage || "accusation" : "day_end";
+        if (source === "barber") state.specialReturnStage = null;
       }
       function canUseAlien() {
         const alien = livingAlien();
@@ -765,6 +771,15 @@
         return `${barberAction()}${alienAction()}`;
       }
 
+      function renderDaySignalDock() {
+        const actions = daySpecialActions();
+        if (!actions) return;
+        const anchor = scene.querySelector(".scene-lead") || scene.querySelector("h1");
+        const dock = `<aside class="day-signal-dock"><span>${L.day_signals}</span><div>${actions}</div></aside>`;
+        if (anchor) anchor.insertAdjacentHTML("afterend", dock);
+        else scene.insertAdjacentHTML("afterbegin", dock);
+      }
+
       function renderDawn() {
         setHeading(t("day", {n: state.round}), L.awakening);
         const report = state.deaths.length ? state.deaths.map(id => `<div class="death-card"><strong>${t("night_death", {id: String(id).padStart(2, "0"), name: escapeHtml(player(id).name)})}</strong></div>`).join("") : `<div class="peace-card">${L.no_death}</div>`;
@@ -784,7 +799,7 @@
         const deadNames = deadSeers.map(item => `#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)}`).join(", ");
         const finalVision = deadSeers.length && seerTarget ? `<div class="final-vision"><span>${L.last_vision}</span><h2>${t("seer_died", {name: deadNames})}</h2><p>${L.before_dying} <strong>#${String(seerTarget.id).padStart(2, "0")} · ${escapeHtml(seerTarget.name)}</strong> ${L.is_role} <strong>${roleMeta[seerRole].name}</strong>.</p></div>` : "";
         const seerReport = seerTarget && !deadSeers.length ? `<div class="seer-summary"><span>${L.seer_vision}</span><strong>${t("seer_saw", {id: String(seerTarget.id).padStart(2, "0"), name: escapeHtml(seerTarget.name)})}</strong><p>${t("role_is", {role: roleMeta[seerRole].name})}</p></div>` : "";
-        const dayAction = state.winner ? actionButton(L.winners, "show-game-over") : `${actionButton(L.open_accusations, "begin-accusation")}${daySpecialActions()}`;
+        const dayAction = state.winner ? actionButton(L.winners, "show-game-over") : actionButton(L.open_accusations, "begin-accusation");
         scene.innerHTML = `<div class="sunrise-line"></div><div class="scene-kicker">${L.day_rises}</div><h1>${L.villagers_wake}</h1><p class="scene-lead">${L.night_report}</p><div class="night-report">${report}</div>${hunterShotReport("night")}${ancientReport}${bearReport}${judgeReport}${dayConstraints()}${finalVision}${seerReport}${!state.winner && speaker ? `<div class="speaker-card"><span>${L.speaking_starts}</span><strong>#${String(speaker.id).padStart(2, "0")} · ${escapeHtml(speaker.name)}</strong></div>` : ""}<div class="scene-actions">${dayAction}</div>`;
       }
 
@@ -792,9 +807,14 @@
         return `<div class="vote-board">${candidates.map(item => `<article class="vote-row" data-candidate="${item.id}"><span class="vote-avatar">${String(item.id).padStart(2, "0")}</span><strong>#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)} <small>${setup.role_labels[item.role]}</small></strong><div class="vote-counter"><button type="button" data-vote-step="-1">−</button><output>0</output><button type="button" data-vote-step="1">+</button></div></article>`).join("")}</div>`;
       }
 
+      function accusationBoard(candidates) {
+        const selected = new Set(state.accusationDraftIds || []);
+        return `<div class="accusation-board">${candidates.map(item => `<label class="accused-card"><input class="accused-toggle" type="checkbox" value="${item.id}" ${selected.has(item.id) ? "checked" : ""}><span class="vote-avatar">${String(item.id).padStart(2, "0")}</span><strong>#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)} <small>${L.tap_to_qualify}</small></strong><i aria-hidden="true">✓</i></label>`).join("")}</div>`;
+      }
+
       function renderAccusation() {
         setHeading(t("day", {n: state.round}), L.accusations);
-        scene.innerHTML = `<div class="scene-kicker">${L.first_round}</div><h1>${L.village_accuses}</h1><p class="scene-lead">${L.accusation_help}</p>${dayConstraints()}${voteBoard(alive())}<div class="scene-actions">${actionButton(L.qualify, "finish-accusation")}${actionButton(L.skip_vote, "skip-vote", false, true)}${daySpecialActions()}</div>`;
+        scene.innerHTML = `<div class="scene-kicker">${L.first_round}</div><h1>${L.village_accuses}</h1><p class="scene-lead">${L.accusation_help}</p>${dayConstraints()}${accusationBoard(alive())}<div class="scene-actions">${actionButton(L.qualify, "finish-accusation", true)}${actionButton(L.skip_vote, "skip-vote", false, true)}</div>`;
       }
 
       function renderBarberShot() {
@@ -880,17 +900,29 @@
       }
 
       function render() {
-        const dayStages = ["dawn", "accusation", "barber_shot", "barber_result", "alien_guess", "alien_result", "final_vote", "hunter_shot", "day_end", "game_over"];
+        const stageChanged = lastRenderedStage !== state.stage;
+        const dayStages = ["dawn", "accusation", "barber_shot", "barber_result", "alien_guess", "alien_result", "final_vote", "servant_choice", "hunter_shot", "day_end", "game_over"];
+        const signalStages = ["dawn", "accusation", "final_vote", "day_end"];
         document.body.classList.toggle("day-mode", dayStages.includes(state.stage));
         document.body.classList.toggle("night-mode", !dayStages.includes(state.stage));
         renderSidebar();
         const views = { roster: renderRoster, player_reveal: renderPlayerReveal, roles: renderRoles, cupid: renderCupid, couple_reveal: renderCoupleReveal, wild_child: renderWildChild, protector: renderProtector, prostitute: renderProstitute, wolves: renderWolves, cerberus: renderCerberus, infection: renderInfection, infection_result: renderInfectionResult, white_wolf: renderWhiteWolf, bear: renderBear, shepherd: renderShepherd, shepherd_result: renderShepherdResult, judge: renderJudge, judge_result: renderJudgeResult, black_wolf: renderBlackWolf, talkative_wolf: renderTalkativeWolf, barber_signal: renderBarberSignal, alien_signal: renderAlienSignal, witch: renderWitch, seer: renderSeer, dawn: renderDawn, accusation: renderAccusation, barber_shot: renderBarberShot, barber_result: renderBarberResult, alien_guess: renderAlienGuess, alien_result: renderAlienResult, final_vote: renderFinalVote, servant_choice: renderServantChoice, hunter_shot: renderHunterShot, day_end: renderDayEnd, game_over: renderGameOver };
         (views[state.stage] || renderRoster)();
+        if (signalStages.includes(state.stage) && !state.winner) renderDaySignalDock();
+        if (state.stage === "accusation") updateAccusationButton();
         updateUndoButton();
+        lastRenderedStage = state.stage;
+        if (stageChanged) requestAnimationFrame(() => window.scrollTo({top: 0, behavior: "auto"}));
       }
 
       function readVotes() {
         return [...document.querySelectorAll(".vote-row")].map(row => ({ id: Number(row.dataset.candidate), votes: Number(row.querySelector("output").value || row.querySelector("output").textContent) }));
+      }
+
+      function updateAccusationButton() {
+        const selected = document.querySelectorAll(".accused-toggle:checked").length;
+        const button = scene.querySelector('[data-action="finish-accusation"]');
+        if (button) button.disabled = selected === 0;
       }
 
       function updateTalkativeButton() {
@@ -962,6 +994,11 @@
           updateShepherdButton();
         }
         if (event.target.classList.contains("shepherd-target-select")) updateShepherdButton();
+        if (event.target.classList.contains("accused-toggle")) {
+          state.accusationDraftIds = [...document.querySelectorAll(".accused-toggle:checked")].map(input => Number(input.value));
+          save({recordUndo: false});
+          updateAccusationButton();
+        }
       });
       document.addEventListener("input", event => {
         if (event.target.id === "assigned-word") updateTalkativeButton();
@@ -1124,6 +1161,7 @@
           state.stage = "accusation";
         } else if (action === "activate-barber") {
           if (!canUseBarber()) return;
+          state.specialReturnStage = state.stage;
           state.stage = "barber_shot";
         } else if (action === "confirm-barber-shot") {
           const barber = livingBarber();
@@ -1153,9 +1191,14 @@
           }
           state.stage = "barber_result";
         } else if (action === "continue-after-barber") {
-          state.stage = state.pendingHunterId ? "hunter_shot" : "accusation";
+          if (state.pendingHunterId) state.stage = "hunter_shot";
+          else {
+            state.stage = state.specialReturnStage || "accusation";
+            state.specialReturnStage = null;
+          }
         } else if (action === "activate-alien") {
           if (!canUseAlien()) return;
+          state.specialReturnStage = state.stage;
           state.stage = "alien_guess";
         } else if (action === "confirm-alien-guesses") {
           const alien = livingAlien();
@@ -1174,11 +1217,14 @@
           }
           state.stage = "alien_result";
         } else if (action === "continue-after-alien") {
-          state.stage = "accusation";
+          state.stage = state.specialReturnStage || "accusation";
+          state.specialReturnStage = null;
         } else if (action === "finish-accusation") {
-          const votes = readVotes(); const max = Math.max(...votes.map(item => item.votes));
-          if (max === 0) { alert(L.accusation_required); return; }
-          state.qualifiers = votes.filter(item => item.votes === max).map(item => item.id); state.stage = "final_vote";
+          const selected = [...document.querySelectorAll(".accused-toggle:checked")].map(input => Number(input.value));
+          if (!selected.length) { alert(L.accusation_required); return; }
+          state.qualifiers = selected;
+          state.accusationDraftIds = [];
+          state.stage = "final_vote";
         } else if (action === "finish-final-vote") {
           const votes = readVotes(); const max = Math.max(...votes.map(item => item.votes));
           if (max === 0) { alert(L.vote_required); return; }
@@ -1229,12 +1275,13 @@
           finishHunterShotSequence();
         } else if (action === "skip-vote") {
           spendAnkouVotingDay();
+          state.accusationDraftIds = [];
           state.lastVote = null; state.voteOutcome = "skipped";
           if (state.round === 1) state.angelChanceExpired = true;
           state.winner = checkWinner(); state.stage = "day_end";
         } else if (action === "next-night") {
           state.round += 1;
-          state.protectedId = null; state.wolfTargetId = null; state.wolfInitialTargetId = null; state.wolfTargetChanged = false; state.prostituteTargetId = null; state.blockedPlayerId = null; state.infectionAttempted = false; state.infectionSucceeded = false; state.infectedPlayerId = null; state.whiteWolfTargetId = null; state.bearPlayerId = null; state.bearGrowled = null; state.bearNeighborIds = []; state.judgeFirstId = null; state.judgeSecondId = null; state.judgeSameClan = null; state.silencedPlayerId = null; state.talkativePlayerId = null; state.assignedWord = ""; state.witchSave = false; state.witchKillId = null; state.seerTargetId = null; state.seerDisplayedRole = null; state.ancientResistedPlayerId = null; state.lostVillagePowerIds = []; state.pendingHunterId = null; state.pendingHunterSource = null; state.hunterShotRecords = []; state.qualifiers = []; state.lastVote = null; state.voteOutcome = null; state.voteRevealedRole = null; state.servantAccepted = null;
+          state.protectedId = null; state.wolfTargetId = null; state.wolfInitialTargetId = null; state.wolfTargetChanged = false; state.prostituteTargetId = null; state.blockedPlayerId = null; state.infectionAttempted = false; state.infectionSucceeded = false; state.infectedPlayerId = null; state.whiteWolfTargetId = null; state.bearPlayerId = null; state.bearGrowled = null; state.bearNeighborIds = []; state.judgeFirstId = null; state.judgeSecondId = null; state.judgeSameClan = null; state.silencedPlayerId = null; state.talkativePlayerId = null; state.assignedWord = ""; state.witchSave = false; state.witchKillId = null; state.seerTargetId = null; state.seerDisplayedRole = null; state.ancientResistedPlayerId = null; state.lostVillagePowerIds = []; state.pendingHunterId = null; state.pendingHunterSource = null; state.hunterShotRecords = []; state.qualifiers = []; state.accusationDraftIds = []; state.lastVote = null; state.voteOutcome = null; state.voteRevealedRole = null; state.servantAccepted = null; state.specialReturnStage = null;
           nextNightStage(""); return;
         } else if (action === "show-game-over") {
           state.stage = "game_over";

@@ -1,4 +1,5 @@
 import json
+from unittest.mock import patch
 
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
@@ -7,6 +8,12 @@ from .models import GameRoom, RoomEvent
 from .translations import ROLES
 
 
+@override_settings(
+    STORAGES={
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    }
+)
 class RoomFlowTests(TestCase):
     def setUp(self):
         self.narrator = Client()
@@ -24,6 +31,8 @@ class RoomFlowTests(TestCase):
 
     def test_player_joins_and_receives_role_after_narrator_starts(self):
         room = self.create_room()
+        self.assertTrue(room.code.isdigit())
+        self.assertEqual(len(room.code), 6)
         player = Client()
         response = player.post(
             reverse("room_portal"),
@@ -59,6 +68,37 @@ class RoomFlowTests(TestCase):
         self.assertEqual(RoomEvent.objects.filter(room=room).count(), 2)
         history = Client().get(reverse("room_history_api", args=[room.code])).json()
         self.assertEqual([event["type"] for event in history["events"]], ["night", "day"])
+
+        public_list = Client().get(reverse("room_history_list"))
+        self.assertContains(public_list, room.code)
+
+    def test_room_join_rejects_non_numeric_code(self):
+        response = Client().post(
+            reverse("room_portal"),
+            {"action": "join", "room_code": "ABC123", "player_name": "Sarra"},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "exactement 6 chiffres")
+
+    def test_qr_code_contains_prefilled_room_link(self):
+        room = self.create_room()
+        response = Client(HTTP_HOST="testserver").get(reverse("room_qr", args=[room.code]))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "image/svg+xml")
+        self.assertIn(b"<svg", response.content)
+
+        portal = Client().get(reverse("room_portal"), {"code": room.code})
+        self.assertContains(portal, f'value="{room.code}"')
+
+    @patch.dict("os.environ", {"ADMIN_USERNAME": "admin", "ADMIN_PASSWORD": "safe-test-password"})
+    def test_admin_is_created_as_superuser(self):
+        from django.contrib.auth import get_user_model
+        from django.core.management import call_command
+
+        call_command("ensure_admin")
+        admin = get_user_model().objects.get(username="admin")
+        self.assertTrue(admin.is_superuser)
+        self.assertTrue(admin.check_password("safe-test-password"))
 
 
 @override_settings(

@@ -19,7 +19,21 @@
     <header class="narrator-header">
       <a class="brand" href="{% url 'welcome' %}">Loup <span>Garou</span></a>
       <div class="phase-indicator"><span id="cycle-label">{{ ui.preparation }}</span><strong id="phase-label">{{ ui.players }}</strong></div>
-      <div class="narrator-actions"><strong class="room-code-chip" title="Room">{{ room_code }}</strong><a class="header-action history-header-link" href="{% url 'room_history' room_code %}" target="_blank">Historique</a>{% include "pages/_language_selector.html" %}<button id="reset-game" class="header-action" type="button">{{ ui.restart }}</button></div>
+      <div class="narrator-actions">
+        <details class="room-share">
+          <summary class="room-code-chip" title="{{ room.scan_qr }}"><span aria-hidden="true">▦</span>{{ room_code }}</summary>
+          <div class="room-share-popover">
+            <span>{{ room.scan_qr }}</span>
+            <img src="{% url 'room_qr' room_code %}" alt="QR code room {{ room_code }}" width="210" height="210" />
+            <strong>{{ room_code }}</strong>
+            <p>{{ room.qr_help }}</p>
+            <a href="{% url 'room_history' room_code %}" target="_blank">{{ room.open_history }} →</a>
+          </div>
+        </details>
+        <a class="header-action history-header-link" href="{% url 'room_history' room_code %}" target="_blank">{{ room.history }}</a>
+        {% include "pages/_language_selector.html" %}
+        <button id="reset-game" class="header-action" type="button">{{ ui.restart }}</button>
+      </div>
     </header>
 
     <main id="game-app" class="narrator-layout">
@@ -31,6 +45,7 @@
       const setup = JSON.parse(document.getElementById("game-setup").textContent);
       const L = JSON.parse(document.getElementById("game-translations").textContent);
       const roomCode = "{{ room_code|escapejs }}";
+      const roomQrUrl = "{% url 'room_qr' room_code %}";
       const csrfToken = "{{ csrf_token }}";
       function t(key, values = {}) {
         return Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, value), L[key]);
@@ -294,7 +309,7 @@
         const number = state.players.length + 1;
         setHeading(L.distribution, t("player", {n: String(number).padStart(2, "0")}));
         if (!state.roomStarted) {
-          scene.innerHTML = `<div class="scene-kicker">Room · ${roomCode}</div><h1>Lobby joueurs</h1><p class="scene-lead">Les joueurs entrent le code <strong>${roomCode}</strong> et leur prénom sur leur téléphone. Lance la distribution quand ceux qui veulent se connecter sont présents.</p><div id="online-player-list" class="online-player-list"><p>Chargement…</p></div><div class="scene-actions">${actionButton("Lancer la distribution", "start-room")}</div>`;
+          scene.innerHTML = `<div class="scene-kicker">Room · ${roomCode}</div><h1>Lobby joueurs</h1><p class="scene-lead">{{ room.qr_help|escapejs }}</p><div class="lobby-share"><img src="${roomQrUrl}" alt="QR code room ${roomCode}" width="220" height="220"><div><span>{{ room.scan_qr|escapejs }}</span><strong>${roomCode}</strong><small>{{ room.room_code|escapejs }}</small></div></div><div id="online-player-list" class="online-player-list"><p>Chargement…</p></div><div class="scene-actions">${actionButton("Lancer la distribution", "start-room")}</div>`;
           refreshLobby();
           return;
         }

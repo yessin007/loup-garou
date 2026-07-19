@@ -1,0 +1,22 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="{{ language_code }}" dir="{{ language_dir }}">
+  <head>
+    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#080d12" />{% include "pages/_pwa_head.html" %}
+    <title>{{ room.all_histories }} | Loup Garou</title><link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+  </head>
+  <body class="room-page">
+    <header class="guide-header"><a class="brand" href="{% url 'home' %}">Loup <span>Garou</span></a><div class="guide-header-actions">{% include "pages/_language_selector.html" %}<a class="guide-back" href="{% url 'room_portal' %}">{{ room.back }}</a></div></header>
+    <main class="room-shell">
+      <section class="room-hero"><p class="eyebrow">Archive</p><h1>{{ room.all_histories }}</h1><p>{{ room.history_intro }}</p></section>
+      <div class="history-room-list">
+        {% for game_room in history_rooms %}
+          <a class="history-room-link" href="{% url 'room_history' game_room.code %}"><span><strong>Room {{ game_room.code }}</strong><small>{{ game_room.events.count }} événement(s) · {{ game_room.updated_at|date:"d/m/Y H:i" }}</small></span><span>→</span></a>
+        {% empty %}
+          <p class="history-empty">{{ room.history_empty }}</p>
+        {% endfor %}
+      </div>
+    </main>
+  </body>
+</html>

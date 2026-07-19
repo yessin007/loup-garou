@@ -25,16 +25,15 @@
         <form class="room-card" method="post">
           {% csrf_token %}<input type="hidden" name="action" value="join" />
           <span>01</span><h2>{{ room.join }}</h2>
-          <label>{{ room.room_code }}<input name="room_code" maxlength="6" autocomplete="off" required /></label>
+          <label>{{ room.room_code }}<input name="room_code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" value="{{ initial_code }}" required /></label>
           <label>{{ room.player_name }}<input name="player_name" maxlength="40" autocomplete="name" required /></label>
           <button type="submit">{{ room.join }} <span>→</span></button>
         </form>
-        <form class="room-card" method="post">
-          {% csrf_token %}<input type="hidden" name="action" value="history" />
+        <section class="room-card">
           <span>02</span><h2>{{ room.history }}</h2>
-          <label>{{ room.room_code }}<input name="room_code" maxlength="6" autocomplete="off" required /></label>
-          <button type="submit">{{ room.open_history }} <span>→</span></button>
-        </form>
+          <p>{{ room.history_intro }}</p>
+          <a class="room-card-action" href="{% url 'room_history_list' %}">{{ room.all_histories }} <span>→</span></a>
+        </section>
       </div>
     </main>
   </body>

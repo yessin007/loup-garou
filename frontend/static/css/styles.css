@@ -13,6 +13,9 @@
 }
 
 * { box-sizing: border-box; }
+html { overflow-x: hidden; }
+img { max-width: 100%; height: auto; }
+p, li, strong, small, a { overflow-wrap: anywhere; }
 
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; margin: -1px; padding: 0; border: 0; clip: rect(0, 0, 0, 0); white-space: nowrap; }
 .language-selector { margin: 0; }
@@ -343,6 +346,16 @@ button.start-button:disabled { opacity: .38; cursor: not-allowed; filter: graysc
 .phase-indicator span { color: var(--ember); font-size: .6rem; letter-spacing: .16em; text-transform: uppercase; }
 .phase-indicator strong { font: 600 .83rem "Cinzel", serif; }
 button.header-action { justify-self: end; width: auto; margin: 0; padding: 8px 11px; border: 1px solid rgba(255,255,255,.1); color: #8f999e; font-size: .65rem; background: transparent; }
+.room-share { position: relative; }
+.room-share summary { cursor: pointer; list-style: none; }
+.room-share summary::-webkit-details-marker { display: none; }
+.room-share summary span { margin-right: 7px; font-size: .9rem; }
+.room-share-popover { position: absolute; z-index: 50; top: calc(100% + 12px); right: 0; width: 280px; padding: 18px; border: 1px solid rgba(199,139,69,.35); color: var(--ivory); text-align: center; background: #0d151c; box-shadow: 0 24px 70px rgba(0,0,0,.55); }
+.room-share-popover > span { display: block; margin-bottom: 10px; color: var(--ember-light); font-size: .66rem; letter-spacing: .12em; text-transform: uppercase; }
+.room-share-popover img { display: block; width: 210px; margin: 0 auto; padding: 8px; background: #fff; }
+.room-share-popover > strong { display: block; margin-top: 12px; color: var(--ember-light); font: 700 1.8rem "Cinzel", serif; letter-spacing: .18em; }
+.room-share-popover p { margin: 8px 0 12px; color: #8f9da4; font-size: .72rem; line-height: 1.5; }
+.room-share-popover a { display: block; padding: 10px; border: 1px solid rgba(255,255,255,.1); color: #aeb8bd; font-size: .72rem; text-decoration: none; }
 
 .narrator-layout { display: grid; grid-template-columns: 290px minmax(0, 1fr); min-height: calc(100vh - 73px); }
 .player-sidebar { padding: 28px 18px; border-right: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.018); }
@@ -631,6 +644,8 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .room-card label { margin-top: 13px; color: #9ba7ac; font-size: .7rem; }
 .room-card input { margin-top: 7px; text-transform: uppercase; }
 .room-card button { margin-top: auto; padding-top: 15px; padding-bottom: 15px; }
+.room-card > p { margin: 0 0 28px; color: #8e9ba1; line-height: 1.65; }
+.room-card-action { display: flex; align-items: center; justify-content: space-between; min-height: 48px; margin-top: auto; padding: 14px 18px; border: 1px solid rgba(199,139,69,.38); color: var(--ivory); text-decoration: none; background: rgba(199,139,69,.08); }
 .room-code-chip { display: inline-grid; place-items: center; min-height: 34px; padding: 6px 11px; border: 1px solid rgba(199,139,69,.4); color: var(--ember-light); font: 700 .75rem "Cinzel", serif; letter-spacing: .15em; background: rgba(199,139,69,.08); }
 .player-secret-card { padding: clamp(28px, 7vw, 55px); border: 1px solid rgba(255,255,255,.1); text-align: center; background: rgba(255,255,255,.025); }
 .player-secret-card h1 { margin: 10px 0 25px; font-size: clamp(2.5rem, 10vw, 5.5rem); }
@@ -641,6 +656,10 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .waiting-orbit span { color: var(--ember-light); font-size: 2rem; }
 @keyframes room-pulse { 50% { box-shadow: 0 0 40px rgba(199,139,69,.2); transform: scale(1.04); } }
 .history-room-link { display: flex; justify-content: space-between; margin-top: 12px; padding: 16px 18px; border: 1px solid rgba(255,255,255,.1); color: #aeb8bd; text-decoration: none; }
+.history-room-list { display: grid; gap: 10px; }
+.history-room-list .history-room-link { margin-top: 0; align-items: center; }
+.history-room-link strong, .history-room-link small { display: block; }
+.history-room-link small { margin-top: 5px; color: #718087; }
 .history-timeline { display: grid; gap: 12px; }
 .history-empty { padding: 35px; border: 1px dashed rgba(255,255,255,.12); color: #7e8b91; text-align: center; }
 .history-event { display: grid; grid-template-columns: 110px 1fr; border: 1px solid rgba(255,255,255,.09); background: rgba(255,255,255,.025); }
@@ -654,6 +673,10 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .history-event li strong { margin-top: 4px; font-size: .72rem; }
 .online-player-list { display: flex; flex-wrap: wrap; gap: 8px; max-width: 720px; margin: 25px 0; }
 .online-player-list span, .online-player-list p { padding: 12px 14px; border: 1px solid rgba(199,139,69,.24); color: #aeb9be; background: rgba(199,139,69,.05); }
+.lobby-share { display: flex; align-items: center; gap: clamp(20px, 5vw, 45px); width: min(100%, 620px); margin: 28px 0; padding: clamp(18px, 4vw, 30px); border: 1px solid rgba(199,139,69,.24); background: rgba(199,139,69,.045); }
+.lobby-share img { flex: 0 0 auto; width: min(42vw, 220px); padding: 8px; background: #fff; }
+.lobby-share span, .lobby-share small { display: block; color: #7f8c92; font-size: .64rem; letter-spacing: .12em; text-transform: uppercase; }
+.lobby-share strong { display: block; margin: 10px 0; color: var(--ember-light); font: 700 clamp(2rem, 7vw, 4rem) "Cinzel", serif; letter-spacing: .14em; }
 .history-header-link { display: inline-flex; align-items: center; color: #9aa7ad; text-decoration: none; }
 
 .roles-guide-page {
@@ -750,9 +773,34 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 
 @media (max-width: 800px) {
   input, select, textarea { font-size: 16px; }
-  button, .scene-action, .header-action, .role-guide-link, .history-room-link { min-height: 44px; }
+  button, .scene-action, .header-action, .role-guide-link, .history-room-link, .room-code-chip, .guide-back, .language-selector select, .room-card-action { min-height: 44px; }
   .narrator-header { padding-top: max(12px, var(--safe-top)); }
   .guide-header { padding-top: max(12px, var(--safe-top)); }
   .login-shell, .welcome-page { padding-right: max(18px, var(--safe-right)); padding-bottom: max(24px, var(--safe-bottom)); padding-left: max(18px, var(--safe-left)); }
   .room-shell, .guide-shell, .setup-shell { padding-bottom: max(48px, calc(var(--safe-bottom) + 24px)); }
+}
+
+@media (max-width: 540px) {
+  .setup-header { gap: 8px; }
+  .setup-header .brand { font-size: .78rem; }
+  .setup-header .language-selector select { width: 82px; min-width: 0; }
+  button.small-stepper, .counter button { width: 44px; height: 44px; }
+  .counter { gap: 2px; }
+  .counter input { width: 25px; }
+  .narrator-header { column-gap: 8px; }
+  .narrator-header > .brand { font-size: .72rem; }
+  .narrator-actions .history-header-link { display: none; }
+  .narrator-actions .language-selector select { width: 72px; min-width: 0; padding-right: 18px; }
+  .room-share-popover { position: fixed; top: calc(var(--safe-top) + 74px); right: 12px; left: 12px; width: auto; max-height: calc(100dvh - 100px); overflow-y: auto; }
+  .room-share-popover img { width: min(58vw, 210px); }
+  .lobby-share { align-items: center; flex-direction: column; text-align: center; }
+  .lobby-share img { width: min(70vw, 220px); }
+  .night-details { padding: 14px; }
+  .night-details li { grid-template-columns: 1fr; gap: 5px; padding: 12px; }
+  .speaker-card { align-items: flex-start; flex-direction: column; gap: 8px; }
+  .history-event { grid-template-columns: 58px minmax(0, 1fr); }
+  .history-event li { min-width: 0; padding: 9px 6px; }
+  .room-shell { width: min(100% - 24px, 960px); padding-top: 34px; }
+  .room-card { min-width: 0; }
+  .player-secret-card h1 { font-size: clamp(2.2rem, 13vw, 4rem); }
 }

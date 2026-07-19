@@ -47,6 +47,10 @@ Dans le panneau Render:
    - `DJANGO_DEBUG=0`
    - `DJANGO_ALLOWED_HOSTS=.onrender.com`
    - `DJANGO_SECRET_KEY=<une longue valeur aleatoire et privee>`
+   - `DATABASE_URL=<Internal Database URL de Render Postgres>`
+   - `ADMIN_USERNAME=admin`
+   - `ADMIN_EMAIL=<adresse email admin>`
+   - `ADMIN_PASSWORD=<mot de passe admin fort et prive>`
 
 7. Configurer le health check HTTP avec la methode `GET` et le chemin
    `/health/` sur le port `8000`.
@@ -63,14 +67,18 @@ Render construit un seul conteneur a partir de `frontend/Dockerfile`. Il
 n'execute pas le fichier `docker-compose.yml`; celui-ci reste destine au
 developpement local.
 
-Les rooms utilisent SQLite par defaut. Pour conserver les rooms et leur
-historique apres un redeploiement Render, ajouter une base PostgreSQL externe
-et definir sa chaine de connexion dans la variable `DATABASE_URL`.
+Creer une base Render Postgres dans la meme region que le service web et utiliser
+son URL interne pour `DATABASE_URL`. Les rooms et leurs historiques restent
+alors disponibles apres les redeploiements. Le compte configure par les
+variables `ADMIN_*` peut gerer et supprimer les historiques depuis `/admin/`.
+La consultation publique reste en lecture seule sur `/historique/`.
+
+En local, Docker Compose demarre automatiquement PostgreSQL, applique les
+migrations et conserve les donnees dans le volume `loup_garou_postgres`.
 
 ## Suite proposee
 
 1. Ajouter les premiers ecrans du jeu
 2. Ajouter la gestion des joueurs et des rooms
-3. Ajouter une base de donnees en conteneur
-4. Ajouter websocket / temps reel
-5. Basculer ensuite vers Kubernetes
+3. Ajouter websocket / temps reel
+4. Basculer ensuite vers Kubernetes

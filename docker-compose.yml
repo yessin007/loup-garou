@@ -3,17 +3,25 @@ services:
     build:
       context: ./frontend
     container_name: loup_garou_frontend
-    command: python manage.py runserver 0.0.0.0:8000
+    command: sh -c "python manage.py migrate --noinput && python manage.py ensure_admin && python manage.py runserver 0.0.0.0:8000"
     volumes:
       - ./frontend:/app
     ports:
       - "127.0.0.1:8000:8000"
     environment:
+      PORT: "8000"
       DJANGO_DEBUG: "1"
-      DJANGO_SECRET_KEY: "dev-secret-key-change-me"
+      DJANGO_SECRET_KEY: "dev-only-docker-secret-key-change-before-production"
+      DJANGO_ALLOWED_HOSTS: "localhost,127.0.0.1,.onrender.com"
+      DATABASE_URL: "postgresql://loup_garou:loup_garou@database:5432/loup_garou"
+      ADMIN_USERNAME: "admin"
+      ADMIN_EMAIL: "admin@example.com"
+      ADMIN_PASSWORD: "admin"
       BACKEND_PUBLIC_PORT: "5000"
     depends_on:
       backend:
+        condition: service_healthy
+      database:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health/', timeout=3)"]
@@ -39,3 +47,21 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
+
+  database:
+    image: postgres:16-alpine
+    container_name: loup_garou_database
+    environment:
+      POSTGRES_DB: loup_garou
+      POSTGRES_USER: loup_garou
+      POSTGRES_PASSWORD: loup_garou
+    volumes:
+      - loup_garou_postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U loup_garou -d loup_garou"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  loup_garou_postgres:

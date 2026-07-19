@@ -1,11 +1,10 @@
 import secrets
-import string
 import uuid
 
 from django.db import models
 
 
-ROOM_ALPHABET = string.ascii_uppercase + string.digits
+ROOM_ALPHABET = "0123456789"
 
 
 def generate_room_code():

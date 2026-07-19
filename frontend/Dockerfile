@@ -7,7 +7,12 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-RUN python manage.py collectstatic --noinput
+# Render does not guarantee runtime environment variables during the Docker
+# build. Force Django's production staticfiles backend here so WhiteNoise gets
+# the hashed manifest required when DJANGO_DEBUG=0 at runtime.
+RUN DJANGO_DEBUG=0 \
+    DJANGO_SECRET_KEY=build-only-staticfiles-key \
+    python manage.py collectstatic --noinput
 
 EXPOSE 8000
 

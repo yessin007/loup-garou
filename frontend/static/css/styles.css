@@ -6,6 +6,10 @@
   --ember: #c78b45;
   --ember-light: #e3b473;
   --danger: #ff9e93;
+  --safe-top: env(safe-area-inset-top, 0px);
+  --safe-right: env(safe-area-inset-right, 0px);
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+  --safe-left: env(safe-area-inset-left, 0px);
 }
 
 * { box-sizing: border-box; }
@@ -26,7 +30,7 @@
   cursor: pointer;
 }
 .language-selector select:focus { border-color: var(--ember); }
-.floating-language { position: fixed; z-index: 30; top: 22px; right: 25px; }
+.floating-language { position: fixed; z-index: 30; top: max(22px, calc(var(--safe-top) + 8px)); right: max(25px, calc(var(--safe-right) + 10px)); }
 .narrator-actions { display: flex; align-items: center; justify-self: end; gap: 10px; }
 .narrator-actions button.header-action { justify-self: auto; }
 
@@ -198,6 +202,7 @@ button:hover, .logout-link:hover { filter: brightness(1.08); }
   width: min(100% - 40px, 1220px);
   margin: 0 auto;
   padding: 25px 0;
+  padding-top: calc(25px + var(--safe-top));
   border-bottom: 1px solid rgba(255, 255, 255, .09);
 }
 
@@ -328,6 +333,7 @@ button.start-button:disabled { opacity: .38; cursor: not-allowed; filter: graysc
   align-items: center;
   min-height: 72px;
   padding: 0 clamp(18px, 4vw, 55px);
+  padding-top: var(--safe-top);
   border-bottom: 1px solid rgba(255,255,255,.08);
   background: rgba(6, 11, 16, .86);
   backdrop-filter: blur(18px);
@@ -666,6 +672,7 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
   justify-content: space-between;
   min-height: 72px;
   padding: 14px clamp(18px, 4vw, 58px);
+  padding-top: calc(14px + var(--safe-top));
   border-bottom: 1px solid rgba(255,255,255,.09);
   background: rgba(6,11,15,.88);
   backdrop-filter: blur(18px);
@@ -734,4 +741,18 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
   .guide-role-body { padding: 0 13px 16px; }
   .guide-role-heading strong { font-size: .83rem; }
   .guide-role-heading small { font-size: .67rem; }
+}
+
+@supports (min-height: 100dvh) {
+  .login-page, .login-shell, .welcome-page, .setup-page, .narrator-page, .room-page, .roles-guide-page { min-height: 100dvh; }
+  .narrator-layout { min-height: calc(100dvh - 73px - var(--safe-top)); }
+}
+
+@media (max-width: 800px) {
+  input, select, textarea { font-size: 16px; }
+  button, .scene-action, .header-action, .role-guide-link, .history-room-link { min-height: 44px; }
+  .narrator-header { padding-top: max(12px, var(--safe-top)); }
+  .guide-header { padding-top: max(12px, var(--safe-top)); }
+  .login-shell, .welcome-page { padding-right: max(18px, var(--safe-right)); padding-bottom: max(24px, var(--safe-bottom)); padding-left: max(18px, var(--safe-left)); }
+  .room-shell, .guide-shell, .setup-shell { padding-bottom: max(48px, calc(var(--safe-bottom) + 24px)); }
 }

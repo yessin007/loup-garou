@@ -3,11 +3,13 @@ from django.urls import path
 from .views import (
     game, health, home, logout_view, room_history, room_history_api,
     room_lobby_api, room_player, room_player_api, room_portal, room_start_api,
-    room_sync_api, roles_guide, set_language, welcome,
+    room_sync_api, roles_guide, service_worker, set_language, pwa_manifest, welcome,
 )
 
 urlpatterns = [
     path("health/", health, name="health"),
+    path("manifest.webmanifest", pwa_manifest, name="pwa_manifest"),
+    path("sw.js", service_worker, name="service_worker"),
     path("", home, name="home"),
     path("roles/", roles_guide, name="roles_guide"),
     path("room/", room_portal, name="room_portal"),

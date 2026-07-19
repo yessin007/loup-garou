@@ -3,8 +3,9 @@
 <html lang="{{ language_code }}" dir="{{ language_dir }}">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#080d12" />
+    {% include "pages/_pwa_head.html" %}
     <title>{{ ui.game_title }} | Loup Garou</title>
     <link rel="icon" href="{% static 'images/favicon-wolf.png' %}" type="image/png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -69,7 +70,7 @@
           wolfTargetId: null, wolfInitialTargetId: null, wolfTargetChanged: false, prostituteTargetId: null, blockedPlayerId: null, silencedPlayerId: null,
           infectionAvailable: true, infectionAttempted: false, infectionSucceeded: false, infectedPlayerId: null,
           talkativePlayerId: null, assignedWord: "", witchSave: false, witchKillId: null,
-          barberSignalReady: false, barberShotAvailable: true, barberTargetId: null, barberHit: null,
+          barberSignalReady: false, barberShotAvailable: true, barberPlayerId: null, barberTargetId: null, barberHit: null,
           alienSignalReady: false, alienCorrectGuesses: [], alienLastGuessCorrect: null, alienRemainingCount: null,
           ancientWolfHits: {}, ancientResistedPlayerId: null, lostVillagePowerIds: [],
           pendingHunterId: null, pendingHunterSource: null, hunterShotRecords: [],
@@ -100,6 +101,7 @@
       if (state.wolfTargetChanged === undefined) state.wolfTargetChanged = false;
       if (state.lastProtectedId === undefined) state.lastProtectedId = null;
       if (state.roomStarted === undefined) state.roomStarted = state.players.length > 0;
+      if (state.barberPlayerId === undefined) state.barberPlayerId = null;
 
       const scene = document.getElementById("scene");
       const sidebar = document.getElementById("player-sidebar");
@@ -227,11 +229,11 @@
         state.stage = "day_end";
       }
       function finishHunterShotSequence() {
-        const returnStage = state.pendingHunterSource === "night" ? "dawn" : "day_end";
+        const source = state.pendingHunterSource;
         state.pendingHunterId = null;
         state.pendingHunterSource = null;
         state.winner = checkWinner();
-        state.stage = returnStage;
+        state.stage = source === "night" ? "dawn" : source === "barber" && !state.winner ? "accusation" : "day_end";
       }
       function canUseAlien() {
         const alien = livingAlien();
@@ -637,7 +639,7 @@
         const targets = alive();
         setHeading(t("day", {n: state.round}), L.hunter);
         const killedByHunter = (state.hunterShotRecords || []).some(record => record.targetId === hunter.id);
-        const deathText = killedByHunter ? t("hunter_died_shot", {name: escapeHtml(hunter.name)}) : state.pendingHunterSource === "night" ? t("hunter_died_night", {name: escapeHtml(hunter.name)}) : t("hunter_died_vote", {name: escapeHtml(hunter.name)});
+        const deathText = killedByHunter ? t("hunter_died_shot", {name: escapeHtml(hunter.name)}) : state.pendingHunterSource === "night" ? t("hunter_died_night", {name: escapeHtml(hunter.name)}) : state.pendingHunterSource === "barber" ? t("hunter_died_barber", {name: escapeHtml(hunter.name)}) : t("hunter_died_vote", {name: escapeHtml(hunter.name)});
         const content = targets.length ? `<select id="night-select">${options(targets, L.choose_hunter_target, false)}</select>` : `<div class="peace-card">${L.hunter_no_target}</div>`;
         const button = targets.length ? actionButton(L.hunter_fire, "confirm-hunter-shot", true) : actionButton(L.continue_day, "finish-hunter-shot");
         scene.innerHTML = `<div class="scene-kicker">${L.hunter_last_shot}</div><h1>${L.hunter_choose}</h1><p class="scene-lead">${deathText}</p>${content}<div class="scene-actions">${button}</div>`;
@@ -691,9 +693,10 @@
 
       function renderBarberResult() {
         const target = player(state.barberTargetId);
+        const barber = player(state.barberPlayerId);
         setHeading(t("day", {n: state.round}), L.barber);
         const title = state.barberHit ? L.barber_hit : L.barber_miss;
-        const message = state.barberHit ? t("barber_wolf_dies", {name: escapeHtml(target.name)}) : t("barber_becomes_villager", {name: escapeHtml(target.name)});
+        const message = state.barberHit ? t("barber_wolf_dies", {name: escapeHtml(target.name)}) : t("barber_miss_deaths", {barber: escapeHtml(barber.name), target: escapeHtml(target.name)});
         const nextAction = state.winner ? actionButton(L.winners, "show-game-over") : actionButton(L.continue_day, "continue-after-barber");
         scene.innerHTML = `<div class="end-emblem ${state.barberHit ? "wolf" : "village"}"><span>BA</span></div><div class="scene-kicker">${L.barber_signal}</div><h1>${title}</h1><div class="verdict-card"><strong>${message}</strong>${state.barberHit ? `<small>${roleMeta[target.role].name}</small>` : ""}</div><div class="scene-actions">${nextAction}</div>`;
       }
@@ -1012,19 +1015,31 @@
           const barber = livingBarber();
           const target = player(document.getElementById("night-select").value);
           if (!barber || !target || !state.barberShotAvailable) return;
+          state.barberPlayerId = barber.id;
           state.barberTargetId = target.id;
           state.barberShotAvailable = false;
           state.barberHit = isWolfPlayer(target);
           if (state.barberHit) {
             target.alive = false;
             activateAnkouGhost(target, state.round);
-            state.winner = checkWinner();
           } else {
-            barber.role = "villagers";
+            barber.alive = false;
+            target.alive = false;
+            activateAnkouGhost(target, state.round);
+          }
+          if ([barber, target].some(item => !item.alive && item.id === state.wildIdolId)) state.wildIdolDeathTriggered = true;
+          updateWildChildFromIdolDeath();
+          const deadHunter = [target, barber].find(item => !item.alive && item.role === "hunters");
+          if (deadHunter) {
+            state.pendingHunterId = deadHunter.id;
+            state.pendingHunterSource = "barber";
+            state.winner = null;
+          } else {
+            state.winner = checkWinner();
           }
           state.stage = "barber_result";
         } else if (action === "continue-after-barber") {
-          state.stage = "accusation";
+          state.stage = state.pendingHunterId ? "hunter_shot" : "accusation";
         } else if (action === "activate-alien") {
           if (!canUseAlien()) return;
           state.stage = "alien_guess";

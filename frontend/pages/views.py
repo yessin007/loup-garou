@@ -2,6 +2,7 @@ import json
 import secrets
 
 from django.db import transaction
+from django.conf import settings
 from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
@@ -50,6 +51,43 @@ def health(request):
             "status": "ok",
         }
     )
+
+
+@require_GET
+def pwa_manifest(request):
+    return JsonResponse(
+        {
+            "name": "Loup Garou — Narrateur",
+            "short_name": "Loup Garou",
+            "description": "Parties de Loup Garou avec narrateur, rooms et rôles secrets.",
+            "start_url": "/",
+            "scope": "/",
+            "display": "standalone",
+            "background_color": "#070d12",
+            "theme_color": "#080d12",
+            "icons": [
+                {
+                    "src": f"{settings.STATIC_URL}images/favicon-wolf.png",
+                    "sizes": "1254x1254",
+                    "type": "image/png",
+                    "purpose": "any maskable",
+                }
+            ],
+        },
+        content_type="application/manifest+json",
+    )
+
+
+@require_GET
+def service_worker(request):
+    response = render(
+        request,
+        "pages/service_worker.js",
+        content_type="application/javascript",
+    )
+    response["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    response["Service-Worker-Allowed"] = "/"
+    return response
 
 
 def current_language(request):

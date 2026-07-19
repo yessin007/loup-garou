@@ -1,6 +1,6 @@
 import json
 
-from django.test import Client, TestCase
+from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from .models import GameRoom, RoomEvent
@@ -59,3 +59,27 @@ class RoomFlowTests(TestCase):
         self.assertEqual(RoomEvent.objects.filter(room=room).count(), 2)
         history = Client().get(reverse("room_history_api", args=[room.code])).json()
         self.assertEqual([event["type"] for event in history["events"]], ["night", "day"])
+
+
+@override_settings(
+    STORAGES={
+        "default": {"BACKEND": "django.core.files.storage.FileSystemStorage"},
+        "staticfiles": {"BACKEND": "django.contrib.staticfiles.storage.StaticFilesStorage"},
+    }
+)
+class PwaTests(TestCase):
+    def test_manifest_and_service_worker_are_available_at_root_scope(self):
+        manifest = self.client.get(reverse("pwa_manifest"))
+        self.assertEqual(manifest.status_code, 200)
+        self.assertEqual(manifest["Content-Type"], "application/manifest+json")
+        self.assertEqual(manifest.json()["display"], "standalone")
+        self.assertEqual(manifest.json()["scope"], "/")
+
+        worker = self.client.get(reverse("service_worker"))
+        self.assertEqual(worker.status_code, 200)
+        self.assertEqual(worker["Service-Worker-Allowed"], "/")
+        self.assertContains(worker, "loup-garou-shell-v1")
+
+        home = self.client.get(reverse("home"))
+        self.assertContains(home, reverse("pwa_manifest"))
+        self.assertContains(home, "apple-mobile-web-app-capable")

@@ -2,7 +2,8 @@
 <!DOCTYPE html>
 <html lang="{{ language_code }}" dir="{{ language_dir }}">
   <head>
-    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta charset="UTF-8" /><meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#080d12" />{% include "pages/_pwa_head.html" %}
     <title>{{ room.history }} | {{ game_room.code }}</title><link rel="stylesheet" href="{% static 'css/styles.css' %}" />
   </head>
   <body class="room-page">

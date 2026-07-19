@@ -33,6 +33,19 @@ L'application web actuelle fonctionne entierement dans le service Django. Le
 service Flask est conserve pour le developpement local, mais il n'est pas
 necessaire au deploiement public actuel.
 
+### Methode automatique recommandee (Blueprint)
+
+Le fichier `render.yaml` a la racine du depot configure automatiquement le
+service Docker, PostgreSQL, le health check et toutes les variables. Dans
+Render, choisir **New > Blueprint**, connecter ce depot puis confirmer avec
+**Apply**. Aucune variable d'environnement ne doit etre saisie manuellement.
+
+Le Blueprint genere une cle Django aleatoire et relie automatiquement
+`DATABASE_URL` a la base PostgreSQL. L'administration est disponible sur
+`/admin/` avec `admin / admin`.
+
+### Configuration manuelle alternative
+
 Dans le panneau Render:
 
 1. Creer une Web Service depuis le depot GitHub `yessin007/loup-garou`.

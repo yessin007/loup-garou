@@ -72,6 +72,62 @@ class RoomFlowTests(TestCase):
         public_list = Client().get(reverse("room_history_list"))
         self.assertContains(public_list, room.code)
 
+    def test_narrator_undo_restores_active_state_and_corrects_history(self):
+        room = self.create_room()
+        self.narrator.post(reverse("room_start_api", args=[room.code]))
+        sync_url = reverse("room_sync_api", args=[room.code])
+        dawn = {
+            "stage": "dawn",
+            "round": 1,
+            "players": [
+                {"id": 1, "name": "Ahmed", "alive": True},
+                {"id": 2, "name": "Sarra", "alive": True},
+            ],
+            "deaths": [],
+            "wolfTargetId": 1,
+        }
+        self.narrator.post(sync_url, json.dumps(dawn), content_type="application/json")
+        self.assertTrue(RoomEvent.objects.filter(room=room, marker="night-1").exists())
+
+        before_dawn = {**dawn, "stage": "seer", "wolfTargetId": 2}
+        response = self.narrator.post(
+            sync_url,
+            json.dumps(before_dawn),
+            content_type="application/json",
+            HTTP_X_GAME_UNDO="1",
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertFalse(RoomEvent.objects.filter(room=room, marker="night-1").exists())
+
+        corrected_dawn = {**before_dawn, "stage": "dawn"}
+        self.narrator.post(sync_url, json.dumps(corrected_dawn), content_type="application/json")
+        event = RoomEvent.objects.get(room=room, marker="night-1")
+        self.assertEqual(event.details["wolves_target"], "Sarra")
+
+        day_end = {**corrected_dawn, "stage": "day_end", "lastVote": 1, "voteOutcome": "eliminated"}
+        self.narrator.post(sync_url, json.dumps(day_end), content_type="application/json")
+        self.assertTrue(RoomEvent.objects.filter(room=room, marker="day-1").exists())
+        before_verdict = {**day_end, "stage": "final_vote", "lastVote": None, "voteOutcome": None}
+        self.narrator.post(
+            sync_url,
+            json.dumps(before_verdict),
+            content_type="application/json",
+            HTTP_X_GAME_UNDO="1",
+        )
+        self.assertFalse(RoomEvent.objects.filter(room=room, marker="day-1").exists())
+
+        self.narrator.post(sync_url, json.dumps({**before_verdict, "stage": "game_over"}), content_type="application/json")
+        room.refresh_from_db()
+        self.assertEqual(room.status, GameRoom.Status.FINISHED)
+        self.narrator.post(
+            sync_url,
+            json.dumps(before_verdict),
+            content_type="application/json",
+            HTTP_X_GAME_UNDO="1",
+        )
+        room.refresh_from_db()
+        self.assertEqual(room.status, GameRoom.Status.ACTIVE)
+
     def test_room_join_rejects_non_numeric_code(self):
         response = Client().post(
             reverse("room_portal"),
@@ -119,7 +175,7 @@ class PwaTests(TestCase):
         worker = self.client.get(reverse("service_worker"))
         self.assertEqual(worker.status_code, 200)
         self.assertEqual(worker["Service-Worker-Allowed"], "/")
-        self.assertContains(worker, "loup-garou-shell-v2")
+        self.assertContains(worker, "loup-garou-shell-v4")
 
         home = self.client.get(reverse("home"))
         self.assertContains(home, reverse("pwa_manifest"))

@@ -44,7 +44,7 @@ ROOM_TEXT = {
 ROOM_DETAIL_LABELS = {
     "fr": {"deaths": "Victimes", "protected": "Protection", "wolves_target": "Cible des loups", "blocked": "Pouvoir bloqué", "redirected_to": "Redirection", "infection_attempted": "Infection tentée", "infection_succeeded": "Infection réussie", "witch_saved": "Potion de vie", "witch_target": "Potion de mort", "bear_growled": "Ours", "seer_target": "Vision de la Voyante", "seer_role": "Rôle aperçu", "eliminated": "Éliminé par vote", "vote_outcome": "Résultat", "winner": "Vainqueur"},
     "en": {"deaths": "Victims", "protected": "Protection", "wolves_target": "Wolves' target", "blocked": "Blocked power", "redirected_to": "Redirected to", "infection_attempted": "Infection attempted", "infection_succeeded": "Infection succeeded", "witch_saved": "Life potion", "witch_target": "Death potion", "bear_growled": "Bear", "seer_target": "Seer's vision", "seer_role": "Role seen", "eliminated": "Voted out", "vote_outcome": "Result", "winner": "Winner"},
-    "tn": {"deaths": "Eli metou", "protected": "Protection", "wolves_target": "Cible mta3 el loups", "blocked": "Pouvoir bloque", "redirected_to": "Redirection", "infection_attempted": "Jarbet infection", "infection_succeeded": "Infection nej7et", "witch_saved": "Potion de vie", "witch_target": "Potion de mort", "bear_growled": "Ours", "seer_target": "Vision mta3 el 3arrafa", "seer_role": "Role eli chefetou", "eliminated": "5raj bel vote", "vote_outcome": "Resultat", "winner": "Eli rba7"},
+    "tn": {"deaths": "Eli metou", "protected": "Protection", "wolves_target": "Cible mta3 el loups", "blocked": "Pouvoir bloque", "redirected_to": "Redirection", "infection_attempted": "Jarbet infection", "infection_succeeded": "Infection nej7et", "witch_saved": "Potion de vie", "witch_target": "Potion de mort", "bear_growled": "Ours", "seer_target": "Vision mta3 el Voyante", "seer_role": "Role eli chefetou", "eliminated": "5raj bel vote", "vote_outcome": "Resultat", "winner": "Eli rba7"},
 }
 
 
@@ -365,22 +365,37 @@ def room_start_api(request, code):
 
 
 @require_POST
+@transaction.atomic
 def room_sync_api(request, code):
     room = room_for_narrator(request, code.upper())
     if not room:
         return JsonResponse({"error": "forbidden"}, status=403)
+    room = GameRoom.objects.select_for_update().get(code=room.code)
     try:
         state = json.loads(request.body)
     except (TypeError, ValueError, json.JSONDecodeError):
         return JsonResponse({"error": "invalid_json"}, status=400)
+    previous_state = room.game_state or {}
+    undo_requested = request.headers.get("X-Game-Undo") == "1"
     room.game_state = state
-    if state.get("stage") == "game_over":
-        room.status = GameRoom.Status.FINISHED
+    room.status = GameRoom.Status.FINISHED if state.get("stage") == "game_over" else GameRoom.Status.ACTIVE
     room.save(update_fields=["game_state", "status", "updated_at"])
     round_number = max(1, int(state.get("round", 1)))
+
+    if undo_requested:
+        previous_round = max(1, int(previous_state.get("round", round_number)))
+        previous_stage = previous_state.get("stage")
+        current_stage = state.get("stage")
+        if round_number < previous_round:
+            room.events.filter(round_number__gt=round_number).delete()
+        if previous_round == round_number and previous_stage == "dawn" and current_stage != "dawn":
+            room.events.filter(marker=f"night-{round_number}").delete()
+        if previous_round == round_number and previous_stage == "day_end" and current_stage != "day_end":
+            room.events.filter(marker=f"day-{round_number}").delete()
+
     event_type = "night" if state.get("stage") == "dawn" else "day" if state.get("stage") == "day_end" else None
     if event_type:
-        RoomEvent.objects.get_or_create(
+        RoomEvent.objects.update_or_create(
             room=room,
             marker=f"{event_type}-{round_number}",
             defaults={"event_type": event_type, "round_number": round_number, "details": public_event_details(state, event_type)},

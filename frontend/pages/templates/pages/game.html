@@ -20,6 +20,9 @@
       <a class="brand" href="{% url 'welcome' %}">Loup <span>Garou</span></a>
       <div class="phase-indicator"><span id="cycle-label">{{ ui.preparation }}</span><strong id="phase-label">{{ ui.players }}</strong></div>
       <div class="narrator-actions">
+        <button id="undo-game" class="header-action undo-action" type="button" disabled title="{{ game_text.undo_empty }}" aria-label="{{ game_text.undo }}">
+          <span aria-hidden="true">↶</span><strong>{{ game_text.undo }}</strong>
+        </button>
         <details class="room-share">
           <summary class="room-code-chip" title="{{ room.scan_qr }}"><span aria-hidden="true">▦</span>{{ room_code }}</summary>
           <div class="room-share-popover">
@@ -41,6 +44,22 @@
       <section id="scene" class="scene-panel" aria-live="polite"></section>
     </main>
 
+    <dialog id="undo-dialog" class="undo-dialog">
+      <form method="dialog" class="undo-dialog-card">
+        <span class="undo-dialog-icon" aria-hidden="true">↶</span>
+        <div>
+          <p class="scene-kicker">{{ game_text.undo_kicker }}</p>
+          <h2>{{ game_text.undo_title }}</h2>
+          <p>{{ game_text.undo_help }}</p>
+        </div>
+        <div class="undo-dialog-actions">
+          <button class="undo-cancel" value="cancel" type="submit">{{ game_text.undo_cancel }}</button>
+          <button id="confirm-undo" class="undo-confirm" value="default" type="button">{{ game_text.undo_confirm }}</button>
+        </div>
+      </form>
+    </dialog>
+    <div id="undo-toast" class="undo-toast" role="status" aria-live="polite">{{ game_text.undo_success }}</div>
+
     <script>
       const setup = JSON.parse(document.getElementById("game-setup").textContent);
       const L = JSON.parse(document.getElementById("game-translations").textContent);
@@ -51,6 +70,7 @@
         return Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, value), L[key]);
       }
       const storageKey = `loup-garou-game-v3-${roomCode}`;
+      const undoStorageKey = `${storageKey}-undo-v1`;
       const roleMeta = {
         infecting_fathers: { short: "LPI", name: setup.role_labels.infecting_fathers, faction: "wolf", description: setup.role_descriptions.infecting_fathers },
         simple_wolves: { short: "LG", name: setup.role_labels.simple_wolves, faction: "wolf", description: setup.role_descriptions.simple_wolves },
@@ -118,16 +138,89 @@
       if (state.roomStarted === undefined) state.roomStarted = state.players.length > 0;
       if (state.barberPlayerId === undefined) state.barberPlayerId = null;
 
+      function cloneState(value) { return JSON.parse(JSON.stringify(value)); }
+      let undoStack = [];
+      try {
+        const storedUndo = JSON.parse(localStorage.getItem(undoStorageKey));
+        if (Array.isArray(storedUndo)) undoStack = storedUndo.filter(entry => entry?.state && typeof entry.state.stage === "string").slice(-50);
+      } catch { undoStack = []; }
+      let lastSavedState = cloneState(state);
+
       const scene = document.getElementById("scene");
       const sidebar = document.getElementById("player-sidebar");
       const cycleLabel = document.getElementById("cycle-label");
       const phaseLabel = document.getElementById("phase-label");
+      const undoButton = document.getElementById("undo-game");
+      const undoDialog = document.getElementById("undo-dialog");
+      const confirmUndoButton = document.getElementById("confirm-undo");
+      const undoToast = document.getElementById("undo-toast");
 
       let syncTimer = null;
-      function save() {
+      function syncState(snapshot, isUndo = false) {
+        return fetch(`/api/rooms/${roomCode}/sync/`, {
+          method: "POST",
+          headers: {"Content-Type": "application/json", "X-CSRFToken": csrfToken, ...(isUndo ? {"X-Game-Undo": "1"} : {})},
+          body: JSON.stringify(snapshot),
+        });
+      }
+      function canRecordUndo(previous) {
+        return previous.roomStarted && !["roster", "player_reveal"].includes(previous.stage);
+      }
+      function updateUndoButton() {
+        const available = undoStack.length > 0;
+        undoButton.disabled = !available;
+        undoButton.title = available ? L.undo_help : L.undo_empty;
+        undoButton.setAttribute("aria-label", available ? L.undo : L.undo_empty);
+      }
+      function save({recordUndo = true, synchronize = true} = {}) {
+        const previousSerialized = JSON.stringify(lastSavedState);
+        const currentSerialized = JSON.stringify(state);
+        if (recordUndo && previousSerialized !== currentSerialized && canRecordUndo(lastSavedState)) {
+          const latest = undoStack.at(-1)?.state;
+          if (!latest || JSON.stringify(latest) !== previousSerialized) {
+            undoStack.push({state: cloneState(lastSavedState), savedAt: Date.now()});
+            undoStack = undoStack.slice(-50);
+            localStorage.setItem(undoStorageKey, JSON.stringify(undoStack));
+          }
+        }
         localStorage.setItem(storageKey, JSON.stringify(state));
+        lastSavedState = cloneState(state);
+        updateUndoButton();
         clearTimeout(syncTimer);
-        syncTimer = setTimeout(() => fetch(`/api/rooms/${roomCode}/sync/`, {method: "POST", headers: {"Content-Type": "application/json", "X-CSRFToken": csrfToken}, body: JSON.stringify(state)}).catch(() => {}), 120);
+        if (synchronize) {
+          const snapshot = cloneState(state);
+          syncTimer = setTimeout(() => syncState(snapshot).catch(() => {}), 120);
+        }
+      }
+      function showUndoToast() {
+        undoToast.classList.add("visible");
+        clearTimeout(showUndoToast.timer);
+        showUndoToast.timer = setTimeout(() => undoToast.classList.remove("visible"), 2600);
+      }
+      async function restorePreviousState() {
+        let entry = undoStack.pop();
+        while (entry && JSON.stringify(entry.state) === JSON.stringify(state)) entry = undoStack.pop();
+        if (!entry) {
+          localStorage.setItem(undoStorageKey, JSON.stringify(undoStack));
+          updateUndoButton();
+          if (undoDialog.open) undoDialog.close();
+          return;
+        }
+        confirmUndoButton.disabled = true;
+        clearTimeout(syncTimer);
+        state = cloneState(entry.state);
+        localStorage.setItem(undoStorageKey, JSON.stringify(undoStack));
+        save({recordUndo: false, synchronize: false});
+        render();
+        try {
+          await syncState(cloneState(state), true);
+          if (undoDialog.open) undoDialog.close();
+          showUndoToast();
+        } catch {
+          if (undoDialog.open) undoDialog.close();
+        } finally {
+          confirmUndoButton.disabled = false;
+        }
       }
       function alive() { return state.players.filter(player => player.alive); }
       function player(id) { return state.players.find(item => item.id === Number(id)); }
@@ -788,6 +881,7 @@
         renderSidebar();
         const views = { roster: renderRoster, player_reveal: renderPlayerReveal, roles: renderRoles, cupid: renderCupid, couple_reveal: renderCoupleReveal, wild_child: renderWildChild, protector: renderProtector, prostitute: renderProstitute, wolves: renderWolves, cerberus: renderCerberus, infection: renderInfection, infection_result: renderInfectionResult, white_wolf: renderWhiteWolf, bear: renderBear, shepherd: renderShepherd, shepherd_result: renderShepherdResult, judge: renderJudge, judge_result: renderJudgeResult, black_wolf: renderBlackWolf, talkative_wolf: renderTalkativeWolf, barber_signal: renderBarberSignal, alien_signal: renderAlienSignal, witch: renderWitch, seer: renderSeer, dawn: renderDawn, accusation: renderAccusation, barber_shot: renderBarberShot, barber_result: renderBarberResult, alien_guess: renderAlienGuess, alien_result: renderAlienResult, final_vote: renderFinalVote, servant_choice: renderServantChoice, hunter_shot: renderHunterShot, day_end: renderDayEnd, game_over: renderGameOver };
         (views[state.stage] || renderRoster)();
+        updateUndoButton();
       }
 
       function readVotes() {
@@ -1150,6 +1244,12 @@
       document.getElementById("reset-game").addEventListener("click", () => {
         if (confirm(L.restart_confirm)) window.location.href = "{% url 'welcome' %}";
       });
+      undoButton.addEventListener("click", () => {
+        if (!undoStack.length) return;
+        if (typeof undoDialog.showModal === "function") undoDialog.showModal();
+        else if (confirm(L.undo_help)) restorePreviousState();
+      });
+      confirmUndoButton.addEventListener("click", restorePreviousState);
       render();
     </script>
   </body>

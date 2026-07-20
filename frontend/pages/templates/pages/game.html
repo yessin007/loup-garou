@@ -256,12 +256,18 @@
       function isAngelVillageAligned(item) { return item?.role === "angels" && (state.angelChanceExpired || state.round > 1); }
       function baseFaction(item) { return isWolfPlayer(item) ? "wolf" : isAngelVillageAligned(item) ? "village" : roleMeta[item.role].faction; }
       function coupleMembers() { return (state.coupleIds || []).map(player).filter(Boolean); }
+      function isSoloPlayer(item) { return Boolean(item && (item.role === "aliens" || item.role === "white_wolves" || (item.role === "angels" && !isAngelVillageAligned(item)))); }
+      function infectedSoloCouple(members = coupleMembers()) {
+        if (members.length !== 2 || !members.every(item => item.alive)) return [];
+        return members.some((item, index) => item.infected && isSoloPlayer(members[1 - index])) ? members : [];
+      }
       function alienCouple() {
         const members = coupleMembers();
-        return members.length === 2 && members.every(item => item.alive) && members.some(item => baseFaction(item) === "alien") ? members : [];
+        return infectedSoloCouple(members).length === 0 && members.length === 2 && members.every(item => item.alive) && members.some(item => baseFaction(item) === "alien") ? members : [];
       }
       function independentCouple() {
         const members = coupleMembers();
+        if (infectedSoloCouple(members).length === 2) return members;
         return members.length === 2 && members.every(item => item.alive) && !members.some(item => baseFaction(item) === "alien") && baseFaction(members[0]) !== baseFaction(members[1]) ? members : [];
       }
       function isIndependentLover(item) { return independentCouple().some(lover => lover.id === item?.id); }
@@ -320,7 +326,7 @@
       }
       function finalizeVoteDeath() {
         const eliminated = player(state.lastVote);
-        const angelWon = state.round === 1 && eliminated?.role === "angels";
+        const angelWon = state.round === 1 && eliminated?.role === "angels" && competitionFaction(eliminated) === "angel";
         if (state.round === 1) state.angelChanceExpired = true;
         if (angelWon) {
           state.winner = "angel";
@@ -375,9 +381,15 @@
       }
       function escapeHtml(value) { const div = document.createElement("div"); div.textContent = value; return div.innerHTML; }
       function shuffle(items) { return [...items].sort(() => Math.random() - .5); }
-      function options(players, placeholder = L.choose_probe, showRole = true, disabledIds = []) {
+      function playerRoleStatus(item) {
+        const statuses = [roleMeta[item.role].name];
+        if (item.infected) statuses.push(L.infected_status);
+        if ((state.coupleIds || []).includes(item.id)) statuses.push(L.couple_status);
+        return statuses.join(" · ");
+      }
+      function options(players, placeholder = L.choose_probe, _showRole = true, disabledIds = []) {
         const disabled = new Set(disabledIds.map(Number));
-        return `<option value="">${placeholder}</option>${players.map(item => `<option value="${item.id}" ${disabled.has(item.id) ? "disabled" : ""}>#${String(item.id).padStart(2, "0")} — ${escapeHtml(item.name)}${showRole ? ` — ${roleMeta[item.role].name}` : ""}${disabled.has(item.id) ? ` — ${L.protected_previous_target}` : ""}</option>`).join("")}`;
+        return `<option value="">${placeholder}</option>${players.map(item => `<option value="${item.id}" ${disabled.has(item.id) ? "disabled" : ""}>#${String(item.id).padStart(2, "0")} — ${escapeHtml(item.name)} (${escapeHtml(playerRoleStatus(item))})${disabled.has(item.id) ? ` — ${L.protected_previous_target}` : ""}</option>`).join("")}`;
       }
       function actionButton(label, action, disabled = false, secondary = false) {
         return `<button class="scene-action ${secondary ? "secondary" : ""}" type="button" data-action="${action}" ${disabled ? "disabled" : ""}>${label}<span>→</span></button>`;
@@ -464,19 +476,71 @@
           <div class="scene-actions">${actionButton(L.begin_night, "begin-night")}</div>`;
       }
 
+      const nightOrder = ["cupid", "couple_reveal", "wild_child", "barber_signal", "alien_signal", "protector", "prostitute", "wolves", "cerberus", "infection", "white_wolf", "black_wolf", "talkative_wolf", "witch", "seer", "bear", "shepherd", "judge", "dawn"];
+      const nightResultStages = {infection_result: "infection", shepherd_result: "shepherd", judge_result: "judge"};
+
+      function hasLivingCouple() {
+        return coupleMembers().filter(item => item.alive).length === 2;
+      }
+
+      function nightStageCouldWake(stage) {
+        if (stage === "cupid") return state.round === 1 && hasAliveRole("cupids") && !state.cupidLinked;
+        if (stage === "couple_reveal") return (state.cupidLinked && hasLivingCouple()) || (state.round === 1 && hasAliveRole("cupids") && !state.cupidLinked);
+        if (stage === "wild_child") return state.round === 1 && hasAliveRole("wild_children") && !state.wildChildLinked;
+        if (stage === "barber_signal") return state.round === 1 && hasAliveRole("barbers") && !state.barberSignalReady;
+        if (stage === "alien_signal") return state.round === 1 && hasAliveRole("aliens") && !state.alienSignalReady;
+        if (stage === "protector") return hasAliveRole("protectors");
+        if (stage === "prostitute") return hasAliveRole("prostitutes");
+        if (stage === "wolves") return wolves().length > 0;
+        if (stage === "cerberus") return hasAliveRole("cerberus_wolves");
+        if (stage === "infection") return hasAliveRole("infecting_fathers");
+        if (stage === "white_wolf") return state.round % 2 === 0 && hasAliveRole("white_wolves") && wolves().some(item => item.role !== "white_wolves");
+        if (stage === "black_wolf") return hasAliveRole("black_wolves");
+        if (stage === "talkative_wolf") return hasAliveRole("talkative_wolves");
+        if (stage === "witch") return hasAliveRole("witches");
+        if (stage === "seer") return hasAliveRole("seers");
+        if (stage === "bear") return hasAliveRole("bears");
+        if (stage === "shepherd") return hasAliveRole("shepherds") && state.sheepRemaining > 0;
+        if (stage === "judge") return hasAliveRole("judges");
+        return stage === "dawn";
+      }
+
+      function nightStageLabel(stage) {
+        const labels = {
+          cupid: L.cupid, couple_reveal: L.couple, wild_child: L.wild_child,
+          barber_signal: L.barber, alien_signal: L.alien, protector: L.protector,
+          prostitute: L.prostitute, wolves: L.night_order_wolves, cerberus: L.cerberus,
+          infection: L.infection, white_wolf: L.white_wolf, black_wolf: L.black_wolf,
+          talkative_wolf: L.talkative_wolf, witch: L.witch, seer: L.seer, bear: L.bear,
+          shepherd: L.shepherd, judge: L.judge, dawn: L.villagers_wake,
+        };
+        return labels[stage] || stage;
+      }
+
+      function activeNightOrder() {
+        return nightOrder.filter(nightStageCouldWake);
+      }
+
+      function nightOrderGuide() {
+        const order = activeNightOrder();
+        const currentStage = nightResultStages[state.stage] || state.stage;
+        const currentIndex = Math.max(0, order.indexOf(currentStage));
+        const rows = order.map((stage, index) => `<li class="${index < currentIndex ? "done" : index === currentIndex ? "current" : "upcoming"}"><span>${String(index + 1).padStart(2, "0")}</span><strong>${nightStageLabel(stage)}</strong></li>`).join("");
+        return `<details class="night-order-guide"><summary><span>${L.night_order_title}</span><strong>${t("night_order_progress", {current: currentIndex + 1, total: order.length, role: nightStageLabel(currentStage)})}</strong></summary><p>${L.night_order_help}</p><ol>${rows}</ol></details>`;
+      }
+
       function nextNightStage(after) {
-        const order = ["cupid", "couple_reveal", "wild_child", "protector", "prostitute", "wolves", "cerberus", "infection", "white_wolf", "bear", "shepherd", "judge", "black_wolf", "talkative_wolf", "barber_signal", "alien_signal", "witch", "seer", "dawn"];
-        let index = order.indexOf(after) + 1;
-        while (index < order.length) {
-          const next = order[index];
+        let index = nightOrder.indexOf(after) + 1;
+        while (index < nightOrder.length) {
+          const next = nightOrder[index];
           if (next === "cupid" && (state.round !== 1 || !hasAliveRole("cupids") || state.cupidLinked)) { index++; continue; }
-          if (next === "couple_reveal") { index++; continue; }
+          if (next === "couple_reveal" && (!state.cupidLinked || !hasLivingCouple())) { index++; continue; }
           if (next === "wild_child" && (state.round !== 1 || !hasAliveRole("wild_children") || state.wildChildLinked)) { index++; continue; }
           if (next === "protector" && !hasAliveRole("protectors")) { index++; continue; }
           if (next === "prostitute" && !hasAliveRole("prostitutes")) { index++; continue; }
           if (next === "wolves" && !wolves().length) { index++; continue; }
           if (next === "cerberus" && !hasAliveRole("cerberus_wolves")) { index++; continue; }
-          if (next === "infection" && (!state.infectionAvailable || !hasAliveRole("infecting_fathers") || isRoleBlocked("infecting_fathers") || !state.wolfTargetId)) { index++; continue; }
+          if (next === "infection" && !hasAliveRole("infecting_fathers")) { index++; continue; }
           if (next === "white_wolf" && (state.round % 2 !== 0 || !hasAliveRole("white_wolves") || isRoleBlocked("white_wolves") || wolves().filter(item => item.role !== "white_wolves").length === 0)) { index++; continue; }
           if (next === "bear" && !hasAliveRole("bears")) { index++; continue; }
           if (next === "shepherd" && (!hasAliveRole("shepherds") || state.sheepRemaining <= 0)) { index++; continue; }
@@ -494,7 +558,7 @@
       }
 
       function nightFrame(kicker, title, instruction, content, button) {
-        return `<div class="moon-orbit"><span>${state.round}</span></div><div class="scene-kicker">${kicker}</div><h1>${title}</h1><p class="scene-lead">${instruction}</p>${content}<div class="scene-actions">${button}</div>`;
+        return `<div class="moon-orbit"><span>${state.round}</span></div><div class="scene-kicker">${kicker}</div><h1>${title}</h1><p class="scene-lead">${instruction}</p>${nightOrderGuide()}${content}<div class="scene-actions">${button}</div>`;
       }
 
       function renderCupid() {
@@ -506,12 +570,14 @@
 
       function renderCoupleReveal() {
         const lovers = coupleMembers();
+        const infectedWithSolo = infectedSoloCouple(lovers).length === 2;
         const joinsAlien = alienCouple().length === 2;
         const independent = independentCouple().length === 2;
         setHeading(t("night", {n: state.round}), L.couple);
         const cards = lovers.map(item => `<div class="verdict-card"><strong>#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)}</strong><small>${roleMeta[item.role].name}</small></div>`).join("");
-        const rule = joinsAlien ? L.couple_alien_help : independent ? L.couple_independent_help : t("couple_same_camp_help", {camp: baseFaction(lovers[0]) === "wolf" ? L.wolf_camp : L.village_camp});
-        scene.innerHTML = nightFrame(L.couple_secret, L.couple_wake, rule, cards, actionButton(L.couple_sleep, "finish-couple"));
+        const factionRule = infectedWithSolo ? L.couple_infected_solo_help : joinsAlien ? L.couple_alien_help : independent ? L.couple_independent_help : t("couple_same_camp_help", {camp: baseFaction(lovers[0]) === "wolf" ? L.wolf_camp : L.village_camp});
+        const rule = state.round === 1 ? factionRule : `${L.couple_talk_help} ${factionRule}`;
+        scene.innerHTML = nightFrame(state.round === 1 ? L.couple_secret : L.couple_talk_secret, L.couple_wake, rule, cards, actionButton(L.couple_sleep, "finish-couple"));
       }
 
       function renderWildChild() {
@@ -553,6 +619,12 @@
       function renderInfection() {
         setHeading(t("night", {n: state.round}), L.infection);
         const target = player(state.wolfTargetId);
+        const blocked = isRoleBlocked("infecting_fathers");
+        if (!state.infectionAvailable || blocked || !target) {
+          const reason = !state.infectionAvailable ? L.infection_spent_help : blocked ? L.infection_blocked_help : L.infection_no_target_help;
+          scene.innerHTML = nightFrame(L.infection_turn, L.infection_wake_always, reason, "", actionButton(L.infection_sleep, "skip-infection"));
+          return;
+        }
         const buttons = `${actionButton(t("infect_target", {name: escapeHtml(target.name)}), "confirm-infection")}${actionButton(L.keep_attack, "skip-infection", false, true)}`;
         scene.innerHTML = nightFrame(L.infection_turn, L.infection_wake, L.infection_help, "", buttons);
       }
@@ -561,7 +633,7 @@
         setHeading(t("night", {n: state.round}), L.infection);
         const target = player(state.wolfTargetId);
         const title = state.infectionSucceeded ? L.infection_success : L.infection_failed;
-        const message = state.infectionSucceeded ? target.role === "bears" ? t("infection_success_bear_help", {name: escapeHtml(target.name)}) : t("infection_success_help", {name: escapeHtml(target.name)}) : L.infection_failed_help;
+        const message = state.infectionSucceeded ? t("infection_success_help", {name: escapeHtml(target.name), role: escapeHtml(roleMeta[target.role].name)}) : L.infection_failed_help;
         scene.innerHTML = nightFrame(L.infection_turn, title, message, "", actionButton(L.continue_night, "finish-infection"));
       }
 
@@ -610,13 +682,10 @@
 
       function renderJudge() {
         setHeading(t("night", {n: state.round}), L.judge);
-        if (isRoleBlocked("judges")) {
-          scene.innerHTML = nightFrame(L.judge_night, L.judge_wake, L.judge_blocked, "", actionButton(L.continue_night, "skip-judge"));
-          return;
-        }
         const playerOptions = options(alive(), L.choose_judge_player, false);
         const content = `<div class="potion-grid"><label class="single-name"><span>${L.judge_first_player}</span><select id="judge-first">${playerOptions}</select></label><label class="single-name"><span>${L.judge_second_player}</span><select id="judge-second">${playerOptions}</select></label></div>`;
-        scene.innerHTML = nightFrame(L.judge_night, L.judge_wake, L.judge_help, content, actionButton(L.compare_clans, "confirm-judge", true));
+        const help = isRoleBlocked("judges") ? `${L.judge_help} ${L.judge_blocked}` : L.judge_help;
+        scene.innerHTML = nightFrame(L.judge_night, L.judge_wake, help, content, actionButton(L.compare_clans, "confirm-judge", true));
       }
 
       function renderJudgeResult() {
@@ -1080,10 +1149,7 @@
           state.infectionAttempted = true;
           state.infectionSucceeded = infectionCanSucceed(target?.id);
           state.infectedPlayerId = state.infectionSucceeded ? target.id : null;
-          if (state.infectionSucceeded) {
-            if (target.role === "bears") target.infected = true;
-            else target.role = "simple_wolves";
-          }
+          if (state.infectionSucceeded) target.infected = true;
           state.stage = "infection_result"; save(); render(); return;
         } else if (action === "finish-infection") {
           nextNightStage("infection"); return;
@@ -1124,7 +1190,7 @@
           if (!first || !second || first.id === second.id) return;
           state.judgeFirstId = first.id;
           state.judgeSecondId = second.id;
-          state.judgeSameClan = competitionFaction(first) === competitionFaction(second);
+          state.judgeSameClan = isRoleBlocked("judges") || competitionFaction(first) === competitionFaction(second);
           state.stage = "judge_result";
         } else if (action === "skip-judge") {
           state.judgeFirstId = null; state.judgeSecondId = null; state.judgeSameClan = null;
@@ -1237,7 +1303,8 @@
           updateWildChildFromIdolDeath();
           state.voteRevealedRole = state.lastVote ? player(state.lastVote).role : null;
           state.servantAccepted = null;
-          const angelWonFirstDay = state.round === 1 && player(state.lastVote)?.role === "angels";
+          const votedPlayer = player(state.lastVote);
+          const angelWonFirstDay = state.round === 1 && votedPlayer?.role === "angels" && competitionFaction(votedPlayer) === "angel";
           if (angelWonFirstDay) {
             finalizeVoteDeath();
           } else if (state.lastVote && livingServant()) {

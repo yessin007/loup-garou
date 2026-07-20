@@ -102,24 +102,24 @@
       function freshState() {
         return {
           stage: "roster", round: 1, players: [], protectedId: null, lastProtectedId: null, roomStarted: false,
-          wolfTargetId: null, wolfInitialTargetId: null, wolfTargetChanged: false, prostituteTargetId: null, blockedPlayerId: null, silencedPlayerId: null,
+          wolfTargetId: null, wolfInitialTargetId: null, wolfTargetChanged: false, prostituteTargetId: null, lastProstituteTargetId: null, blockedPlayerId: null, silencedPlayerId: null, lastSilencedPlayerId: null,
           infectionAvailable: true, infectionAttempted: false, infectionSucceeded: false, infectedPlayerId: null,
           talkativePlayerId: null, assignedWord: "", witchSave: false, witchKillId: null,
           barberSignalReady: false, barberShotAvailable: true, barberPlayerId: null, barberTargetId: null, barberHit: null,
-          alienSignalReady: false, alienCorrectGuesses: [], alienLastGuessCorrect: null, alienRemainingCount: null,
+          alienSignalReady: false, alienCorrectGuesses: [], alienLastGuessCorrect: null, alienLastGuessResults: [], alienRemainingCount: null,
           specialReturnStage: null,
           ancientWolfHits: {}, ancientResistedPlayerId: null, lostVillagePowerIds: [],
           pendingHunterId: null, pendingHunterSource: null, hunterShotRecords: [],
           bearPlayerId: null, bearGrowled: null, bearNeighborIds: [],
-          sheepRemaining: 3, shepherdLastResults: [],
+          sheepRemaining: 3, shepherdLastResults: [], shepherdReportedThisNight: false, shepherdWasBlocked: false,
           cupidLinked: false, coupleIds: [],
           judgeFirstId: null, judgeSecondId: null, judgeSameClan: null,
           wildChildLinked: false, wildChildId: null, wildIdolId: null, wildIdolDeathTriggered: false, wildChildTurned: false,
           angelChanceExpired: false,
           ankouGhost: null,
           whiteWolfTargetId: null,
-          lifePotion: true, deathPotion: true, seerTargetId: null, seerDisplayedRole: null,
-          deaths: [], speakerId: null, qualifiers: [], accusationDraftIds: [], lastVote: null,
+          lifePotion: true, deathPotion: true, seerTargetId: null, seerDisplayedRole: null, seerWasBlocked: false,
+          deaths: [], speakerId: null, qualifiers: [], accusationDraftIds: [], lastVote: null, voteDeathIds: [],
           roleDeck: [], revealVisible: false, voteOutcome: null, voteRevealedRole: null, servantAccepted: null, winner: null,
         };
       }
@@ -130,12 +130,16 @@
       if (state.infectionAvailable === undefined) state.infectionAvailable = true;
       if (!state.ancientWolfHits) state.ancientWolfHits = {};
       if (state.sheepRemaining === undefined) state.sheepRemaining = 3;
+      if (state.shepherdReportedThisNight === undefined) state.shepherdReportedThisNight = false;
+      if (state.shepherdWasBlocked === undefined) state.shepherdWasBlocked = false;
       if (!state.coupleIds) state.coupleIds = [];
       if (state.angelChanceExpired === undefined) state.angelChanceExpired = state.round > 1;
       if (state.ankouGhost === undefined) state.ankouGhost = null;
       if (state.wolfInitialTargetId === undefined) state.wolfInitialTargetId = null;
       if (state.wolfTargetChanged === undefined) state.wolfTargetChanged = false;
       if (state.lastProtectedId === undefined) state.lastProtectedId = null;
+      if (state.lastProstituteTargetId === undefined) state.lastProstituteTargetId = null;
+      if (state.lastSilencedPlayerId === undefined) state.lastSilencedPlayerId = null;
       if (state.roomStarted === undefined) state.roomStarted = state.players.length > 0;
       if (state.barberPlayerId === undefined) state.barberPlayerId = null;
       if (state.specialReturnStage === undefined) state.specialReturnStage = null;
@@ -305,6 +309,16 @@
           state.wildChildTurned = true;
         }
       }
+      function killPlayersWithLovers(ids) {
+        const expanded = new Set((ids || []).map(Number).filter(Boolean));
+        const lovers = coupleMembers();
+        if (lovers.some(item => expanded.has(item.id))) lovers.forEach(item => expanded.add(item.id));
+        const killed = [...expanded].map(player).filter(item => item?.alive);
+        killed.forEach(item => { item.alive = false; });
+        if (killed.some(item => item.id === state.wildIdolId)) state.wildIdolDeathTriggered = true;
+        updateWildChildFromIdolDeath();
+        return killed;
+      }
       function bearStatus() {
         const bear = livingBear();
         if (!bear) return {bear: null, neighbors: [], growls: false};
@@ -333,11 +347,16 @@
           state.stage = "day_end";
           return;
         }
+        const voteDeaths = (state.voteDeathIds || [state.lastVote]).map(player).filter(Boolean);
         const deadRole = state.servantAccepted ? "servants" : eliminated?.role;
-        if (deadRole === "ankous") activateAnkouGhost(eliminated, state.round + 1);
-        if (deadRole === "ancients") removeVillagePowersAfterAncientVote();
-        if (deadRole === "hunters") {
-          state.pendingHunterId = eliminated.id;
+        voteDeaths.forEach(item => {
+          const effectiveRole = item.id === eliminated?.id ? deadRole : item.role;
+          if (effectiveRole === "ankous") activateAnkouGhost(item, state.round + 1);
+        });
+        if (voteDeaths.some(item => (item.id === eliminated?.id ? deadRole : item.role) === "ancients")) removeVillagePowersAfterAncientVote();
+        const deadHunter = voteDeaths.find(item => (item.id === eliminated?.id ? deadRole : item.role) === "hunters");
+        if (deadHunter) {
+          state.pendingHunterId = deadHunter.id;
           state.pendingHunterSource = "vote";
           state.winner = null;
           state.stage = "hunter_shot";
@@ -352,8 +371,8 @@
         state.pendingHunterId = null;
         state.pendingHunterSource = null;
         state.winner = checkWinner();
-        state.stage = source === "night" ? "dawn" : source === "barber" && !state.winner ? specialReturnStage || "accusation" : "day_end";
-        if (source === "barber") state.specialReturnStage = null;
+        state.stage = source === "night" ? "dawn" : ["barber", "alien"].includes(source) && !state.winner ? specialReturnStage || "accusation" : "day_end";
+        if (["barber", "alien"].includes(source)) state.specialReturnStage = null;
       }
       function canUseAlien() {
         const alien = livingAlien();
@@ -385,11 +404,21 @@
         const statuses = [roleMeta[item.role].name];
         if (item.infected) statuses.push(L.infected_status);
         if ((state.coupleIds || []).includes(item.id)) statuses.push(L.couple_status);
+        if (item.id === state.wildIdolId) statuses.push(L.wild_idol_status);
         return statuses.join(" · ");
       }
-      function options(players, placeholder = L.choose_probe, _showRole = true, disabledIds = []) {
+      function playerText(item, includeId = true) {
+        if (!item) return "";
+        const prefix = includeId ? `#${String(item.id).padStart(2, "0")} · ` : "";
+        return `${prefix}${escapeHtml(item.name)} (${escapeHtml(playerRoleStatus(item))})`;
+      }
+      function playerIdentity(item) {
+        if (!item) return "";
+        return `#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)} <em class="player-inline-role">(${escapeHtml(playerRoleStatus(item))})</em>`;
+      }
+      function options(players, placeholder = L.choose_probe, _showRole = true, disabledIds = [], disabledLabel = L.protected_previous_target) {
         const disabled = new Set(disabledIds.map(Number));
-        return `<option value="">${placeholder}</option>${players.map(item => `<option value="${item.id}" ${disabled.has(item.id) ? "disabled" : ""}>#${String(item.id).padStart(2, "0")} — ${escapeHtml(item.name)} (${escapeHtml(playerRoleStatus(item))})${disabled.has(item.id) ? ` — ${L.protected_previous_target}` : ""}</option>`).join("")}`;
+        return `<option value="">${placeholder}</option>${players.map(item => `<option value="${item.id}" ${disabled.has(item.id) ? "disabled" : ""}>#${String(item.id).padStart(2, "0")} — ${escapeHtml(item.name)} (${escapeHtml(playerRoleStatus(item))})${disabled.has(item.id) ? ` — ${disabledLabel}` : ""}</option>`).join("")}`;
       }
       function actionButton(label, action, disabled = false, secondary = false) {
         return `<button class="scene-action ${secondary ? "secondary" : ""}" type="button" data-action="${action}" ${disabled ? "disabled" : ""}>${label}<span>→</span></button>`;
@@ -411,7 +440,7 @@
         sidebar.innerHTML = `<div class="sidebar-title"><span>${L.village}</span><strong>${t("alive_count", {n: alive().length})}</strong></div><div class="player-stack">${state.players.map(item => `
           <article class="player-chip ${item.alive ? "" : "dead"} ${!concealRoles && isWolfPlayer(item) ? "is-wolf" : ""}">
             <span class="role-token">${String(item.id).padStart(2, "0")}</span>
-            <div><strong>#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)}</strong><small>${concealRoles ? "" : `${setup.role_labels[item.role]} · ${roleMeta[item.role].short}${item.infected ? ` · ${L.infected_status}` : ""}${item.wildTurned ? ` · ${L.wild_wolf_status}` : ""}${isAngelVillageAligned(item) ? ` · ${L.angel_village_status}` : ""}${state.ankouGhost?.playerId === item.id && state.ankouGhost.votesRemaining > 0 ? ` · ${t("ankou_votes_left", {count: state.ankouGhost.votesRemaining})}` : ""}${loverIds.has(item.id) ? ` · ${L.couple_status}` : ""}`}</small></div>
+            <div><strong>#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)}</strong><small>${concealRoles ? "" : `${setup.role_labels[item.role]} · ${roleMeta[item.role].short}${item.infected ? ` · ${L.infected_status}` : ""}${item.wildTurned ? ` · ${L.wild_wolf_status}` : ""}${item.id === state.wildIdolId ? ` · ${L.wild_idol_status}` : ""}${isAngelVillageAligned(item) ? ` · ${L.angel_village_status}` : ""}${state.ankouGhost?.playerId === item.id && state.ankouGhost.votesRemaining > 0 ? ` · ${t("ankou_votes_left", {count: state.ankouGhost.votesRemaining})}` : ""}${loverIds.has(item.id) ? ` · ${L.couple_status}` : ""}`}</small></div>
             <i>${item.alive ? L.alive : L.eliminated}</i>
           </article>`).join("")}</div>`;
       }
@@ -477,7 +506,7 @@
       }
 
       const nightOrder = ["cupid", "couple_reveal", "wild_child", "barber_signal", "alien_signal", "protector", "prostitute", "wolves", "cerberus", "infection", "white_wolf", "black_wolf", "talkative_wolf", "witch", "seer", "bear", "shepherd", "judge", "dawn"];
-      const nightResultStages = {infection_result: "infection", shepherd_result: "shepherd", judge_result: "judge"};
+      const nightResultStages = {infection_result: "infection", judge_result: "judge"};
 
       function hasLivingCouple() {
         return coupleMembers().filter(item => item.alive).length === 2;
@@ -551,6 +580,13 @@
           if (next === "alien_signal" && (state.round !== 1 || !hasAliveRole("aliens") || state.alienSignalReady)) { index++; continue; }
           if (next === "witch" && (!hasAliveRole("witches") || isRoleBlocked("witches"))) { index++; continue; }
           if (next === "seer" && !hasAliveRole("seers")) { index++; continue; }
+          if (next === "seer" && isRoleBlocked("seers")) {
+            state.seerTargetId = null;
+            state.seerDisplayedRole = "cerberus_wolves";
+            state.seerWasBlocked = true;
+            index++;
+            continue;
+          }
           if (next === "dawn") { resolveNight(); render(); return; }
           state.stage = next;
           save(); render(); return;
@@ -584,14 +620,14 @@
         const child = alive().find(item => item.role === "wild_children");
         const targets = alive().filter(item => item.id !== child?.id);
         setHeading(t("night", {n: state.round}), L.wild_child);
-        const content = `<div class="verdict-card"><span>${L.wild_child_position}</span><strong>#${String(child.id).padStart(2, "0")} · ${escapeHtml(child.name)}</strong></div><select id="night-select">${options(targets, L.choose_idol, false)}</select>`;
+        const content = `<div class="verdict-card"><span>${L.wild_child_position}</span><strong>${playerIdentity(child)}</strong></div><select id="night-select">${options(targets, L.choose_idol, false)}</select>`;
         scene.innerHTML = nightFrame(L.wild_child_first_night, L.wild_child_wake, L.wild_child_help, content, actionButton(L.confirm_idol, "confirm-wild-child", true));
       }
 
       function renderProtector() {
         setHeading(t("night", {n: state.round}), L.protector);
         const previous = player(state.lastProtectedId);
-        const previousNotice = previous?.alive ? `<div class="protector-lock-note"><span>${L.protected_previous_target}</span><strong>#${String(previous.id).padStart(2, "0")} · ${escapeHtml(previous.name)}</strong><small>${L.protector_no_repeat}</small></div>` : "";
+        const previousNotice = previous?.alive ? `<div class="protector-lock-note"><span>${L.protected_previous_target}</span><strong>${playerIdentity(previous)}</strong><small>${L.protector_no_repeat}</small></div>` : "";
         scene.innerHTML = nightFrame(L.village_sleeps, L.protector_wake, L.protect_q, `${previousNotice}<select id="night-select">${options(alive(), L.choose_protected, false, previous?.alive ? [previous.id] : [])}</select>`, actionButton(L.confirm_protection, "confirm-protector", true));
       }
 
@@ -599,7 +635,9 @@
         setHeading(t("night", {n: state.round}), L.prostitute);
         const prostitute = alive().find(item => item.role === "prostitutes");
         const targets = alive().filter(item => item.id !== prostitute?.id);
-        scene.innerHTML = nightFrame(L.prostitute_night, L.prostitute_wake, L.prostitute_help, `<select id="night-select">${options(targets, L.choose_redirect_target, false)}</select>`, actionButton(L.confirm_redirect, "confirm-prostitute", true));
+        const previous = player(state.lastProstituteTargetId);
+        const previousNotice = previous?.alive ? `<div class="protector-lock-note"><span>${L.prostitute_previous_target}</span><strong>${playerIdentity(previous)}</strong><small>${L.prostitute_no_repeat}</small></div>` : "";
+        scene.innerHTML = nightFrame(L.prostitute_night, L.prostitute_wake, L.prostitute_help, `${previousNotice}<select id="night-select">${options(targets, L.choose_redirect_target, false, previous?.alive ? [previous.id] : [], L.prostitute_previous_target)}</select>`, actionButton(L.confirm_redirect, "confirm-prostitute", true));
       }
 
       function renderWolves() {
@@ -607,7 +645,7 @@
         const targets = alive().filter(item => !isWolfPlayer(item));
         const targetOptions = options(targets, L.choose_victim, false);
         const changeControl = `<div class="potion-grid"><label class="choice-card"><input id="wolf-change-target" type="checkbox"><span><strong>${L.wolves_change_target}</strong><small>${L.wolves_change_target_help}</small></span></label></div><label class="single-name"><span>${L.wolves_replacement_victim}</span><select id="wolf-replacement-target" disabled>${targetOptions}</select></label>`;
-        scene.innerHTML = nightFrame(L.shadows, L.wolves_wake, L.wolves_q, `<div class="active-role-list">${wolves().map(item => `<span>#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)} · ${L.pack_member}</span>`).join("")}</div><label class="single-name"><span>${L.wolves_initial_victim}</span><select id="wolf-initial-target">${targetOptions}</select></label>${changeControl}`, actionButton(L.wolves_sleep, "confirm-wolves", true));
+        scene.innerHTML = nightFrame(L.shadows, L.wolves_wake, L.wolves_q, `<div class="active-role-list">${wolves().map(item => `<span>${playerIdentity(item)} · ${L.pack_member}</span>`).join("")}</div><label class="single-name"><span>${L.wolves_initial_victim}</span><select id="wolf-initial-target">${targetOptions}</select></label>${changeControl}`, actionButton(L.wolves_sleep, "confirm-wolves", true));
       }
 
       function renderCerberus() {
@@ -625,7 +663,7 @@
           scene.innerHTML = nightFrame(L.infection_turn, L.infection_wake_always, reason, "", actionButton(L.infection_sleep, "skip-infection"));
           return;
         }
-        const buttons = `${actionButton(t("infect_target", {name: escapeHtml(target.name)}), "confirm-infection")}${actionButton(L.keep_attack, "skip-infection", false, true)}`;
+        const buttons = `${actionButton(t("infect_target", {name: playerText(target, false)}), "confirm-infection")}${actionButton(L.keep_attack, "skip-infection", false, true)}`;
         scene.innerHTML = nightFrame(L.infection_turn, L.infection_wake, L.infection_help, "", buttons);
       }
 
@@ -641,43 +679,31 @@
         const whiteWolf = alive().find(item => item.role === "white_wolves");
         const targets = wolves().filter(item => item.id !== whiteWolf?.id);
         setHeading(t("night", {n: state.round}), L.white_wolf);
-        const content = `<div class="verdict-card"><span>${L.white_wolf_alone}</span><strong>#${String(whiteWolf.id).padStart(2, "0")} · ${escapeHtml(whiteWolf.name)}</strong></div><select id="night-select">${options(targets, L.choose_wolf_target, false)}</select>`;
+        const content = `<div class="verdict-card"><span>${L.white_wolf_alone}</span><strong>${playerIdentity(whiteWolf)}</strong></div><select id="night-select">${options(targets, L.choose_wolf_target, false)}</select>`;
         const buttons = `${actionButton(L.white_wolf_kill, "confirm-white-wolf", true)}${actionButton(L.white_wolf_pass, "skip-white-wolf", false, true)}`;
         scene.innerHTML = nightFrame(L.white_wolf_night, L.white_wolf_wake, L.white_wolf_help, content, buttons);
       }
 
       function renderBear() {
-        const {bear, neighbors, growls} = bearStatus();
+        const {bear, neighbors} = bearStatus();
         setHeading(t("night", {n: state.round}), L.bear);
-        const neighborCards = neighbors.map(item => `<span>#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)}</span>`).join("");
-        const result = growls ? `<div class="vision-card wolf"><span class="vision-symbol">OU</span><strong>${L.bear_growls}</strong><p>${L.bear_growls_help}</p></div>` : `<div class="vision-card"><span class="vision-symbol">OU</span><strong>${L.bear_silent}</strong><p>${isRoleBlocked("bears") ? L.bear_blocked_help : L.bear_silent_help}</p></div>`;
-        const content = `<div class="active-role-list"><span>${L.bear_position}: #${String(bear.id).padStart(2, "0")} · ${escapeHtml(bear.name)}</span>${neighborCards}</div>${result}`;
+        const neighborCards = neighbors.map(item => `<span>${playerIdentity(item)}</span>`).join("");
+        const content = `<div class="active-role-list"><span>${L.bear_position}: ${playerIdentity(bear)}</span>${neighborCards}</div>`;
         scene.innerHTML = nightFrame(L.bear_night, L.bear_wake, L.bear_check_neighbors, content, actionButton(L.bear_sleep, "finish-bear"));
       }
 
       function renderShepherd() {
         setHeading(t("night", {n: state.round}), L.shepherd);
-        if (isRoleBlocked("shepherds")) {
-          scene.innerHTML = nightFrame(L.shepherd_night, L.shepherd_wake, L.shepherd_blocked, "", actionButton(L.continue_night, "skip-shepherd"));
-          return;
-        }
+        const blocked = isRoleBlocked("shepherds");
         const shepherd = alive().find(item => item.role === "shepherds");
         const targets = alive().filter(item => item.id !== shepherd?.id);
         const rows = Array.from({length: state.sheepRemaining}, (_, index) => `<label class="alien-guess-row shepherd-row"><input class="shepherd-send-toggle" type="checkbox"><span><strong>${t("sheep_number", {n: index + 1})}</strong><small>${L.choose_sheep_target}</small></span><select class="shepherd-target-select" disabled>${options(targets, L.choose_sheep_target, false)}</select></label>`).join("");
-        const help = t("shepherd_help", {count: state.sheepRemaining});
+        const help = `${t("shepherd_help", {count: state.sheepRemaining})}${blocked ? ` ${L.shepherd_blocked}` : ""}`;
         scene.innerHTML = nightFrame(L.shepherd_night, L.shepherd_wake, help, `<div class="alien-guess-list">${rows}</div>`, actionButton(L.send_sheep, "confirm-shepherd", true));
       }
 
       function renderShepherdResult() {
-        setHeading(t("night", {n: state.round}), L.shepherd);
-        const cards = state.shepherdLastResults.map(result => {
-          const target = player(result.targetId);
-          const label = result.returned ? L.sheep_returned : L.sheep_lost;
-          const detail = result.returned ? L.sheep_returned_help : L.sheep_lost_help;
-          return `<div class="verdict-card"><span>${label}</span><strong>#${String(target.id).padStart(2, "0")} · ${escapeHtml(target.name)}</strong><small>${detail}</small></div>`;
-        }).join("");
-        const remaining = t("sheep_remaining", {count: state.sheepRemaining});
-        scene.innerHTML = nightFrame(L.shepherd_result, remaining, state.sheepRemaining ? L.shepherd_returns_next_night : L.shepherd_no_sheep, cards, actionButton(L.continue_night, "finish-shepherd-result"));
+        nextNightStage("shepherd");
       }
 
       function renderJudge() {
@@ -692,7 +718,7 @@
         const first = player(state.judgeFirstId);
         const second = player(state.judgeSecondId);
         setHeading(t("night", {n: state.round}), L.judge);
-        const cards = `<div class="verdict-card"><strong>#${String(first.id).padStart(2, "0")} · ${escapeHtml(first.name)}</strong></div><div class="verdict-card"><strong>#${String(second.id).padStart(2, "0")} · ${escapeHtml(second.name)}</strong></div>`;
+        const cards = `<div class="verdict-card"><strong>${playerIdentity(first)}</strong></div><div class="verdict-card"><strong>${playerIdentity(second)}</strong></div>`;
         const title = state.judgeSameClan ? L.judge_same_clan : L.judge_different_clans;
         const help = state.judgeSameClan ? L.judge_same_clan_help : L.judge_different_clans_help;
         scene.innerHTML = nightFrame(L.judge_result, title, help, cards, actionButton(L.continue_night, "finish-judge-result"));
@@ -701,7 +727,9 @@
       function renderBlackWolf() {
         setHeading(t("night", {n: state.round}), L.black_wolf);
         const targets = alive().filter(item => item.role !== "black_wolves");
-        scene.innerHTML = nightFrame(L.black_wolf_alone, L.black_wolf_wake, L.black_wolf_q, `<select id="night-select">${options(targets, L.choose_silenced, false)}</select>`, actionButton(L.confirm_silence, "confirm-black-wolf", true));
+        const previous = player(state.lastSilencedPlayerId);
+        const previousNotice = previous?.alive ? `<div class="protector-lock-note"><span>${L.silenced_previous_target}</span><strong>${playerIdentity(previous)}</strong><small>${L.black_wolf_no_repeat}</small></div>` : "";
+        scene.innerHTML = nightFrame(L.black_wolf_alone, L.black_wolf_wake, L.black_wolf_q, `${previousNotice}<select id="night-select">${options(targets, L.choose_silenced, false, previous?.alive ? [previous.id] : [], L.silenced_previous_target)}</select>`, actionButton(L.confirm_silence, "confirm-black-wolf", true));
       }
 
       function renderTalkativeWolf() {
@@ -728,7 +756,7 @@
         const savedByProtector = Boolean(victim && !isRoleBlocked("protectors") && state.protectedId === actualWolfTargetId);
         const lifeDisabled = !victim || !state.lifePotion || savedByProtector;
         const targets = alive().filter(item => item.id !== actualWolfTargetId);
-        const instruction = !victim ? L.no_wolf_attack : savedByProtector ? t("protected_saved", {name: escapeHtml(victim.name)}) : t("pack_chose", {name: escapeHtml(victim.name)});
+        const instruction = !victim ? L.no_wolf_attack : savedByProtector ? t("protected_saved", {name: playerText(victim, false)}) : t("pack_chose", {name: playerText(victim, false)});
         scene.innerHTML = nightFrame(L.potions, L.witch_wake, instruction, `
           <div class="potion-grid">
             <label class="choice-card ${lifeDisabled ? "disabled" : ""}"><input id="witch-save" type="checkbox" ${lifeDisabled ? "disabled" : ""}><span><strong>${L.life_potion}</strong><small>${state.lifePotion ? L.save_victim : L.used_potion}</small></span></label>
@@ -740,25 +768,19 @@
       function renderSeer() {
         setHeading(t("night", {n: state.round}), L.seer);
         if (isRoleBlocked("seers")) {
-          const meta = roleMeta.cerberus_wolves;
-          scene.innerHTML = nightFrame(L.cerberus_vision, L.veil_lifts, L.cerberus_vision_help, `<div class="vision-card wolf"><div class="vision-glow"></div><span class="vision-symbol">${meta.short}</span><small>${L.wolf_camp}</small><strong>${meta.name}</strong><p>${meta.description}</p></div>`, actionButton(L.saw_role, "finish-seer"));
+          state.seerTargetId = null;
+          state.seerDisplayedRole = "cerberus_wolves";
+          state.seerWasBlocked = true;
+          nextNightStage("seer");
           return;
         }
         const seers = alive().filter(item => item.role === "seers");
         const targets = alive().filter(item => !seers.some(seer => seer.id === item.id));
-        if (state.seerTargetId) {
-          const target = player(state.seerTargetId);
-          const meta = roleMeta[state.seerDisplayedRole || target.role];
-          const camp = meta.faction === "wolf" ? L.wolf_camp : meta.faction === "alien" ? L.alien_camp : L.village_camp;
-          const randomized = target.role === "blue_wolves";
-          scene.innerHTML = nightFrame(L.vision_revealed, L.veil_lifts, t("true_role", {id: String(target.id).padStart(2, "0"), name: escapeHtml(target.name)}), `<div class="vision-card ${meta.faction === "wolf" ? "wolf" : ""} ${randomized ? "randomized-vision" : ""}"><div class="vision-glow"></div><span class="vision-symbol">${meta.short}</span><small>${camp}</small><strong>${meta.name}</strong><p>${meta.description}</p></div>`, actionButton(L.saw_role, "finish-seer"));
-        } else {
-          scene.innerHTML = nightFrame(L.future_blurs, L.seer_wake, L.discover_q, `<div class="seer-prompt"><span>${L.seer_eye}</span><p>${L.seer_help}</p></div><select id="night-select">${options(targets, L.choose_probe, false)}</select>`, actionButton(L.open_vision, "reveal-seer", true));
-        }
+        scene.innerHTML = nightFrame(L.future_blurs, L.seer_wake, L.discover_q, `<div class="seer-prompt"><span>${L.seer_eye}</span><p>${L.seer_help}</p></div><select id="night-select">${options(targets, L.choose_probe, false)}</select>`, actionButton(L.open_vision, "reveal-seer", true));
       }
 
       function resolveNight() {
-        const deaths = [];
+        const deathIds = [];
         const actualWolfTargetId = effectiveWolfTargetId();
         const protectionWorks = !isRoleBlocked("protectors") && state.protectedId === actualWolfTargetId;
         const wolfVictimDies = actualWolfTargetId && !protectionWorks && !state.witchSave;
@@ -767,18 +789,16 @@
           state.ancientWolfHits[wolfVictim.id] = 1;
           state.ancientResistedPlayerId = wolfVictim.id;
         } else if (wolfVictimDies && wolfVictim?.role !== "aliens") {
-          deaths.push(actualWolfTargetId);
+          deathIds.push(actualWolfTargetId);
         }
-        if (state.whiteWolfTargetId && !deaths.includes(state.whiteWolfTargetId)) deaths.push(state.whiteWolfTargetId);
-        if (state.witchKillId && !deaths.includes(state.witchKillId)) deaths.push(state.witchKillId);
-        deaths.forEach(id => { player(id).alive = false; });
-        deaths.map(player).forEach(item => activateAnkouGhost(item, state.round));
-        if (deaths.includes(state.wildIdolId)) state.wildIdolDeathTriggered = true;
-        updateWildChildFromIdolDeath();
-        state.deaths = deaths;
+        if (state.whiteWolfTargetId && !deathIds.includes(state.whiteWolfTargetId)) deathIds.push(state.whiteWolfTargetId);
+        if (state.witchKillId && !deathIds.includes(state.witchKillId)) deathIds.push(state.witchKillId);
+        const deaths = killPlayersWithLovers(deathIds);
+        deaths.forEach(item => activateAnkouGhost(item, state.round));
+        state.deaths = deaths.map(item => item.id);
         const survivors = alive();
         state.speakerId = survivors.length ? survivors[Math.floor(Math.random() * survivors.length)].id : null;
-        const deadHunter = deaths.map(player).find(item => item?.role === "hunters");
+        const deadHunter = deaths.find(item => item.role === "hunters");
         if (deadHunter) {
           state.pendingHunterId = deadHunter.id;
           state.pendingHunterSource = "night";
@@ -797,13 +817,13 @@
         const talkative = player(state.talkativePlayerId);
         const ankouVote = activeAnkouGhost();
         if (silenced?.alive) {
-          cards.push(`<article class="day-effect-card silence"><span>${L.silenced_title}</span><strong>#${String(silenced.id).padStart(2, "0")} · ${escapeHtml(silenced.name)}</strong><p>${L.silenced_rule}</p></article>`);
+          cards.push(`<article class="day-effect-card silence"><span>${L.silenced_title}</span><strong>${playerIdentity(silenced)}</strong><p>${L.silenced_rule}</p></article>`);
         }
         if (talkative?.alive && state.assignedWord) {
-          cards.push(`<article class="day-effect-card word"><span>${L.word_title}</span><strong>#${String(talkative.id).padStart(2, "0")} · ${escapeHtml(talkative.name)}</strong><p>${t("word_rule", {word: escapeHtml(state.assignedWord)})}</p></article>`);
+          cards.push(`<article class="day-effect-card word"><span>${L.word_title}</span><strong>${playerIdentity(talkative)}</strong><p>${t("word_rule", {word: escapeHtml(state.assignedWord)})}</p></article>`);
         }
         if (ankouVote) {
-          cards.push(`<article class="day-effect-card silence"><span>${L.ankou_vote_title}</span><strong>#${String(ankouVote.ankou.id).padStart(2, "0")} · ${escapeHtml(ankouVote.ankou.name)}</strong><p>${t("ankou_vote_rule", {count: ankouVote.ghost.votesRemaining})}</p></article>`);
+          cards.push(`<article class="day-effect-card silence"><span>${L.ankou_vote_title}</span><strong>${playerIdentity(ankouVote.ankou)}</strong><p>${t("ankou_vote_rule", {count: ankouVote.ghost.votesRemaining})}</p></article>`);
         }
         return cards.length ? `<div class="day-effects">${cards.join("")}</div>` : "";
       }
@@ -813,7 +833,7 @@
           const hunter = player(record.hunterId);
           const target = player(record.targetId);
           if (!hunter || !target) return "";
-          return `<div class="verdict-card"><span>${L.hunter_last_shot}</span><strong>${t("hunter_took_player", {hunter: escapeHtml(hunter.name), target: escapeHtml(target.name)})}</strong><small>${roleMeta[target.role].name}</small></div>`;
+          return `<div class="verdict-card"><span>${L.hunter_last_shot}</span><strong>${t("hunter_took_player", {hunter: playerText(hunter, false), target: playerText(target, false)})}</strong></div>`;
         }).join("");
       }
 
@@ -851,25 +871,41 @@
 
       function renderDawn() {
         setHeading(t("day", {n: state.round}), L.awakening);
-        const report = state.deaths.length ? state.deaths.map(id => `<div class="death-card"><strong>${t("night_death", {id: String(id).padStart(2, "0"), name: escapeHtml(player(id).name)})}</strong></div>`).join("") : `<div class="peace-card">${L.no_death}</div>`;
+        const report = state.deaths.length ? state.deaths.map(id => {
+          const victim = player(id);
+          if (!victim) return "";
+          return `<div class="death-card"><strong>${t("night_death", {id: String(id).padStart(2, "0"), name: escapeHtml(victim.name)})}</strong><span>${roleMeta[victim.role].name}</span></div>`;
+        }).join("") : `<div class="peace-card">${L.no_death}</div>`;
         const resistedAncient = player(state.ancientResistedPlayerId);
-        const ancientReport = resistedAncient?.alive ? `<div class="seer-summary"><span>${L.ancient_resisted}</span><strong>#${String(resistedAncient.id).padStart(2, "0")} · ${escapeHtml(resistedAncient.name)}</strong><p>${L.ancient_one_life_left}</p></div>` : "";
+        const ancientReport = resistedAncient?.alive ? `<div class="seer-summary"><span>${L.ancient_resisted}</span><strong>${playerIdentity(resistedAncient)}</strong><p>${L.ancient_one_life_left}</p></div>` : "";
         const nightBear = player(state.bearPlayerId);
-        const bearReport = nightBear?.alive ? `<div class="seer-summary"><span>${state.bearGrowled ? L.bear_growls : L.bear_silent}</span><strong>#${String(nightBear.id).padStart(2, "0")} · ${escapeHtml(nightBear.name)}</strong><p>${state.bearGrowled ? L.bear_day_growl : L.bear_day_silent}</p></div>` : "";
+        const bearReport = nightBear?.alive ? `<div class="seer-summary"><span>${state.bearGrowled ? L.bear_growls : L.bear_silent}</span><strong>${playerIdentity(nightBear)}</strong><p>${state.bearGrowled ? L.bear_day_growl : L.bear_day_silent}</p></div>` : "";
+        const shepherdCards = (state.shepherdLastResults || []).map(result => {
+          const target = player(result.targetId);
+          if (!target) return "";
+          const label = result.returned ? L.sheep_returned : L.sheep_lost;
+          const detail = state.shepherdWasBlocked ? (result.returned ? L.sheep_returned_blocked_help : L.sheep_lost_blocked_help) : (result.returned ? L.sheep_returned_help : L.sheep_lost_help);
+          return `<div class="verdict-card"><span>${label}</span><strong>${playerIdentity(target)}</strong><small>${detail}</small></div>`;
+        }).join("");
+        const shepherdExists = state.players.some(item => item.role === "shepherds");
+        const shepherdStatus = state.shepherdWasBlocked ? `<p>${L.shepherd_blocked}</p>` : state.sheepRemaining <= 0 ? `<p>${L.shepherd_no_sheep}</p>` : `<p>${L.shepherd_returns_next_night}</p>`;
+        const shepherdReport = shepherdExists && (state.shepherdReportedThisNight || shepherdCards || state.sheepRemaining <= 0) ? `<div class="seer-summary"><span>${L.shepherd_result}</span><strong>${t("sheep_remaining", {count: state.sheepRemaining})}</strong>${shepherdStatus}${shepherdCards}</div>` : "";
         const judgeFirst = player(state.judgeFirstId);
         const judgeSecond = player(state.judgeSecondId);
         const judgeReport = judgeFirst && judgeSecond && state.judgeSameClan !== null
-          ? `<div class="seer-summary"><span>${L.judge_result}</span><strong>#${String(judgeFirst.id).padStart(2, "0")} · ${escapeHtml(judgeFirst.name)} / #${String(judgeSecond.id).padStart(2, "0")} · ${escapeHtml(judgeSecond.name)}</strong><p>${state.judgeSameClan ? L.judge_same_clan : L.judge_different_clans}</p></div>`
+          ? `<div class="seer-summary"><span>${L.judge_result}</span><strong>${playerIdentity(judgeFirst)} / ${playerIdentity(judgeSecond)}</strong><p>${state.judgeSameClan ? L.judge_same_clan : L.judge_different_clans}</p></div>`
           : "";
         const speaker = player(state.speakerId);
         const seerTarget = player(state.seerTargetId);
         const seerRole = state.seerDisplayedRole || seerTarget?.role;
         const deadSeers = state.deaths.map(player).filter(item => item?.role === "seers");
         const deadNames = deadSeers.map(item => `#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)}`).join(", ");
-        const finalVision = deadSeers.length && seerTarget ? `<div class="final-vision"><span>${L.last_vision}</span><h2>${t("seer_died", {name: deadNames})}</h2><p>${L.before_dying} <strong>#${String(seerTarget.id).padStart(2, "0")} · ${escapeHtml(seerTarget.name)}</strong> ${L.is_role} <strong>${roleMeta[seerRole].name}</strong>.</p></div>` : "";
-        const seerReport = seerTarget && !deadSeers.length ? `<div class="seer-summary"><span>${L.seer_vision}</span><strong>${t("seer_saw", {id: String(seerTarget.id).padStart(2, "0"), name: escapeHtml(seerTarget.name)})}</strong><p>${t("role_is", {role: roleMeta[seerRole].name})}</p></div>` : "";
+        const finalVision = deadSeers.length && (seerTarget || state.seerWasBlocked) ? `<div class="final-vision"><span>${L.last_vision}</span><h2>${t("seer_died", {name: deadNames})}</h2><p>${state.seerWasBlocked ? L.seer_saw_cerberus : `${L.before_dying} <strong>#${String(seerTarget.id).padStart(2, "0")} · ${escapeHtml(seerTarget.name)}</strong> ${L.is_role} <strong>${roleMeta[seerRole].name}</strong>.`}</p></div>` : "";
+        const seerReport = !deadSeers.length && state.seerWasBlocked
+          ? `<div class="seer-summary"><span>${L.seer_vision}</span><strong>${L.seer_saw_cerberus}</strong></div>`
+          : seerTarget && !deadSeers.length ? `<div class="seer-summary"><span>${L.seer_vision}</span><strong>${t("seer_saw", {id: String(seerTarget.id).padStart(2, "0"), name: escapeHtml(seerTarget.name)})}</strong><p>${t("role_is", {role: roleMeta[seerRole].name})}</p></div>` : "";
         const dayAction = state.winner ? actionButton(L.winners, "show-game-over") : actionButton(L.open_accusations, "begin-accusation");
-        scene.innerHTML = `<div class="sunrise-line"></div><div class="scene-kicker">${L.day_rises}</div><h1>${L.villagers_wake}</h1><p class="scene-lead">${L.night_report}</p><div class="night-report">${report}</div>${hunterShotReport("night")}${ancientReport}${bearReport}${judgeReport}${dayConstraints()}${finalVision}${seerReport}${!state.winner && speaker ? `<div class="speaker-card"><span>${L.speaking_starts}</span><strong>#${String(speaker.id).padStart(2, "0")} · ${escapeHtml(speaker.name)}</strong></div>` : ""}<div class="scene-actions">${dayAction}</div>`;
+        scene.innerHTML = `<div class="sunrise-line"></div><div class="scene-kicker">${L.day_rises}</div><h1>${L.villagers_wake}</h1><p class="scene-lead">${L.night_report}</p><div class="night-report">${report}</div>${hunterShotReport("night")}${ancientReport}${bearReport}${shepherdReport}${judgeReport}${dayConstraints()}${finalVision}${seerReport}${!state.winner && speaker ? `<div class="speaker-card"><span>${L.speaking_starts}</span><strong>${playerIdentity(speaker)}</strong></div>` : ""}<div class="scene-actions">${dayAction}</div>`;
       }
 
       function voteBoard(candidates) {
@@ -878,7 +914,7 @@
 
       function accusationBoard(candidates) {
         const selected = new Set(state.accusationDraftIds || []);
-        return `<div class="accusation-board">${candidates.map(item => `<label class="accused-card"><input class="accused-toggle" type="checkbox" value="${item.id}" ${selected.has(item.id) ? "checked" : ""}><span class="vote-avatar">${String(item.id).padStart(2, "0")}</span><strong>#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)} <small>${L.tap_to_qualify}</small></strong><i aria-hidden="true">✓</i></label>`).join("")}</div>`;
+        return `<div class="accusation-board">${candidates.map(item => `<label class="accused-card"><input class="accused-toggle" type="checkbox" value="${item.id}" ${selected.has(item.id) ? "checked" : ""}><span class="vote-avatar">${String(item.id).padStart(2, "0")}</span><strong>#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)} <small>${escapeHtml(playerRoleStatus(item))}</small></strong><i aria-hidden="true">✓</i></label>`).join("")}</div>`;
       }
 
       function renderAccusation() {
@@ -908,7 +944,7 @@
         const alien = livingAlien();
         const targets = alive().filter(item => item.id !== alien?.id);
         const roleOptions = Object.entries(roleMeta).map(([role, meta]) => `<option value="${role}">${meta.name}</option>`).join("");
-        const rows = targets.map(item => `<label class="alien-guess-row" data-guess-player="${item.id}"><input class="alien-guess-toggle" type="checkbox"><span><strong>#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)}</strong><small>${L.select_guess}</small></span><select class="alien-role-select" disabled><option value="">${L.choose_role}</option>${roleOptions}</select></label>`).join("");
+        const rows = targets.map(item => `<label class="alien-guess-row alien-player-guess" data-guess-player="${item.id}"><input class="alien-guess-toggle" type="checkbox"><span><strong>${playerIdentity(item)}</strong><small class="alien-guess-order">${L.select_guess}</small></span><select class="alien-role-select" disabled><option value="">${L.choose_role}</option>${roleOptions}</select></label>`).join("");
         scene.innerHTML = `<div class="scene-kicker">${L.alien_sleep_all}</div><h1>${L.alien_guess}</h1><p class="scene-lead">${L.alien_guess_help}</p><div class="alien-guess-list">${rows}</div><div class="scene-actions">${actionButton(L.validate_guesses, "confirm-alien-guesses", true)}</div>`;
       }
 
@@ -917,14 +953,19 @@
         const correct = state.alienLastGuessCorrect;
         const title = correct ? L.alien_correct : L.alien_wrong;
         const message = correct ? t("alien_survives", {count: state.alienRemainingCount}) : L.alien_dies;
+        const results = (state.alienLastGuessResults || []).map((result, index) => {
+          const target = player(result.id);
+          const guessedRole = roleMeta[result.guessedRole]?.name || "—";
+          return `<div class="alien-guess-result ${result.correct ? "correct" : "wrong"}"><span>${t("alien_answer_number", {n: index + 1})}</span><strong>#${String(result.id).padStart(2, "0")} · ${escapeHtml(target?.name || "")}</strong><small>${guessedRole} · ${result.correct ? L.alien_answer_correct : L.alien_answer_wrong}</small></div>`;
+        }).join("");
         const nextAction = state.winner ? actionButton(L.winners, "show-game-over") : actionButton(L.continue_day, "continue-after-alien");
-        scene.innerHTML = `<div class="end-emblem ${correct ? "village" : "wolf"}"><span>AL</span></div><div class="scene-kicker">${L.alien_signal}</div><h1>${title}</h1><div class="verdict-card"><strong>${message}</strong></div><div class="scene-actions">${nextAction}</div>`;
+        scene.innerHTML = `<div class="end-emblem ${correct ? "village" : "wolf"}"><span>AL</span></div><div class="scene-kicker">${L.alien_signal}</div><h1>${title}</h1><div class="verdict-card"><strong>${message}</strong></div>${results ? `<div class="alien-guess-results">${results}</div>` : ""}<div class="scene-actions">${nextAction}</div>`;
       }
 
       function renderFinalVote() {
         setHeading(t("day", {n: state.round}), L.final_vote);
         const candidates = state.qualifiers.map(player).filter(Boolean);
-        scene.innerHTML = `<div class="scene-kicker">${L.last_decision}</div><h1>${L.village_vote}</h1><p class="scene-lead">${L.final_help}</p>${dayConstraints()}<div class="qualified-strip">${candidates.map(item => `<span>#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)}</span>`).join("")}</div>${voteBoard(candidates)}<div class="scene-actions">${actionButton(L.verdict, "finish-final-vote")}${actionButton(L.skip_vote, "skip-vote", false, true)}</div>`;
+        scene.innerHTML = `<div class="scene-kicker">${L.last_decision}</div><h1>${L.village_vote}</h1><p class="scene-lead">${L.final_help}</p>${dayConstraints()}<div class="qualified-strip">${candidates.map(item => `<span>${playerIdentity(item)}</span>`).join("")}</div>${voteBoard(candidates)}<div class="scene-actions">${actionButton(L.verdict, "finish-final-vote")}${actionButton(L.skip_vote, "skip-vote", false, true)}</div>`;
       }
 
       function renderServantChoice() {
@@ -940,8 +981,10 @@
         setHeading(t("day", {n: state.round}), L.vote_report);
         const eliminated = state.lastVote ? player(state.lastVote) : null;
         const revealedRole = state.voteRevealedRole || eliminated?.role;
-        const message = eliminated ? `<div class="verdict-card"><span>${L.village_decided}</span><strong>${t("is_eliminated", {id: String(eliminated.id).padStart(2, "0"), name: escapeHtml(eliminated.name)})}</strong><small>${roleMeta[revealedRole].name}</small></div>` : state.voteOutcome === "tie" ? `<div class="tie-card"><span>${L.perfect_tie}</span><strong>${L.nobody_eliminated}</strong><p>${L.divided}</p></div>` : `<div class="peace-card">${L.vote_skipped}</div>`;
-        const affectedNames = (state.lostVillagePowerIds || []).map(id => { const item = player(id); return item ? `#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)}` : ""; }).filter(Boolean).join(", ");
+        const voteDeaths = (state.voteDeathIds || []).map(player).filter(Boolean);
+        const voteDeathCards = voteDeaths.map((item, index) => `<div class="verdict-card"><span>${index === 0 ? L.village_decided : L.lover_died_with_partner}</span><strong>${playerIdentity(item)}</strong><small>${roleMeta[index === 0 ? revealedRole : item.role].name}</small></div>`).join("");
+        const message = eliminated ? voteDeathCards || `<div class="verdict-card"><span>${L.village_decided}</span><strong>${t("is_eliminated", {id: String(eliminated.id).padStart(2, "0"), name: escapeHtml(eliminated.name)})}</strong><small>${roleMeta[revealedRole].name}</small></div>` : state.voteOutcome === "tie" ? `<div class="tie-card"><span>${L.perfect_tie}</span><strong>${L.nobody_eliminated}</strong><p>${L.divided}</p></div>` : `<div class="peace-card">${L.vote_skipped}</div>`;
+        const affectedNames = (state.lostVillagePowerIds || []).map(id => { const item = player(id); return item ? playerText(item) : ""; }).filter(Boolean).join(", ");
         const powerLossReport = affectedNames ? `<div class="seer-summary"><span>${L.ancient_vote_penalty}</span><strong>${affectedNames}</strong><p>${L.ancient_roles_lost}</p></div>` : "";
         scene.innerHTML = `<div class="scene-kicker">${L.sun_sets}</div><h1>${L.day_ends}</h1>${message}${hunterShotReport("vote")}${powerLossReport}${state.winner ? actionButton(L.winners, "show-game-over") : actionButton(L.make_night, "next-night")}`;
       }
@@ -965,7 +1008,7 @@
         const showCoupleScore = Boolean(state.cupidLinked);
         const scoreClass = showAlienScore && showCoupleScore ? "four" : showAlienScore || showCoupleScore ? "three" : "";
         setHeading(L.game_over, victoryLabel);
-        scene.innerHTML = `<div class="end-emblem ${wolfVictory || whiteWolfVictory ? "wolf" : "village"}"><span>${angelVictory ? "AG" : whiteWolfVictory ? "LW" : coupleVictory ? "CU" : alienVictory ? "AL" : wolfVictory ? "LG" : "VI"}</span></div><div class="scene-kicker">${L.finished}</div><h1>${victoryTitle}</h1><p class="scene-lead">${victoryHelp}</p><div class="end-score ${scoreClass}"><div><strong>${livingPack}</strong><span>${L.wolves_alive}</span></div><div><strong>${livingVillagers}</strong><span>${L.villagers_alive}</span></div>${showAlienScore ? `<div><strong>${livingAliens}</strong><span>${L.aliens_alive}</span></div>` : ""}${showCoupleScore ? `<div><strong>${livingCouples}</strong><span>${L.lovers_alive}</span></div>` : ""}</div><div class="final-roster">${state.players.map(item => `<span class="${item.alive ? "alive" : "dead"}">#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)} <small>${roleMeta[item.role].name}${item.infected ? ` · ${L.infected_status}` : ""}${item.wildTurned ? ` · ${L.wild_wolf_status}` : ""}${isAngelVillageAligned(item) ? ` · ${L.angel_village_status}` : ""}${state.ankouGhost?.playerId === item.id && state.ankouGhost.votesRemaining > 0 ? ` · ${t("ankou_votes_left", {count: state.ankouGhost.votesRemaining})}` : ""}${(state.coupleIds || []).includes(item.id) ? ` · ${L.couple_status}` : ""}</small></span>`).join("")}</div><div class="scene-actions">${actionButton(L.new_game, "new-game")}${actionButton(L.back_setup, "back-setup", false, true)}</div>`;
+        scene.innerHTML = `<div class="end-emblem ${wolfVictory || whiteWolfVictory ? "wolf" : "village"}"><span>${angelVictory ? "AG" : whiteWolfVictory ? "LW" : coupleVictory ? "CU" : alienVictory ? "AL" : wolfVictory ? "LG" : "VI"}</span></div><div class="scene-kicker">${L.finished}</div><h1>${victoryTitle}</h1><p class="scene-lead">${victoryHelp}</p><div class="end-score ${scoreClass}"><div><strong>${livingPack}</strong><span>${L.wolves_alive}</span></div><div><strong>${livingVillagers}</strong><span>${L.villagers_alive}</span></div>${showAlienScore ? `<div><strong>${livingAliens}</strong><span>${L.aliens_alive}</span></div>` : ""}${showCoupleScore ? `<div><strong>${livingCouples}</strong><span>${L.lovers_alive}</span></div>` : ""}</div><div class="final-roster">${state.players.map(item => `<span class="${item.alive ? "alive" : "dead"}">#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)} <small>${roleMeta[item.role].name}${item.infected ? ` · ${L.infected_status}` : ""}${item.wildTurned ? ` · ${L.wild_wolf_status}` : ""}${item.id === state.wildIdolId ? ` · ${L.wild_idol_status}` : ""}${isAngelVillageAligned(item) ? ` · ${L.angel_village_status}` : ""}${state.ankouGhost?.playerId === item.id && state.ankouGhost.votesRemaining > 0 ? ` · ${t("ankou_votes_left", {count: state.ankouGhost.votesRemaining})}` : ""}${(state.coupleIds || []).includes(item.id) ? ` · ${L.couple_status}` : ""}</small></span>`).join("")}</div><div class="scene-actions">${actionButton(L.new_game, "new-game")}${actionButton(L.back_setup, "back-setup", false, true)}</div>`;
       }
 
       function render() {
@@ -1004,6 +1047,21 @@
         const rows = [...document.querySelectorAll(".alien-guess-row")].filter(row => row.querySelector(".alien-guess-toggle").checked);
         const button = scene.querySelector('[data-action="confirm-alien-guesses"]');
         if (button) button.disabled = !rows.length || rows.some(row => !row.querySelector(".alien-role-select").value);
+      }
+
+      function refreshAlienGuessOrder() {
+        const selectedRows = [...document.querySelectorAll(".alien-player-guess")]
+          .filter(row => row.querySelector(".alien-guess-toggle").checked)
+          .sort((first, second) => Number(first.dataset.guessOrder) - Number(second.dataset.guessOrder));
+        selectedRows.forEach((row, index) => {
+          row.dataset.guessOrder = String(index + 1);
+          row.querySelector(".alien-guess-order").textContent = t("alien_answer_number", {n: index + 1});
+        });
+        document.querySelectorAll(".alien-player-guess").forEach(row => {
+          if (row.querySelector(".alien-guess-toggle").checked) return;
+          delete row.dataset.guessOrder;
+          row.querySelector(".alien-guess-order").textContent = L.select_guess;
+        });
       }
 
       function updateShepherdButton() {
@@ -1050,9 +1108,15 @@
         }
         if (event.target.id === "witch-kill") document.getElementById("witch-target").disabled = !event.target.checked;
         if (event.target.classList.contains("alien-guess-toggle")) {
-          const select = event.target.closest(".alien-guess-row").querySelector(".alien-role-select");
+          const row = event.target.closest(".alien-guess-row");
+          const select = row.querySelector(".alien-role-select");
+          if (event.target.checked) {
+            const orders = [...document.querySelectorAll(".alien-player-guess[data-guess-order]")].map(item => Number(item.dataset.guessOrder));
+            row.dataset.guessOrder = String((orders.length ? Math.max(...orders) : 0) + 1);
+          }
           select.disabled = !event.target.checked;
           if (!event.target.checked) select.value = "";
+          refreshAlienGuessOrder();
           updateAlienGuessButton();
         }
         if (event.target.classList.contains("alien-role-select")) updateAlienGuessButton();
@@ -1105,7 +1169,7 @@
           state.revealVisible = false;
           state.stage = state.players.length === setup.player_count ? "roles" : "roster";
         } else if (action === "begin-night") {
-          state.protectedId = null; state.wolfTargetId = null; state.wolfInitialTargetId = null; state.wolfTargetChanged = false; state.prostituteTargetId = null; state.blockedPlayerId = null; state.infectionAttempted = false; state.infectionSucceeded = false; state.infectedPlayerId = null; state.whiteWolfTargetId = null; state.bearPlayerId = null; state.bearGrowled = null; state.bearNeighborIds = []; state.judgeFirstId = null; state.judgeSecondId = null; state.judgeSameClan = null; state.silencedPlayerId = null; state.talkativePlayerId = null; state.assignedWord = ""; state.witchSave = false; state.witchKillId = null; state.seerTargetId = null; state.seerDisplayedRole = null; state.ancientResistedPlayerId = null; state.deaths = [];
+          state.protectedId = null; state.wolfTargetId = null; state.wolfInitialTargetId = null; state.wolfTargetChanged = false; state.prostituteTargetId = null; state.blockedPlayerId = null; state.infectionAttempted = false; state.infectionSucceeded = false; state.infectedPlayerId = null; state.whiteWolfTargetId = null; state.bearPlayerId = null; state.bearGrowled = null; state.bearNeighborIds = []; state.shepherdLastResults = []; state.shepherdReportedThisNight = false; state.shepherdWasBlocked = false; state.judgeFirstId = null; state.judgeSecondId = null; state.judgeSameClan = null; state.silencedPlayerId = null; state.talkativePlayerId = null; state.assignedWord = ""; state.witchSave = false; state.witchKillId = null; state.seerTargetId = null; state.seerDisplayedRole = null; state.seerWasBlocked = false; state.ancientResistedPlayerId = null; state.deaths = []; state.voteDeathIds = [];
           nextNightStage(""); return;
         } else if (action === "confirm-cupid") {
           const firstId = Number(document.getElementById("cupid-first").value);
@@ -1131,7 +1195,11 @@
           state.lastProtectedId = targetId;
           nextNightStage("protector"); return;
         } else if (action === "confirm-prostitute") {
-          state.prostituteTargetId = Number(document.getElementById("night-select").value); nextNightStage("prostitute"); return;
+          const targetId = Number(document.getElementById("night-select").value);
+          if (!targetId || targetId === state.lastProstituteTargetId) return;
+          state.prostituteTargetId = targetId;
+          state.lastProstituteTargetId = targetId;
+          nextNightStage("prostitute"); return;
         } else if (action === "confirm-wolves") {
           const initialTargetId = Number(document.getElementById("wolf-initial-target").value);
           const targetChanged = Boolean(document.getElementById("wolf-change-target")?.checked);
@@ -1173,16 +1241,19 @@
         } else if (action === "confirm-shepherd") {
           const rows = [...document.querySelectorAll(".shepherd-row")].filter(row => row.querySelector(".shepherd-send-toggle").checked);
           if (!rows.length || rows.some(row => !row.querySelector(".shepherd-target-select").value)) return;
+          const resultIsInverted = isRoleBlocked("shepherds");
           state.shepherdLastResults = rows.map(row => {
             const target = player(row.querySelector(".shepherd-target-select").value);
-            return {targetId: target.id, returned: !isWolfPlayer(target)};
+            return {targetId: target.id, returned: resultIsInverted ? isWolfPlayer(target) : !isWolfPlayer(target)};
           });
           state.sheepRemaining = Math.max(0, state.sheepRemaining - state.shepherdLastResults.filter(result => !result.returned).length);
-          state.stage = "shepherd_result";
+          state.shepherdReportedThisNight = true;
+          state.shepherdWasBlocked = resultIsInverted;
+          nextNightStage("shepherd"); return;
         } else if (action === "skip-shepherd") {
           state.shepherdLastResults = [];
-          nextNightStage("shepherd"); return;
-        } else if (action === "finish-shepherd-result") {
+          state.shepherdReportedThisNight = true;
+          state.shepherdWasBlocked = true;
           nextNightStage("shepherd"); return;
         } else if (action === "confirm-judge") {
           const first = player(document.getElementById("judge-first").value);
@@ -1199,7 +1270,11 @@
         } else if (action === "finish-judge-result") {
           nextNightStage("judge"); return;
         } else if (action === "confirm-black-wolf") {
-          state.silencedPlayerId = Number(document.getElementById("night-select").value); nextNightStage("black_wolf"); return;
+          const targetId = Number(document.getElementById("night-select").value);
+          if (!targetId || targetId === state.lastSilencedPlayerId) return;
+          state.silencedPlayerId = targetId;
+          state.lastSilencedPlayerId = targetId;
+          nextNightStage("black_wolf"); return;
         } else if (action === "confirm-talkative-wolf") {
           state.talkativePlayerId = Number(document.getElementById("night-select").value);
           state.assignedWord = document.getElementById("assigned-word").value.trim();
@@ -1222,8 +1297,8 @@
           const target = player(state.seerTargetId);
           const possibleRoles = Object.keys(roleMeta);
           state.seerDisplayedRole = target?.role === "blue_wolves" ? possibleRoles[Math.floor(Math.random() * possibleRoles.length)] : target?.role || null;
-        } else if (action === "finish-seer") {
-          resolveNight(); render(); return;
+          state.seerWasBlocked = false;
+          nextNightStage("seer"); return;
         } else if (action === "begin-accusation") {
           state.stage = "accusation";
         } else if (action === "activate-barber") {
@@ -1238,17 +1313,9 @@
           state.barberTargetId = target.id;
           state.barberShotAvailable = false;
           state.barberHit = isWolfPlayer(target);
-          if (state.barberHit) {
-            target.alive = false;
-            activateAnkouGhost(target, state.round);
-          } else {
-            barber.alive = false;
-            target.alive = false;
-            activateAnkouGhost(target, state.round);
-          }
-          if ([barber, target].some(item => !item.alive && item.id === state.wildIdolId)) state.wildIdolDeathTriggered = true;
-          updateWildChildFromIdolDeath();
-          const deadHunter = [target, barber].find(item => !item.alive && item.role === "hunters");
+          const barberDeaths = killPlayersWithLovers(state.barberHit ? [target.id] : [barber.id, target.id]);
+          barberDeaths.forEach(item => activateAnkouGhost(item, state.round));
+          const deadHunter = barberDeaths.find(item => item.role === "hunters");
           if (deadHunter) {
             state.pendingHunterId = deadHunter.id;
             state.pendingHunterSource = "barber";
@@ -1269,23 +1336,41 @@
           state.stage = "alien_guess";
         } else if (action === "confirm-alien-guesses") {
           const alien = livingAlien();
-          const rows = [...document.querySelectorAll(".alien-guess-row")].filter(row => row.querySelector(".alien-guess-toggle").checked);
+          const rows = [...document.querySelectorAll(".alien-player-guess")]
+            .filter(row => row.querySelector(".alien-guess-toggle").checked)
+            .sort((first, second) => Number(first.dataset.guessOrder) - Number(second.dataset.guessOrder));
           if (!alien || !rows.length) return;
           const guesses = rows.map(row => ({ id: Number(row.dataset.guessPlayer), role: row.querySelector(".alien-role-select").value }));
-          state.alienLastGuessCorrect = guesses.every(guess => player(guess.id)?.role === guess.role);
+          state.alienLastGuessResults = [];
+          for (const guess of guesses) {
+            const correct = player(guess.id)?.role === guess.role;
+            state.alienLastGuessResults.push({ id: guess.id, guessedRole: guess.role, correct });
+            if (!correct) break;
+          }
+          const correctPrefixIds = state.alienLastGuessResults.filter(result => result.correct).map(result => result.id);
+          state.alienCorrectGuesses = [...new Set([...(state.alienCorrectGuesses || []), ...correctPrefixIds])];
+          state.alienLastGuessCorrect = state.alienLastGuessResults.length === guesses.length && state.alienLastGuessResults.every(result => result.correct);
           if (state.alienLastGuessCorrect) {
-            state.alienCorrectGuesses = [...new Set([...(state.alienCorrectGuesses || []), ...guesses.map(guess => guess.id)])];
             state.alienRemainingCount = alive().filter(item => item.role !== "aliens" && !state.alienCorrectGuesses.includes(item.id)).length;
             state.winner = checkWinner();
           } else {
-            alien.alive = false;
+            const alienDeaths = killPlayersWithLovers([alien.id]);
+            alienDeaths.forEach(item => activateAnkouGhost(item, state.round + 1));
+            const deadHunter = alienDeaths.find(item => item.role === "hunters");
+            if (deadHunter) {
+              state.pendingHunterId = deadHunter.id;
+              state.pendingHunterSource = "alien";
+            }
             state.alienRemainingCount = null;
-            state.winner = checkWinner();
+            state.winner = deadHunter ? null : checkWinner();
           }
           state.stage = "alien_result";
         } else if (action === "continue-after-alien") {
-          state.stage = state.specialReturnStage || "accusation";
-          state.specialReturnStage = null;
+          if (state.pendingHunterId) state.stage = "hunter_shot";
+          else {
+            state.stage = state.specialReturnStage || "accusation";
+            state.specialReturnStage = null;
+          }
         } else if (action === "finish-accusation") {
           const selected = [...document.querySelectorAll(".accused-toggle:checked")].map(input => Number(input.value));
           if (!selected.length) { alert(L.accusation_required); return; }
@@ -1299,9 +1384,7 @@
           const winners = votes.filter(item => item.votes === max);
           state.lastVote = winners.length === 1 ? winners[0].id : null;
           state.voteOutcome = winners.length === 1 ? "eliminated" : "tie";
-          if (state.lastVote) player(state.lastVote).alive = false;
-          if (state.lastVote === state.wildIdolId) state.wildIdolDeathTriggered = true;
-          updateWildChildFromIdolDeath();
+          state.voteDeathIds = state.lastVote ? killPlayersWithLovers([state.lastVote]).map(item => item.id) : [];
           state.voteRevealedRole = state.lastVote ? player(state.lastVote).role : null;
           state.servantAccepted = null;
           const votedPlayer = player(state.lastVote);
@@ -1330,11 +1413,12 @@
           const hunter = player(state.pendingHunterId);
           const target = player(document.getElementById("night-select").value);
           if (!hunter || !target?.alive) return;
-          target.alive = false;
-          activateAnkouGhost(target, state.pendingHunterSource === "night" ? state.round : state.round + 1);
+          const hunterDeaths = killPlayersWithLovers([target.id]);
+          hunterDeaths.forEach(item => activateAnkouGhost(item, state.pendingHunterSource === "night" ? state.round : state.round + 1));
           state.hunterShotRecords = [...(state.hunterShotRecords || []), {hunterId: hunter.id, targetId: target.id, source: state.pendingHunterSource}];
-          if (target.role === "hunters") {
-            state.pendingHunterId = target.id;
+          const chainedHunter = hunterDeaths.find(item => item.role === "hunters");
+          if (chainedHunter) {
+            state.pendingHunterId = chainedHunter.id;
             state.stage = "hunter_shot";
           } else {
             finishHunterShotSequence();
@@ -1344,12 +1428,12 @@
         } else if (action === "skip-vote") {
           spendAnkouVotingDay();
           state.accusationDraftIds = [];
-          state.lastVote = null; state.voteOutcome = "skipped";
+          state.lastVote = null; state.voteDeathIds = []; state.voteOutcome = "skipped";
           if (state.round === 1) state.angelChanceExpired = true;
           state.winner = checkWinner(); state.stage = "day_end";
         } else if (action === "next-night") {
           state.round += 1;
-          state.protectedId = null; state.wolfTargetId = null; state.wolfInitialTargetId = null; state.wolfTargetChanged = false; state.prostituteTargetId = null; state.blockedPlayerId = null; state.infectionAttempted = false; state.infectionSucceeded = false; state.infectedPlayerId = null; state.whiteWolfTargetId = null; state.bearPlayerId = null; state.bearGrowled = null; state.bearNeighborIds = []; state.judgeFirstId = null; state.judgeSecondId = null; state.judgeSameClan = null; state.silencedPlayerId = null; state.talkativePlayerId = null; state.assignedWord = ""; state.witchSave = false; state.witchKillId = null; state.seerTargetId = null; state.seerDisplayedRole = null; state.ancientResistedPlayerId = null; state.lostVillagePowerIds = []; state.pendingHunterId = null; state.pendingHunterSource = null; state.hunterShotRecords = []; state.qualifiers = []; state.accusationDraftIds = []; state.lastVote = null; state.voteOutcome = null; state.voteRevealedRole = null; state.servantAccepted = null; state.specialReturnStage = null;
+          state.protectedId = null; state.wolfTargetId = null; state.wolfInitialTargetId = null; state.wolfTargetChanged = false; state.prostituteTargetId = null; state.blockedPlayerId = null; state.infectionAttempted = false; state.infectionSucceeded = false; state.infectedPlayerId = null; state.whiteWolfTargetId = null; state.bearPlayerId = null; state.bearGrowled = null; state.bearNeighborIds = []; state.shepherdLastResults = []; state.shepherdReportedThisNight = false; state.shepherdWasBlocked = false; state.judgeFirstId = null; state.judgeSecondId = null; state.judgeSameClan = null; state.silencedPlayerId = null; state.talkativePlayerId = null; state.assignedWord = ""; state.witchSave = false; state.witchKillId = null; state.seerTargetId = null; state.seerDisplayedRole = null; state.seerWasBlocked = false; state.ancientResistedPlayerId = null; state.lostVillagePowerIds = []; state.pendingHunterId = null; state.pendingHunterSource = null; state.hunterShotRecords = []; state.qualifiers = []; state.accusationDraftIds = []; state.lastVote = null; state.voteDeathIds = []; state.voteOutcome = null; state.voteRevealedRole = null; state.servantAccepted = null; state.specialReturnStage = null;
           nextNightStage(""); return;
         } else if (action === "show-game-over") {
           state.stage = "game_over";

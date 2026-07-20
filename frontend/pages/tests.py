@@ -62,13 +62,18 @@ class RoomFlowTests(TestCase):
             ],
             "deaths": [1], "wolfTargetId": 1,
             "bearGrowled": True,
+            "shepherdLastResults": [
+                {"targetId": 1, "returned": False},
+                {"targetId": 2, "returned": True},
+            ],
+            "sheepRemaining": 2, "shepherdWasBlocked": False,
             "judgeFirstId": 1, "judgeSecondId": 2, "judgeSameClan": False,
             "seerTargetId": 2, "seerDisplayedRole": "villagers",
         }
         sync_url = reverse("room_sync_api", args=[room.code])
         self.narrator.post(sync_url, json.dumps(state), content_type="application/json")
         self.narrator.post(sync_url, json.dumps(state), content_type="application/json")
-        state.update({"stage": "day_end", "lastVote": 1, "voteOutcome": "eliminated"})
+        state.update({"stage": "day_end", "lastVote": 1, "voteDeathIds": [1, 2], "voteOutcome": "eliminated"})
         self.narrator.post(sync_url, json.dumps(state), content_type="application/json")
 
         self.assertEqual(RoomEvent.objects.filter(room=room).count(), 2)
@@ -76,11 +81,17 @@ class RoomFlowTests(TestCase):
         self.assertEqual([event["type"] for event in history["events"]], ["night", "day"])
         night = history["events"][0]["details"]
         self.assertTrue(night["bear_growled"])
+        self.assertEqual(night["sheep_lost"], ["Ahmed"])
+        self.assertEqual(night["sheep_returned"], ["Sarra"])
+        self.assertEqual(night["sheep_remaining"], 2)
+        self.assertFalse(night["shepherd_blocked"])
         self.assertEqual(night["judge_first"], "Ahmed")
         self.assertEqual(night["judge_second"], "Sarra")
         self.assertFalse(night["judge_same_clan"])
         self.assertEqual(night["seer_target"], "Sarra")
         self.assertEqual(night["seer_role"], "villagers")
+        day = history["events"][1]["details"]
+        self.assertEqual(day["vote_deaths"], ["Ahmed", "Sarra"])
 
         public_list = Client().get(reverse("room_history_list"))
         self.assertContains(public_list, room.code)
@@ -188,7 +199,7 @@ class PwaTests(TestCase):
         worker = self.client.get(reverse("service_worker"))
         self.assertEqual(worker.status_code, 200)
         self.assertEqual(worker["Service-Worker-Allowed"], "/")
-        self.assertContains(worker, "loup-garou-shell-v4")
+        self.assertContains(worker, "loup-garou-shell-v5")
 
         home = self.client.get(reverse("home"))
         self.assertContains(home, reverse("pwa_manifest"))

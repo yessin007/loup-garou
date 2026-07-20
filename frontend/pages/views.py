@@ -42,9 +42,9 @@ ROOM_TEXT = {
 }
 
 ROOM_DETAIL_LABELS = {
-    "fr": {"deaths": "Victimes", "protected": "Protection", "wolves_target": "Cible des loups", "blocked": "Pouvoir bloqué", "redirected_to": "Redirection", "infection_attempted": "Infection tentée", "infection_succeeded": "Infection réussie", "witch_saved": "Potion de vie", "witch_target": "Potion de mort", "bear_growled": "Ours", "judge_first": "Premier choix du Juge", "judge_second": "Deuxième choix du Juge", "judge_same_clan": "Même clan", "seer_target": "Vision de la Voyante", "seer_role": "Rôle aperçu", "eliminated": "Éliminé par vote", "vote_outcome": "Résultat", "winner": "Vainqueur"},
-    "en": {"deaths": "Victims", "protected": "Protection", "wolves_target": "Wolves' target", "blocked": "Blocked power", "redirected_to": "Redirected to", "infection_attempted": "Infection attempted", "infection_succeeded": "Infection succeeded", "witch_saved": "Life potion", "witch_target": "Death potion", "bear_growled": "Bear", "judge_first": "Judge's first choice", "judge_second": "Judge's second choice", "judge_same_clan": "Same faction", "seer_target": "Seer's vision", "seer_role": "Role seen", "eliminated": "Voted out", "vote_outcome": "Result", "winner": "Winner"},
-    "tn": {"deaths": "Eli metou", "protected": "Protection", "wolves_target": "Cible mta3 el loups", "blocked": "Pouvoir bloque", "redirected_to": "Redirection", "infection_attempted": "Jarbet infection", "infection_succeeded": "Infection nej7et", "witch_saved": "Potion de vie", "witch_target": "Potion de mort", "bear_growled": "Ours", "judge_first": "Choix louel mta3 Juge", "judge_second": "Choix theni mta3 Juge", "judge_same_clan": "Nafs el clan", "seer_target": "Vision mta3 el Voyante", "seer_role": "Role eli chefetou", "eliminated": "5raj bel vote", "vote_outcome": "Resultat", "winner": "Eli rba7"},
+    "fr": {"deaths": "Victimes", "protected": "Protection", "wolves_target": "Cible des loups", "blocked": "Pouvoir bloqué", "redirected_to": "Redirection", "infection_attempted": "Infection tentée", "infection_succeeded": "Infection réussie", "witch_saved": "Potion de vie", "witch_target": "Potion de mort", "bear_growled": "Ours", "sheep_returned": "Moutons revenus", "sheep_lost": "Moutons perdus", "sheep_remaining": "Moutons restants", "shepherd_blocked": "Berger bloqué", "judge_first": "Premier choix du Juge", "judge_second": "Deuxième choix du Juge", "judge_same_clan": "Même clan", "seer_target": "Vision de la Voyante", "seer_role": "Rôle aperçu", "eliminated": "Éliminé par vote", "vote_deaths": "Morts après le vote", "vote_outcome": "Résultat", "winner": "Vainqueur"},
+    "en": {"deaths": "Victims", "protected": "Protection", "wolves_target": "Wolves' target", "blocked": "Blocked power", "redirected_to": "Redirected to", "infection_attempted": "Infection attempted", "infection_succeeded": "Infection succeeded", "witch_saved": "Life potion", "witch_target": "Death potion", "bear_growled": "Bear", "sheep_returned": "Returned sheep", "sheep_lost": "Lost sheep", "sheep_remaining": "Sheep remaining", "shepherd_blocked": "Shepherd blocked", "judge_first": "Judge's first choice", "judge_second": "Judge's second choice", "judge_same_clan": "Same faction", "seer_target": "Seer's vision", "seer_role": "Role seen", "eliminated": "Voted out", "vote_deaths": "Deaths after the vote", "vote_outcome": "Result", "winner": "Winner"},
+    "tn": {"deaths": "Eli metou", "protected": "Protection", "wolves_target": "Cible mta3 el loups", "blocked": "Pouvoir bloque", "redirected_to": "Redirection", "infection_attempted": "Jarbet infection", "infection_succeeded": "Infection nej7et", "witch_saved": "Potion de vie", "witch_target": "Potion de mort", "bear_growled": "Ours", "sheep_returned": "3lelech eli raj3ou", "sheep_lost": "3lelech eli dha3ou", "sheep_remaining": "3lelech eli ba9aw", "shepherd_blocked": "Berger bloke", "judge_first": "Choix louel mta3 Juge", "judge_second": "Choix theni mta3 Juge", "judge_same_clan": "Nafs el clan", "seer_target": "Vision mta3 el Voyante", "seer_role": "Role eli chefetou", "eliminated": "5raj bel vote", "vote_deaths": "Eli metou ba3d el vote", "vote_outcome": "Resultat", "winner": "Eli rba7"},
 }
 
 
@@ -128,6 +128,9 @@ def public_event_details(state, event_type):
             name = entry.get("name") if isinstance(entry, dict) else player_label(state, entry)
             if name:
                 death_names.append(name)
+        shepherd_results = state.get("shepherdLastResults") or []
+        sheep_returned = [player_label(state, result.get("targetId")) for result in shepherd_results if result.get("returned")]
+        sheep_lost = [player_label(state, result.get("targetId")) for result in shepherd_results if not result.get("returned")]
         return {
             "deaths": death_names,
             "protected": player_label(state, state.get("protectedId")),
@@ -139,6 +142,10 @@ def public_event_details(state, event_type):
             "witch_saved": bool(state.get("witchSave")),
             "witch_target": player_label(state, state.get("witchKillId")),
             "bear_growled": state.get("bearGrowled"),
+            "sheep_returned": [name for name in sheep_returned if name],
+            "sheep_lost": [name for name in sheep_lost if name],
+            "sheep_remaining": state.get("sheepRemaining"),
+            "shepherd_blocked": bool(state.get("shepherdWasBlocked")),
             "judge_first": player_label(state, state.get("judgeFirstId")),
             "judge_second": player_label(state, state.get("judgeSecondId")),
             "judge_same_clan": state.get("judgeSameClan"),
@@ -147,6 +154,7 @@ def public_event_details(state, event_type):
         }
     return {
         "eliminated": player_label(state, state.get("lastVote")),
+        "vote_deaths": [name for name in (player_label(state, item) for item in state.get("voteDeathIds", [])) if name],
         "vote_outcome": state.get("voteOutcome"),
         "winner": state.get("winner"),
     }

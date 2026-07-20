@@ -1190,7 +1190,8 @@
           if (!first || !second || first.id === second.id) return;
           state.judgeFirstId = first.id;
           state.judgeSecondId = second.id;
-          state.judgeSameClan = isRoleBlocked("judges") || competitionFaction(first) === competitionFaction(second);
+          const sameClan = competitionFaction(first) === competitionFaction(second);
+          state.judgeSameClan = isRoleBlocked("judges") ? !sameClan : sameClan;
           state.stage = "judge_result";
         } else if (action === "skip-judge") {
           state.judgeFirstId = null; state.judgeSecondId = null; state.judgeSameClan = null;

@@ -783,7 +783,13 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .history-room-link { display: grid; grid-template-columns: 44px minmax(0, 1fr) auto; align-items: center; gap: 14px; margin-top: 12px; padding: 15px 17px; border: 1px solid rgba(255,255,255,.1); color: #aeb8bd; text-decoration: none; background: rgba(255,255,255,.02); transition: border-color .2s, background .2s, transform .2s; }
 .history-room-link:hover { border-color: rgba(199,139,69,.38); background: rgba(199,139,69,.06); transform: translateY(-1px); }
 .history-room-list { display: grid; gap: 10px; }
+.history-room-entry { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: stretch; gap: 8px; }
 .history-room-list .history-room-link { margin-top: 0; align-items: center; }
+.history-room-entry > form { display: flex; }
+.history-delete-button { justify-content: center; gap: 8px; width: auto; min-width: 112px; min-height: 100%; margin: 0; border: 1px solid rgba(197,74,65,.32); color: #e49a91; background: rgba(145,45,39,.1); }
+.history-delete-button:hover { border-color: rgba(220,91,80,.62); background: rgba(159,48,41,.2); }
+.history-delete-button span { font-size: 1.25rem; line-height: 1; }
+.history-delete-button strong { font-size: .68rem; }
 .history-room-link strong, .history-room-link small { display: block; }
 .history-room-link small { margin-top: 5px; color: #718087; }
 .history-room-code { display: grid; place-items: center; width: 42px; height: 42px; border: 1px solid rgba(199,139,69,.25); border-radius: 50%; color: var(--ember-light); font: 700 .7rem "Cinzel", serif; background: rgba(199,139,69,.07); }
@@ -957,6 +963,9 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
   .history-event-content time { font-size: .55rem; }
   .history-event summary { padding: 9px 13px; }
   .history-event li { min-width: 0; padding: 11px 10px; }
+  .history-room-entry { grid-template-columns: minmax(0, 1fr) 48px; }
+  .history-delete-button { min-width: 48px; padding: 8px; }
+  .history-delete-button strong { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .room-shell { width: min(100% - 24px, 960px); padding-top: 34px; }
   .room-card { min-width: 0; }
   .player-secret-card h1 { font-size: clamp(2.2rem, 13vw, 4rem); }

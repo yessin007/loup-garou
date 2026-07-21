@@ -259,6 +259,33 @@ class RoomFlowTests(TestCase):
         self.assertContains(response, reverse("room_history", args=[room.code]))
         self.assertNotIn("game_setup", returning_narrator.session)
 
+    def test_only_authenticated_admin_can_delete_finished_history(self):
+        room = self.create_room()
+        self.narrator.post(reverse("room_start_api", args=[room.code]))
+        sync_url = reverse("room_sync_api", args=[room.code])
+        self.narrator.post(
+            sync_url,
+            json.dumps({"stage": "dawn", "round": 1, "players": [], "deaths": []}),
+            content_type="application/json",
+        )
+        self.narrator.post(
+            sync_url,
+            json.dumps({"stage": "game_over", "round": 1, "players": [], "winner": "village"}),
+            content_type="application/json",
+        )
+        delete_url = reverse("room_history_delete", args=[room.code])
+
+        visitor = Client()
+        self.assertNotContains(visitor.get(reverse("room_history_list")), delete_url)
+        self.assertEqual(visitor.post(delete_url).status_code, 403)
+        self.assertTrue(GameRoom.objects.filter(code=room.code).exists())
+
+        archive = self.narrator.get(reverse("room_history_list"))
+        self.assertContains(archive, delete_url)
+        response = self.narrator.post(delete_url)
+        self.assertRedirects(response, reverse("room_history_list"), fetch_redirect_response=False)
+        self.assertFalse(GameRoom.objects.filter(code=room.code).exists())
+
     def test_qr_code_contains_prefilled_room_link(self):
         room = self.create_room()
         response = Client(HTTP_HOST="testserver").get(reverse("room_qr", args=[room.code]))
@@ -298,7 +325,7 @@ class PwaTests(TestCase):
         worker = self.client.get(reverse("service_worker"))
         self.assertEqual(worker.status_code, 200)
         self.assertEqual(worker["Service-Worker-Allowed"], "/")
-        self.assertContains(worker, "loup-garou-shell-v8")
+        self.assertContains(worker, "loup-garou-shell-v9")
 
         home = self.client.get(reverse("home"))
         self.assertContains(home, reverse("pwa_manifest"))

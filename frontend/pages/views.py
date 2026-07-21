@@ -159,6 +159,8 @@ def player_label(state, player_id):
 
 def public_event_details(state, event_type):
     if event_type == "night":
+        blocked_player = next((item for item in state.get("players", []) if item.get("id") == state.get("blockedPlayerId")), None)
+        blocked_role = blocked_player.get("role") if blocked_player else None
         death_names = []
         for entry in state.get("deaths", []):
             name = entry.get("name") if isinstance(entry, dict) else player_label(state, entry)
@@ -176,8 +178,8 @@ def public_event_details(state, event_type):
             "redirected_to": player_label(state, state.get("prostituteTargetId")),
             "infection_attempted": bool(state.get("infectionAttempted")),
             "infection_succeeded": bool(state.get("infectionSucceeded")),
-            "witch_saved": bool(state.get("witchSave")),
-            "witch_target": player_label(state, state.get("witchKillId")),
+            "witch_saved": bool(state.get("witchSave")) and blocked_role != "witches",
+            "witch_target": None if blocked_role == "witches" else player_label(state, state.get("witchKillId")),
             "bear_growled": state.get("bearGrowled"),
             "sheep_returned": [name for name in sheep_returned if name],
             "sheep_lost": [name for name in sheep_lost if name],
@@ -192,11 +194,16 @@ def public_event_details(state, event_type):
     hunter_targets = [player_label(state, record.get("targetId")) for record in state.get("hunterShotRecords", []) if record.get("source") != "night"]
     vote_breakdown = state.get("voteBreakdown") or {}
     vote_lines = lambda entries: [f"{player_label(state, entry.get('voterId'))} → {player_label(state, entry.get('targetId'))}" for entry in entries if player_label(state, entry.get("voterId")) and player_label(state, entry.get("targetId"))]
+    normal_vote_lines = [
+        f"{player_label(state, entry.get('targetId'))}: {entry.get('votes', 0)}"
+        for entry in vote_breakdown.get("normal", [])
+        if entry.get("votes") is not None and player_label(state, entry.get("targetId"))
+    ] or vote_lines(vote_breakdown.get("normal", []))
     return {
         "eliminated": player_label(state, state.get("lastVote")),
         "vote_deaths": [name for name in (player_label(state, item) for item in state.get("voteDeathIds", [])) if name],
         "vote_outcome": state.get("voteOutcome"),
-        "normal_votes": vote_lines(vote_breakdown.get("normal", [])),
+        "normal_votes": normal_vote_lines,
         "cancelled_votes": [player_label(state, entry.get("voterId")) for entry in vote_breakdown.get("cancelled", []) if player_label(state, entry.get("voterId"))],
         "secret_votes": vote_lines(vote_breakdown.get("secret", [])),
         "final_totals": [f"{player_label(state, entry.get('id'))}: {entry.get('votes', 0)}" for entry in vote_breakdown.get("totals", []) if player_label(state, entry.get("id"))],

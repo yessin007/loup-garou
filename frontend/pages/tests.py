@@ -57,10 +57,11 @@ class RoomFlowTests(TestCase):
         state = {
             "stage": "dawn", "round": 1,
             "players": [
-                {"id": 1, "name": "Ahmed", "alive": False},
-                {"id": 2, "name": "Sarra", "alive": True},
+                {"id": 1, "name": "Ahmed", "role": "witches", "alive": False},
+                {"id": 2, "name": "Sarra", "role": "villagers", "alive": True},
             ],
             "deaths": [1], "wolfTargetId": 1,
+            "blockedPlayerId": 1, "witchSave": True, "witchKillId": 2,
             "bearGrowled": True,
             "shepherdLastResults": [
                 {"targetId": 1, "returned": False},
@@ -76,7 +77,7 @@ class RoomFlowTests(TestCase):
         state.update({
             "stage": "day_end", "lastVote": 1, "voteDeathIds": [1, 2], "voteOutcome": "eliminated",
             "voteBreakdown": {
-                "normal": [{"voterId": 2, "targetId": 1}],
+                "normal": [{"targetId": 1, "votes": 3}],
                 "cancelled": [{"voterId": 1, "reason": "silenced"}],
                 "secret": [{"voterId": 1, "targetId": 2}],
                 "totals": [{"id": 1, "votes": 1}, {"id": 2, "votes": 1}],
@@ -95,6 +96,8 @@ class RoomFlowTests(TestCase):
         self.assertEqual(night["sheep_returned"], ["Sarra"])
         self.assertEqual(night["sheep_remaining"], 2)
         self.assertFalse(night["shepherd_blocked"])
+        self.assertFalse(night["witch_saved"])
+        self.assertIsNone(night["witch_target"])
         self.assertEqual(night["judge_first"], "Ahmed")
         self.assertEqual(night["judge_second"], "Sarra")
         self.assertFalse(night["judge_same_clan"])
@@ -102,7 +105,7 @@ class RoomFlowTests(TestCase):
         self.assertEqual(night["seer_role"], "villagers")
         day = history["events"][1]["details"]
         self.assertEqual(day["vote_deaths"], ["Ahmed", "Sarra"])
-        self.assertEqual(day["normal_votes"], ["Sarra → Ahmed"])
+        self.assertEqual(day["normal_votes"], ["Ahmed: 3"])
         self.assertEqual(day["cancelled_votes"], ["Ahmed"])
         self.assertEqual(day["secret_votes"], ["Ahmed → Sarra"])
         self.assertEqual(day["final_totals"], ["Ahmed: 1", "Sarra: 1"])

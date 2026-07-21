@@ -336,7 +336,37 @@ def welcome(request):
         return redirect("home")
 
     error = None
+    resume_error = None
+    resume_finished_room = None
+    resume_code = ""
     if request.method == "POST":
+        if request.POST.get("action") == "resume":
+            resume_code = request.POST.get("room_code", "").strip()
+            if not (resume_code.isdigit() and len(resume_code) == 6):
+                resume_error = UI[current_language(request)]["resume_invalid_code"]
+            else:
+                room = GameRoom.objects.filter(code=resume_code).first()
+                if not room:
+                    resume_error = UI[current_language(request)]["resume_not_found"]
+                elif room.status == GameRoom.Status.FINISHED:
+                    resume_error = UI[current_language(request)]["resume_finished"].format(code=room.code)
+                    resume_finished_room = room
+                else:
+                    request.session["game_setup"] = {
+                        "player_count": room.player_count,
+                        "composition": room.composition,
+                        "room_code": room.code,
+                    }
+                    request.session["resume_from_server"] = True
+                    return redirect("game")
+
+            return render(request, "pages/welcome.html", {
+                "error": error,
+                "resume_error": resume_error,
+                "resume_finished_room": resume_finished_room,
+                "resume_code": resume_code,
+            })
+
         try:
             player_count = int(request.POST.get("player_count", 0))
             composition = {
@@ -366,7 +396,12 @@ def welcome(request):
                 }
                 return redirect("game")
 
-    return render(request, "pages/welcome.html", {"error": error})
+    return render(request, "pages/welcome.html", {
+        "error": error,
+        "resume_error": resume_error,
+        "resume_finished_room": resume_finished_room,
+        "resume_code": resume_code,
+    })
 
 
 def game(request):
@@ -382,6 +417,13 @@ def game(request):
         )
         setup["room_code"] = room.code
         request.session["game_setup"] = setup
+    room = GameRoom.objects.filter(code=setup["room_code"]).first()
+    if not room:
+        request.session.pop("game_setup", None)
+        request.session.pop("resume_from_server", None)
+        return redirect("welcome")
+
+    resume_requested = bool(request.session.pop("resume_from_server", False))
 
     role_labels = {key: values[0] for key, values in ROLES[current_language(request)].items()}
     roles = [
@@ -402,6 +444,8 @@ def game(request):
             },
             "room_code": setup["room_code"],
             "room": room_text(request),
+            "resume_requested": resume_requested,
+            "server_game_state": room.game_state if resume_requested else {},
         },
     )
 

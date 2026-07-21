@@ -206,6 +206,53 @@ class RoomFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "exactement 6 chiffres")
 
+    def test_narrator_can_resume_active_room_from_another_session(self):
+        room = self.create_room()
+        self.narrator.post(reverse("room_start_api", args=[room.code]))
+        saved_state = {
+            "stage": "seer", "round": 2, "roomStarted": True,
+            "players": [{"id": 1, "name": "Sarra", "role": "seers", "alive": True}],
+        }
+        self.narrator.post(
+            reverse("room_sync_api", args=[room.code]),
+            json.dumps(saved_state),
+            content_type="application/json",
+        )
+
+        returning_narrator = Client()
+        returning_narrator.post(reverse("home"), {"username": "123", "password": "123"})
+        response = returning_narrator.post(
+            reverse("welcome"),
+            {"action": "resume", "room_code": room.code},
+        )
+        self.assertRedirects(response, reverse("game"), fetch_redirect_response=False)
+        self.assertEqual(returning_narrator.session["game_setup"]["room_code"], room.code)
+
+        game = returning_narrator.get(reverse("game"))
+        self.assertContains(game, '"stage": "seer"')
+        self.assertContains(game, 'id="resume-requested" type="application/json">true</script>')
+        self.assertNotIn("resume_from_server", returning_narrator.session)
+
+    def test_narrator_is_told_when_room_is_finished(self):
+        room = self.create_room()
+        self.narrator.post(reverse("room_start_api", args=[room.code]))
+        self.narrator.post(
+            reverse("room_sync_api", args=[room.code]),
+            json.dumps({"stage": "game_over", "round": 2, "players": [], "winner": "village"}),
+            content_type="application/json",
+        )
+
+        returning_narrator = Client()
+        returning_narrator.post(reverse("home"), {"username": "123", "password": "123"})
+        response = returning_narrator.post(
+            reverse("welcome"),
+            {"action": "resume", "room_code": room.code},
+        )
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, f"La partie {room.code} est déjà terminée.")
+        self.assertContains(response, reverse("room_history", args=[room.code]))
+        self.assertNotIn("game_setup", returning_narrator.session)
+
     def test_qr_code_contains_prefilled_room_link(self):
         room = self.create_room()
         response = Client(HTTP_HOST="testserver").get(reverse("room_qr", args=[room.code]))
@@ -245,7 +292,7 @@ class PwaTests(TestCase):
         worker = self.client.get(reverse("service_worker"))
         self.assertEqual(worker.status_code, 200)
         self.assertEqual(worker["Service-Worker-Allowed"], "/")
-        self.assertContains(worker, "loup-garou-shell-v7")
+        self.assertContains(worker, "loup-garou-shell-v8")
 
         home = self.client.get(reverse("home"))
         self.assertContains(home, reverse("pwa_manifest"))

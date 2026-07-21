@@ -16,6 +16,8 @@
   <body class="narrator-page">
     {{ game_setup|json_script:"game-setup" }}
     {{ game_text|json_script:"game-translations" }}
+    {{ resume_requested|json_script:"resume-requested" }}
+    {{ server_game_state|json_script:"server-game-state" }}
     <header class="narrator-header">
       <a class="brand" href="{% url 'welcome' %}">Loup <span>Garou</span></a>
       <div class="phase-indicator"><span id="cycle-label">{{ ui.preparation }}</span><strong id="phase-label">{{ ui.players }}</strong></div>
@@ -63,6 +65,8 @@
     <script>
       const setup = JSON.parse(document.getElementById("game-setup").textContent);
       const L = JSON.parse(document.getElementById("game-translations").textContent);
+      const resumeRequested = JSON.parse(document.getElementById("resume-requested").textContent);
+      const serverGameState = JSON.parse(document.getElementById("server-game-state").textContent);
       const roomCode = "{{ room_code|escapejs }}";
       const roomQrUrl = "{% url 'room_qr' room_code %}";
       const csrfToken = "{{ csrf_token }}";
@@ -125,7 +129,7 @@
       }
 
       let state;
-      try { state = JSON.parse(localStorage.getItem(storageKey)) || freshState(); }
+      try { state = resumeRequested ? (serverGameState?.stage ? serverGameState : freshState()) : (JSON.parse(localStorage.getItem(storageKey)) || freshState()); }
       catch { state = freshState(); }
       if (state.infectionAvailable === undefined) state.infectionAvailable = true;
       if (!state.ancientWolfHits) state.ancientWolfHits = {};
@@ -153,6 +157,10 @@
       if (state.alienContactAvailableRound === undefined) state.alienContactAvailableRound = null;
       if (!state.voteBreakdown) state.voteBreakdown = {normal: [], cancelled: [], secret: [], totals: []};
       if (!Array.isArray(state.accusationDraftIds)) state.accusationDraftIds = [];
+      if (resumeRequested) {
+        localStorage.setItem(storageKey, JSON.stringify(state));
+        localStorage.removeItem(undoStorageKey);
+      }
 
       function cloneState(value) { return JSON.parse(JSON.stringify(value)); }
       let undoStack = [];
@@ -173,12 +181,17 @@
 
       let syncTimer = null;
       let lastRenderedStage = null;
-      function syncState(snapshot, isUndo = false) {
+      function syncState(snapshot, isUndo = false, keepalive = false) {
         return fetch(`/api/rooms/${roomCode}/sync/`, {
           method: "POST",
+          keepalive,
           headers: {"Content-Type": "application/json", "X-CSRFToken": csrfToken, ...(isUndo ? {"X-Game-Undo": "1"} : {})},
           body: JSON.stringify(snapshot),
         });
+      }
+      function flushStateToServer() {
+        clearTimeout(syncTimer);
+        syncState(cloneState(state), false, true).catch(() => {});
       }
       function canRecordUndo(previous) {
         return previous.roomStarted && !["roster", "player_reveal"].includes(previous.stage);
@@ -1581,6 +1594,8 @@
         else if (confirm(L.undo_help)) restorePreviousState();
       });
       confirmUndoButton.addEventListener("click", restorePreviousState);
+      document.addEventListener("visibilitychange", () => { if (document.hidden) flushStateToServer(); });
+      window.addEventListener("pagehide", flushStateToServer);
       render();
     </script>
   </body>

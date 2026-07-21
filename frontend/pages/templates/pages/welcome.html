@@ -28,6 +28,19 @@
         <p class="eyebrow">{{ ui.new_game }}</p>
         <h1>{{ ui.compose|safe }}</h1>
         <p>{{ ui.compose_help }}</p>
+        <form class="resume-game-card" method="post">
+          {% csrf_token %}
+          <input type="hidden" name="action" value="resume" />
+          <span class="step-label">{{ ui.resume_title }}</span>
+          <p>{{ ui.resume_help }}</p>
+          {% if resume_error %}<p class="form-error" role="alert">{{ resume_error }}</p>{% endif %}
+          <label for="resume-room-code">{{ ui.resume_code }}</label>
+          <div class="resume-game-controls">
+            <input id="resume-room-code" name="room_code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" value="{{ resume_code }}" required />
+            <button type="submit">{{ ui.resume_action }} <span>→</span></button>
+          </div>
+          {% if resume_finished_room %}<a href="{% url 'room_history' resume_finished_room.code %}">{{ ui.resume_history }} · {{ resume_finished_room.code }} →</a>{% endif %}
+        </form>
       </section>
 
       <section class="setup-panel">

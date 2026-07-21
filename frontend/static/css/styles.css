@@ -227,7 +227,16 @@ button:hover, .logout-link:hover { filter: brightness(1.08); }
 
 .setup-intro { position: sticky; top: 50px; align-self: start; }
 .setup-intro h1, .game-ready-shell h1 { font-size: clamp(3rem, 5.6vw, 5.7rem); line-height: .92; letter-spacing: -.045em; text-transform: uppercase; }
-.setup-intro > p:last-child { max-width: 390px; margin-top: 26px; color: var(--mist); line-height: 1.7; }
+.setup-intro > h1 + p { max-width: 390px; margin-top: 26px; color: var(--mist); line-height: 1.7; }
+.resume-game-card { max-width: 430px; margin-top: 28px; padding: 18px; border: 1px solid rgba(199,139,69,.3); background: rgba(9,16,22,.82); box-shadow: 0 18px 45px rgba(0,0,0,.18); }
+.resume-game-card > p:not(.form-error) { margin: 0 0 14px; color: #8d999f; font-size: .73rem; line-height: 1.5; }
+.resume-game-card .form-error { margin-bottom: 13px; }
+.resume-game-card label { display: block; color: #9ba7ac; font-size: .66rem; }
+.resume-game-controls { display: grid; grid-template-columns: minmax(0, .7fr) minmax(150px, 1.3fr); gap: 8px; margin-top: 7px; }
+.resume-game-controls input { min-width: 0; letter-spacing: .14em; text-align: center; }
+.resume-game-controls button { min-height: 48px; margin: 0; padding: 11px 13px; font-size: .74rem; }
+.resume-game-card > a { display: inline-flex; margin-top: 14px; color: var(--ember-light); font-size: .72rem; text-decoration: none; }
+.resume-game-card > a:hover { color: var(--ivory); }
 
 .setup-panel { padding: clamp(24px, 4vw, 42px); border: 1px solid rgba(255,255,255,.1); background: rgba(9, 16, 22, .84); box-shadow: 0 30px 90px rgba(0,0,0,.28); backdrop-filter: blur(15px); }
 .players-row, .roles-heading, .setup-footer { display: flex; align-items: center; justify-content: space-between; gap: 24px; }
@@ -971,7 +980,9 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
   .setup-shell { gap: 22px; padding-top: 24px; }
   .setup-intro .eyebrow { margin-bottom: 8px; font-size: .65rem; }
   .setup-intro h1 { max-width: 360px; font-size: clamp(2.65rem, 13vw, 3.55rem); line-height: .91; }
-  .setup-intro > p:last-child { margin: 15px 0 0; font-size: .88rem; line-height: 1.55; }
+  .setup-intro > h1 + p { margin: 15px 0 0; font-size: .88rem; line-height: 1.55; }
+  .resume-game-card { margin-top: 20px; padding: 15px; }
+  .resume-game-controls { grid-template-columns: 1fr; }
   .setup-panel { padding: 16px 13px; box-shadow: 0 18px 55px rgba(0,0,0,.24); }
   .players-row { align-items: center; gap: 10px; padding-bottom: 20px; }
   .players-row h2, .roles-heading h2 { font-size: 1.04rem; }

@@ -119,7 +119,7 @@
           cupidLinked: false, coupleIds: [],
           judgeFirstId: null, judgeSecondId: null, judgeSameClan: null,
           wildChildLinked: false, wildChildId: null, wildIdolId: null, wildIdolDeathTriggered: false, wildChildTurned: false,
-          angelChanceExpired: false, openingAngelDay: false, pendingFirstNightAfterAngelDay: false, eventRound: null,
+          angelChanceExpired: false, eventRound: null,
           ankouGhost: null,
           whiteWolfTargetId: null,
           lifePotion: true, deathPotion: true, seerTargetId: null, seerDisplayedRole: null, seerWasBlocked: false,
@@ -138,8 +138,6 @@
       if (state.shepherdWasBlocked === undefined) state.shepherdWasBlocked = false;
       if (!state.coupleIds) state.coupleIds = [];
       if (state.angelChanceExpired === undefined) state.angelChanceExpired = state.round > 1;
-      if (state.openingAngelDay === undefined) state.openingAngelDay = false;
-      if (state.pendingFirstNightAfterAngelDay === undefined) state.pendingFirstNightAfterAngelDay = false;
       if (state.eventRound === undefined) state.eventRound = null;
       if (state.ankouGhost === undefined) state.ankouGhost = null;
       if (state.wolfInitialTargetId === undefined) state.wolfInitialTargetId = null;
@@ -867,13 +865,7 @@
         state.bearNeighborIds = bearResult.neighbors.map(item => item.id);
         state.bearGrowled = bearResult.bear ? bearResult.growls : null;
         chooseSpeaker();
-        if (state.pendingFirstNightAfterAngelDay) {
-          state.eventRound = state.round;
-          state.round += 1;
-          state.pendingFirstNightAfterAngelDay = false;
-        } else {
-          state.eventRound = state.round;
-        }
+        state.eventRound = state.round;
         const deadHunter = deaths.find(item => item.role === "hunters");
         if (deadHunter) {
           state.pendingHunterId = deadHunter.id;
@@ -1004,8 +996,7 @@
 
       function renderAccusation() {
         setHeading(t("day", {n: state.round}), L.accusations);
-        const openingSpeaker = state.openingAngelDay && player(state.speakerId)?.alive ? `<div class="speaker-card"><span>${L.speaking_starts}</span><strong>${playerIdentity(player(state.speakerId))}</strong></div>` : "";
-        scene.innerHTML = `<div class="scene-kicker">${L.first_round}</div><h1>${L.village_accuses}</h1><p class="scene-lead">${L.accusation_help}</p>${openingSpeaker}${dayConstraints()}${accusationBoard(alive())}<div class="scene-actions">${actionButton(L.qualify, "finish-accusation", true)}${actionButton(L.skip_vote, "skip-vote", false, true)}</div>`;
+        scene.innerHTML = `<div class="scene-kicker">${L.first_round}</div><h1>${L.village_accuses}</h1><p class="scene-lead">${L.accusation_help}</p>${dayConstraints()}${accusationBoard(alive())}<div class="scene-actions">${actionButton(L.qualify, "finish-accusation", true)}${actionButton(L.skip_vote, "skip-vote", false, true)}</div>`;
       }
 
       function renderBarberShot() {
@@ -1077,7 +1068,7 @@
         const affectedNames = (state.lostVillagePowerIds || []).map(id => { const item = player(id); return item ? playerText(item) : ""; }).filter(Boolean).join(", ");
         const powerLossReport = affectedNames ? `<div class="seer-summary"><span>${L.ancient_vote_penalty}</span><strong>${affectedNames}</strong><p>${L.ancient_roles_lost}</p></div>` : "";
         const dayOutIds = new Set([...(state.voteDeathIds || []), ...(state.hunterShotRecords || []).filter(record => record.source !== "night").map(record => record.targetId)]);
-        const nextNightNumber = state.openingAngelDay ? 1 : state.round + 1;
+        const nextNightNumber = state.round + 1;
         const dayOverview = `<section class="phase-bilan day"><div class="phase-bilan-copy"><span>${L.sun_sets}</span><strong>${L.vote_report}</strong><p>${L.day_bilan_help}</p></div><div class="phase-bilan-stats"><div><strong>${dayOutIds.size}</strong><span>${L.summary_out}</span></div><div><strong>${alive().length}</strong><span>${L.summary_alive}</span></div><div><strong>${nextNightNumber}</strong><span>${L.summary_next}</span></div></div></section>`;
         scene.innerHTML = `<div class="scene-kicker">${L.vote_report}</div><h1>${t("day_bilan", {n: state.round})}</h1>${dayOverview}${message}${hunterShotReport("vote")}${powerLossReport}<div class="scene-actions">${state.winner ? actionButton(L.winners, "show-game-over") : actionButton(L.make_night, "next-night")}</div>`;
       }
@@ -1276,12 +1267,6 @@
           state.stage = state.players.length === setup.player_count ? "roles" : "roster";
         } else if (action === "begin-night") {
           state.protectedId = null; state.wolfTargetId = null; state.wolfInitialTargetId = null; state.wolfTargetChanged = false; state.prostituteTargetId = null; state.blockedPlayerId = null; state.infectionAttempted = false; state.infectionSucceeded = false; state.infectedPlayerId = null; state.whiteWolfTargetId = null; state.bearPlayerId = null; state.bearGrowled = null; state.bearNeighborIds = []; state.shepherdLastResults = []; state.shepherdReportedThisNight = false; state.shepherdWasBlocked = false; state.judgeFirstId = null; state.judgeSecondId = null; state.judgeSameClan = null; state.silencedPlayerId = null; state.talkativePlayerId = null; state.assignedWord = ""; state.talkativeRevealVisible = false; state.witchSave = false; state.witchKillId = null; state.seerTargetId = null; state.seerDisplayedRole = null; state.seerWasBlocked = false; state.ancientResistedPlayerId = null; state.deaths = []; state.voteDeathIds = [];
-          if (hasAliveRole("angels") && !state.angelChanceExpired) {
-            state.openingAngelDay = true;
-            chooseSpeaker();
-            state.stage = "accusation";
-            save(); render(); return;
-          }
           nextNightStage(""); return;
         } else if (action === "confirm-cupid") {
           const firstId = Number(document.getElementById("cupid-first").value);
@@ -1564,12 +1549,7 @@
           if (state.round === 1) expireAngelObjective();
           state.winner = checkWinner(); state.stage = "day_end";
         } else if (action === "next-night") {
-          if (state.openingAngelDay) {
-            state.openingAngelDay = false;
-            state.pendingFirstNightAfterAngelDay = true;
-          } else {
-            state.round += 1;
-          }
+          state.round += 1;
           state.eventRound = null;
           state.protectedId = null; state.wolfTargetId = null; state.wolfInitialTargetId = null; state.wolfTargetChanged = false; state.prostituteTargetId = null; state.blockedPlayerId = null; state.infectionAttempted = false; state.infectionSucceeded = false; state.infectedPlayerId = null; state.whiteWolfTargetId = null; state.bearPlayerId = null; state.bearGrowled = null; state.bearNeighborIds = []; state.shepherdLastResults = []; state.shepherdReportedThisNight = false; state.shepherdWasBlocked = false; state.judgeFirstId = null; state.judgeSecondId = null; state.judgeSameClan = null; state.silencedPlayerId = null; state.talkativePlayerId = null; state.assignedWord = ""; state.talkativeRevealVisible = false; state.witchSave = false; state.witchKillId = null; state.seerTargetId = null; state.seerDisplayedRole = null; state.seerWasBlocked = false; state.ancientResistedPlayerId = null; state.lostVillagePowerIds = []; state.pendingHunterId = null; state.pendingHunterSource = null; state.hunterShotRecords = []; state.qualifiers = []; state.accusationDraftIds = []; state.lastVote = null; state.voteDeathIds = []; state.voteOutcome = null; state.voteRevealedRole = null; state.servantAccepted = null; state.specialReturnStage = null;
           state.wolfResolvedTargetId = null;

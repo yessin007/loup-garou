@@ -187,16 +187,19 @@ class RoomFlowTests(TestCase):
         room.refresh_from_db()
         self.assertEqual(room.status, GameRoom.Status.ACTIVE)
 
-    def test_angel_opening_day_keeps_first_night_number(self):
+    def test_first_night_is_recorded_before_first_day(self):
         room = self.create_room()
         self.narrator.post(reverse("room_start_api", args=[room.code]))
         sync_url = reverse("room_sync_api", args=[room.code])
         players = [{"id": 1, "name": "Ahmed", "alive": True}, {"id": 2, "name": "Sarra", "alive": True}]
+        self.narrator.post(sync_url, json.dumps({"stage": "dawn", "round": 1, "players": players, "deaths": []}), content_type="application/json")
         self.narrator.post(sync_url, json.dumps({"stage": "day_end", "round": 1, "players": players, "voteOutcome": "skipped"}), content_type="application/json")
-        self.narrator.post(sync_url, json.dumps({"stage": "dawn", "round": 2, "eventRound": 1, "players": players, "deaths": []}), content_type="application/json")
-        self.assertTrue(RoomEvent.objects.filter(room=room, marker="day-1").exists())
         self.assertTrue(RoomEvent.objects.filter(room=room, marker="night-1").exists())
-        self.assertFalse(RoomEvent.objects.filter(room=room, marker="night-2").exists())
+        self.assertTrue(RoomEvent.objects.filter(room=room, marker="day-1").exists())
+        self.assertEqual(
+            list(RoomEvent.objects.filter(room=room).values_list("event_type", flat=True)),
+            ["night", "day"],
+        )
 
     def test_room_join_rejects_non_numeric_code(self):
         response = Client().post(

@@ -9,10 +9,14 @@
   <body class="room-page">
     <header class="guide-header"><a class="brand" href="{% url 'home' %}">Loup <span>Garou</span></a><div class="guide-header-actions">{% include "pages/_language_selector.html" %}<a class="guide-back" href="{% url 'room_portal' %}">{{ room.back }}</a></div></header>
     <main class="room-shell">
-      <section class="room-hero"><p class="eyebrow">Archive</p><h1>{{ room.all_histories }}</h1><p>{{ room.history_intro }}</p></section>
+      <section class="room-hero history-hero"><div><p class="eyebrow">{{ room.archive }}</p><h1>{{ room.all_histories }}</h1><p>{{ room.history_intro }}</p></div></section>
       <div class="history-room-list">
         {% for game_room in history_rooms %}
-          <a class="history-room-link" href="{% url 'room_history' game_room.code %}"><span><strong>Room {{ game_room.code }}</strong><small>{{ game_room.event_count }} {{ room.events }} · {{ game_room.updated_at|date:"d/m/Y H:i" }}</small></span><span>→</span></a>
+          <a class="history-room-link" href="{% url 'room_history' game_room.code %}">
+            <span class="history-room-code">{{ game_room.code|slice:":2" }}</span>
+            <span><strong>{{ room.room_label }} {{ game_room.code }}</strong><small>{{ game_room.event_count }} {{ room.events }} · {{ game_room.updated_at|date:"d/m/Y H:i" }}</small></span>
+            <span class="history-room-arrow">→</span>
+          </a>
         {% empty %}
           <p class="history-empty">{{ room.history_empty }}</p>
         {% endfor %}

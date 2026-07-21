@@ -16,7 +16,6 @@
         <h2>{{ room.waiting }}</h2><p>{{ room.waiting_help }}</p>
         <small id="room-count">{{ game_room.room_players.count }} / {{ game_room.player_count }} {{ room.players_joined }}</small>
       </section>
-      <a class="history-room-link" href="{% url 'room_history' game_room.code %}">{{ room.history }} <span>→</span></a>
     </main>
     <script>
       const card = document.getElementById("player-room-card");

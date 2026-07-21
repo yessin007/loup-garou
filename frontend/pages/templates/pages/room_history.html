@@ -8,18 +8,69 @@
   </head>
   <body class="room-page">
     {{ history_labels|json_script:"history-detail-labels" }}
+    {{ role_labels|json_script:"history-role-labels" }}
+    {{ room|json_script:"history-ui-text" }}
     <header class="guide-header"><a class="brand" href="{% url 'room_portal' %}">Loup <span>Garou</span></a><div class="guide-header-actions"><span>{{ room.refreshing }}</span><strong class="room-code-chip">{{ game_room.code }}</strong></div></header>
     <main class="room-shell">
-      <section class="room-hero"><p class="eyebrow">{{ game_room.code }}</p><h1>{{ room.history }}</h1></section>
+      <section class="room-hero history-hero">
+        <div><p class="eyebrow">{{ room.history_kicker }}</p><h1>{{ room.history }}</h1><p>{{ room.history_intro }}</p></div>
+        <div id="history-status" class="history-status"><i></i><span>{{ room.history_live }}</span></div>
+      </section>
+      <section id="history-overview" class="history-overview" aria-live="polite">
+        <div><strong>0</strong><span>{{ room.history_nights }}</span></div>
+        <div><strong>0</strong><span>{{ room.history_days }}</span></div>
+        <p>{{ room.history_updated }}</p>
+      </section>
       <div id="history-timeline" class="history-timeline"><p class="history-empty">{{ room.history_empty }}</p></div>
     </main>
     <script>
       const timeline = document.getElementById("history-timeline");
+      const overview = document.getElementById("history-overview");
+      const statusBadge = document.getElementById("history-status");
       const labels = {night: "{{ room.night|escapejs }}", day: "{{ room.day|escapejs }}"};
       const detailLabels = JSON.parse(document.getElementById("history-detail-labels").textContent);
+      const roleLabels = JSON.parse(document.getElementById("history-role-labels").textContent);
+      const H = JSON.parse(document.getElementById("history-ui-text").textContent);
       function safe(value) { const node = document.createElement("span"); node.textContent = value; return node.innerHTML; }
+      function fill(text, values = {}) { return Object.entries(values).reduce((result, [key, value]) => result.replaceAll(`{${key}}`, value), text); }
       let historyTimer = null;
-      function display(value) { if (Array.isArray(value)) return value.length ? value.join(", ") : "—"; if (value === true) return "{{ room.yes|escapejs }}"; if (value === false) return "{{ room.no|escapejs }}"; return value ?? "—"; }
+      const meaningfulFalse = new Set(["bear_growled", "judge_same_clan", "barber_hit", "alien_correct"]);
+      function shouldShow(key, value) {
+        if (value === null || value === undefined || value === "") return false;
+        if (Array.isArray(value)) return value.length > 0;
+        if (value === false) return meaningfulFalse.has(key);
+        return true;
+      }
+      function display(key, value) {
+        if (Array.isArray(value)) return value.join(", ");
+        if (key === "seer_role") return roleLabels[value] || value;
+        if (key === "vote_outcome") return H[`outcome_${value}`] || value;
+        if (key === "winner") return H[`winner_${value}`] || value;
+        if (value === true) return H.yes;
+        if (value === false) return H.no;
+        return value ?? H.not_recorded;
+      }
+      function eventSummary(event) {
+        if (event.type === "night") {
+          const deaths = event.details.deaths || [];
+          return deaths.length ? fill(H.history_night_deaths, {count: deaths.length}) : H.history_night_quiet;
+        }
+        if (event.details.vote_outcome === "tie") return H.history_day_tie;
+        if (event.details.vote_outcome === "skipped") return H.history_day_skipped;
+        return event.details.eliminated ? fill(H.history_day_eliminated, {name: event.details.eliminated}) : H.history_day_skipped;
+      }
+      function renderEvent(event) {
+        const details = Object.entries(event.details).filter(([key, value]) => shouldShow(key, value));
+        const title = fill(event.type === "night" ? H.history_night_title : H.history_day_title, {round: event.round});
+        const items = details.map(([key, value]) => `<li class="history-detail history-detail-${key}"><span>${safe(detailLabels[key] || key)}</span><strong>${safe(display(key, value))}</strong></li>`).join("");
+        return `<article class="history-event ${event.type}">
+          <div class="history-event-marker"><span>${labels[event.type]}</span><strong>${event.round}</strong></div>
+          <div class="history-event-content">
+            <header><div><span>${safe(title)}</span><strong>${safe(eventSummary(event))}</strong></div><time>${new Date(event.created_at).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})}</time></header>
+            <details><summary>${H.history_details}<span>+</span></summary>${items ? `<ul>${items}</ul>` : `<p class="history-no-details">${H.history_no_details}</p>`}</details>
+          </div>
+        </article>`;
+      }
       function scheduleHistory() { clearTimeout(historyTimer); historyTimer = setTimeout(refreshHistory, 2500); }
       async function refreshHistory() {
         clearTimeout(historyTimer);
@@ -28,7 +79,12 @@
           const response = await fetch("{% url 'room_history_api' game_room.code %}", {cache:"no-store"});
           if (!response.ok) throw new Error("history unavailable");
           const data = await response.json();
-          if (data.events.length) timeline.innerHTML = data.events.map(event => `<article class="history-event ${event.type}"><div><span>${labels[event.type]}</span><strong>${event.round}</strong></div><ul>${Object.entries(event.details).map(([key,value]) => `<li><span>${detailLabels[key] || key}</span><strong>${safe(display(value))}</strong></li>`).join("")}</ul></article>`).join("");
+          const nightCount = data.events.filter(event => event.type === "night").length;
+          const dayCount = data.events.filter(event => event.type === "day").length;
+          overview.innerHTML = `<div><strong>${nightCount}</strong><span>${H.history_nights}</span></div><div><strong>${dayCount}</strong><span>${H.history_days}</span></div><p>${H.history_updated}</p>`;
+          statusBadge.classList.toggle("finished", data.status === "finished");
+          statusBadge.querySelector("span").textContent = data.status === "finished" ? H.history_finished : H.history_live;
+          timeline.innerHTML = data.events.length ? [...data.events].reverse().map(renderEvent).join("") : `<p class="history-empty">${H.history_empty}</p>`;
           if (data.status !== "finished") scheduleHistory();
         } catch (error) { scheduleHistory(); }
       }

@@ -39,7 +39,6 @@
             <input id="resume-room-code" name="room_code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" value="{{ resume_code }}" required />
             <button type="submit">{{ ui.resume_action }} <span>→</span></button>
           </div>
-          {% if resume_finished_room %}<a href="{% url 'room_history' resume_finished_room.code %}">{{ ui.resume_history }} · {{ resume_finished_room.code }} →</a>{% endif %}
         </form>
       </section>
 

@@ -17,7 +17,7 @@ from .translations import ROLES
 class RoomFlowTests(TestCase):
     def setUp(self):
         self.narrator = Client()
-        self.narrator.post(reverse("home"), {"username": "123", "password": "123"})
+        self.narrator.post(reverse("home"), {"username": "admin", "password": "admin"})
         self.composition = {role: 0 for role in ROLES["fr"]}
         self.composition.update({"simple_wolves": 2, "villagers": 6})
 
@@ -28,6 +28,21 @@ class RoomFlowTests(TestCase):
         )
         self.assertRedirects(response, reverse("game"), fetch_redirect_response=False)
         return GameRoom.objects.get(code=self.narrator.session["game_setup"]["room_code"])
+
+    def test_narrator_login_accepts_text_credentials_only(self):
+        login_page = Client().get(reverse("home"))
+        self.assertContains(login_page, "admin / admin")
+        self.assertNotContains(login_page, 'inputmode="numeric"')
+
+        old_credentials = Client()
+        response = old_credentials.post(reverse("home"), {"username": "123", "password": "123"})
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("authenticated", old_credentials.session)
+
+        text_credentials = Client()
+        response = text_credentials.post(reverse("home"), {"username": "admin", "password": "admin"})
+        self.assertRedirects(response, reverse("welcome"), fetch_redirect_response=False)
+        self.assertTrue(text_credentials.session["authenticated"])
 
     def test_player_joins_and_receives_role_after_narrator_starts(self):
         room = self.create_room()
@@ -226,7 +241,7 @@ class RoomFlowTests(TestCase):
         )
 
         returning_narrator = Client()
-        returning_narrator.post(reverse("home"), {"username": "123", "password": "123"})
+        returning_narrator.post(reverse("home"), {"username": "admin", "password": "admin"})
         response = returning_narrator.post(
             reverse("welcome"),
             {"action": "resume", "room_code": room.code},
@@ -239,7 +254,7 @@ class RoomFlowTests(TestCase):
         self.assertContains(game, 'id="resume-requested" type="application/json">true</script>')
         self.assertNotIn("resume_from_server", returning_narrator.session)
 
-    def test_narrator_is_told_when_room_is_finished(self):
+    def test_narrator_can_resume_finished_room_and_continue(self):
         room = self.create_room()
         self.narrator.post(reverse("room_start_api", args=[room.code]))
         self.narrator.post(
@@ -249,15 +264,37 @@ class RoomFlowTests(TestCase):
         )
 
         returning_narrator = Client()
-        returning_narrator.post(reverse("home"), {"username": "123", "password": "123"})
+        returning_narrator.post(reverse("home"), {"username": "admin", "password": "admin"})
         response = returning_narrator.post(
             reverse("welcome"),
             {"action": "resume", "room_code": room.code},
         )
+        self.assertRedirects(response, reverse("game"), fetch_redirect_response=False)
+        self.assertEqual(returning_narrator.session["game_setup"]["room_code"], room.code)
+
+        game = returning_narrator.get(reverse("game"))
+        self.assertContains(game, '"stage": "game_over"')
+        self.assertContains(game, 'id="resume-requested" type="application/json">true</script>')
+        self.assertContains(game, 'actionButton(L.continue_game, "continue-game")')
+        self.assertContains(game, 'id="wolf-target"')
+        self.assertNotContains(game, 'id="wolf-change-target"')
+        self.assertContains(game, "wolvesHaveTarget()")
+
+        continued_state = {
+            "stage": "day_end",
+            "round": 2,
+            "players": [{"id": 1, "name": "Loup final", "role": "simple_wolves", "alive": True}],
+            "winner": None,
+        }
+        response = returning_narrator.post(
+            reverse("room_sync_api", args=[room.code]),
+            json.dumps(continued_state),
+            content_type="application/json",
+        )
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, f"La partie {room.code} est déjà terminée.")
-        self.assertContains(response, reverse("room_history", args=[room.code]))
-        self.assertNotIn("game_setup", returning_narrator.session)
+        room.refresh_from_db()
+        self.assertEqual(room.status, GameRoom.Status.ACTIVE)
+        self.assertEqual(room.game_state["stage"], "day_end")
 
     def test_only_authenticated_admin_can_delete_finished_history(self):
         room = self.create_room()

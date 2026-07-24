@@ -239,7 +239,7 @@ def home(request):
         username = request.POST.get("username", "")
         password = request.POST.get("password", "")
 
-        if username == "123" and password == "123":
+        if username == "admin" and password == "admin":
             request.session["authenticated"] = True
             return redirect("welcome")
 
@@ -360,7 +360,6 @@ def welcome(request):
 
     error = None
     resume_error = None
-    resume_finished_room = None
     resume_code = ""
     if request.method == "POST":
         if request.POST.get("action") == "resume":
@@ -371,9 +370,6 @@ def welcome(request):
                 room = GameRoom.objects.filter(code=resume_code).first()
                 if not room:
                     resume_error = UI[current_language(request)]["resume_not_found"]
-                elif room.status == GameRoom.Status.FINISHED:
-                    resume_error = UI[current_language(request)]["resume_finished"].format(code=room.code)
-                    resume_finished_room = room
                 else:
                     request.session["game_setup"] = {
                         "player_count": room.player_count,
@@ -386,7 +382,6 @@ def welcome(request):
             return render(request, "pages/welcome.html", {
                 "error": error,
                 "resume_error": resume_error,
-                "resume_finished_room": resume_finished_room,
                 "resume_code": resume_code,
             })
 
@@ -422,7 +417,6 @@ def welcome(request):
     return render(request, "pages/welcome.html", {
         "error": error,
         "resume_error": resume_error,
-        "resume_finished_room": resume_finished_room,
         "resume_code": resume_code,
     })
 

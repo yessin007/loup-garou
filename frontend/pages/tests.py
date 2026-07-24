@@ -29,6 +29,22 @@ class RoomFlowTests(TestCase):
         self.assertRedirects(response, reverse("game"), fetch_redirect_response=False)
         return GameRoom.objects.get(code=self.narrator.session["game_setup"]["room_code"])
 
+    def test_narrator_dashboard_routes_each_admin_action(self):
+        dashboard = self.narrator.get(reverse("welcome"))
+        self.assertContains(dashboard, reverse("room_history_list"))
+        self.assertContains(dashboard, f'{reverse("welcome")}?mode=new')
+        self.assertContains(dashboard, f'{reverse("welcome")}?mode=resume')
+        self.assertNotContains(dashboard, 'id="setup-form"')
+        self.assertNotContains(dashboard, 'id="resume-room-code"')
+
+        new_game = self.narrator.get(reverse("welcome"), {"mode": "new"})
+        self.assertContains(new_game, 'id="setup-form"')
+        self.assertNotContains(new_game, 'id="resume-room-code"')
+
+        resume_game = self.narrator.get(reverse("welcome"), {"mode": "resume"})
+        self.assertContains(resume_game, 'id="resume-room-code"')
+        self.assertNotContains(resume_game, 'id="setup-form"')
+
     def test_narrator_login_accepts_text_credentials_only(self):
         login_page = Client().get(reverse("home"))
         self.assertContains(login_page, "admin / admin")
@@ -226,6 +242,16 @@ class RoomFlowTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "exactement 6 chiffres")
+
+    def test_history_link_skips_manual_room_join_form(self):
+        home = Client().get(reverse("home"))
+        self.assertContains(home, reverse("room_history_list"))
+        self.assertNotContains(home, f'href="{reverse("room_portal")}"')
+        self.assertRedirects(
+            Client().get(reverse("room_portal")),
+            reverse("room_history_list"),
+            fetch_redirect_response=False,
+        )
 
     def test_narrator_can_resume_active_room_from_another_session(self):
         room = self.create_room()

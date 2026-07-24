@@ -22,9 +22,6 @@
       <a class="brand" href="{% url 'welcome' %}">Loup <span>Garou</span></a>
       <div class="phase-indicator"><span id="cycle-label">{{ ui.preparation }}</span><strong id="phase-label">{{ ui.players }}</strong></div>
       <div class="narrator-actions">
-        <button id="undo-game" class="header-action undo-action" type="button" disabled title="{{ game_text.undo_empty }}" aria-label="{{ game_text.undo }}">
-          <span aria-hidden="true">↶</span><strong>{{ game_text.undo }}</strong>
-        </button>
         <details class="room-share">
           <summary class="room-code-chip" title="{{ room.scan_qr }}"><span aria-hidden="true">▦</span>{{ room_code }}</summary>
           <div class="room-share-popover">
@@ -45,6 +42,9 @@
       <aside id="player-sidebar" class="player-sidebar"></aside>
       <section id="scene" class="scene-panel" aria-live="polite"></section>
     </main>
+    <button id="undo-game" class="scene-action secondary undo-action" type="button" disabled hidden title="{{ game_text.undo_empty }}" aria-label="{{ game_text.undo }}">
+      <span aria-hidden="true">↶</span>{{ game_text.undo }}
+    </button>
 
     <dialog id="undo-dialog" class="undo-dialog">
       <form method="dialog" class="undo-dialog-card">
@@ -197,6 +197,15 @@
         undoButton.disabled = !available;
         undoButton.title = available ? L.undo_help : L.undo_empty;
         undoButton.setAttribute("aria-label", available ? L.undo : L.undo_empty);
+      }
+      function placeUndoButton() {
+        const actions = scene.querySelector(".scene-actions");
+        if (!actions) {
+          undoButton.hidden = true;
+          return;
+        }
+        undoButton.hidden = false;
+        actions.appendChild(undoButton);
       }
       function save({recordUndo = true, synchronize = true} = {}) {
         const previousSerialized = JSON.stringify(lastSavedState);
@@ -424,6 +433,22 @@
         const contactReady = !state.alienContactRequired || state.round >= (state.alienContactAvailableRound || state.round);
         return Boolean(alien && state.alienSignalReady && alien.id !== effectiveSilencedPlayer()?.id && state.alienLastActionRound !== state.round && contactReady);
       }
+      function hasLivingVillageNightPower(survivors) {
+        const recurringNightRoles = new Set(["protectors", "prostitutes", "seers", "bears", "shepherds", "judges"]);
+        return survivors.some(item => {
+          if (victoryFaction(item) !== "village") return false;
+          if (item.role === "witches") return state.lifePotion || state.deathPotion;
+          if (item.role === "ancients") return !state.ancientWolfHits?.[item.id];
+          if (item.role === "hunters") return true;
+          if (!recurringNightRoles.has(item.role)) return false;
+          if (item.role === "protectors") return nightRoleHasTarget("protector");
+          if (item.role === "prostitutes") return nightRoleHasTarget("prostitute");
+          if (item.role === "seers") return nightRoleHasTarget("seer");
+          if (item.role === "shepherds") return state.sheepRemaining > 0 && nightRoleHasTarget("shepherd");
+          if (item.role === "judges") return nightRoleHasTarget("judge");
+          return true;
+        });
+      }
       function checkWinner() {
         const survivors = alive();
         if (survivors.length === 0) return "draw";
@@ -438,10 +463,11 @@
         const livingAliens = survivors.filter(item => victoryFaction(item) === "alien");
         const livingCouple = survivors.filter(item => victoryFaction(item) === "couple").length;
         const livingSoloAngels = survivors.filter(item => victoryFaction(item) === "angel").length;
-        const livingOthers = survivors.length - livingWolves;
+        const livingVillagers = survivors.filter(item => victoryFaction(item) === "village").length;
         if (survivors.length === 1 && livingWhiteWolves === 1) return "white_wolf";
         if (livingWolves === 0 && livingWhiteWolves === 0 && livingAliens.length === 0 && livingCouple === 0 && livingSoloAngels === 0) return "village";
-        if (livingWhiteWolves === 0 && livingCouple === 0 && livingWolves >= livingOthers) return "wolves";
+        const wolvesControlVillage = livingWolves >= livingVillagers && !hasLivingVillageNightPower(survivors);
+        if (livingWhiteWolves === 0 && livingAliens.length === 0 && livingCouple === 0 && livingSoloAngels === 0 && wolvesControlVillage) return "wolves";
         return null;
       }
       function escapeHtml(value) { const div = document.createElement("div"); div.textContent = value; return div.innerHTML; }
@@ -1108,6 +1134,7 @@
         const views = { roster: renderRoster, player_reveal: renderPlayerReveal, roles: renderRoles, cupid: renderCupid, couple_reveal: renderCoupleReveal, wild_child: renderWildChild, protector: renderProtector, prostitute: renderProstitute, wolves: renderWolves, cerberus: renderCerberus, infection: renderInfection, infection_result: renderInfectionResult, white_wolf: renderWhiteWolf, bear: renderBear, shepherd: renderShepherd, shepherd_result: renderShepherdResult, judge: renderJudge, judge_result: renderJudgeResult, black_wolf: renderBlackWolf, talkative_wolf: renderTalkativeWolf, talkative_reveal: renderTalkativeReveal, barber_signal: renderBarberSignal, alien_signal: renderAlienSignal, witch: renderWitch, seer: renderSeer, dawn: renderDawn, accusation: renderAccusation, barber_shot: renderBarberShot, barber_result: renderBarberResult, alien_guess: renderAlienGuess, alien_result: renderAlienResult, final_vote: renderFinalVote, servant_choice: renderServantChoice, hunter_shot: renderHunterShot, day_end: renderDayEnd, game_over: renderGameOver };
         (views[state.stage] || renderRoster)();
         if (signalStages.includes(state.stage) && !state.winner) renderDaySignalDock();
+        placeUndoButton();
         if (state.stage === "accusation") updateAccusationButton();
         updateUndoButton();
         lastRenderedStage = state.stage;

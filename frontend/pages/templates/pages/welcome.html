@@ -23,23 +23,60 @@
       </div>
     </header>
 
+    {% if dashboard_mode == "dashboard" %}
+    <main class="admin-dashboard-shell">
+      <section class="admin-dashboard-hero">
+        <p class="eyebrow">{{ ui.narrator_mode }}</p>
+        <h1>{{ ui.dashboard_title }}</h1>
+        <p>{{ ui.dashboard_help }}</p>
+      </section>
+      <section class="admin-dashboard-actions">
+        <a class="admin-dashboard-card danger" href="{% url 'room_history_list' %}">
+          <span>01</span>
+          <h2>{{ ui.manage_history }}</h2>
+          <p>{{ ui.manage_history_help }}</p>
+          <strong>{{ ui.choose_action }} <i>→</i></strong>
+        </a>
+        <a class="admin-dashboard-card" href="{% url 'welcome' %}?mode=new">
+          <span>02</span>
+          <h2>{{ ui.start_new_game }}</h2>
+          <p>{{ ui.start_new_game_help }}</p>
+          <strong>{{ ui.choose_action }} <i>→</i></strong>
+        </a>
+        <a class="admin-dashboard-card" href="{% url 'welcome' %}?mode=resume">
+          <span>03</span>
+          <h2>{{ ui.continue_old_game }}</h2>
+          <p>{{ ui.continue_old_game_help }}</p>
+          <strong>{{ ui.choose_action }} <i>→</i></strong>
+        </a>
+      </section>
+    </main>
+    {% elif dashboard_mode == "resume" %}
+    <main class="admin-dashboard-shell compact-dashboard">
+      <section class="admin-dashboard-hero">
+        <p class="eyebrow">{{ ui.continue_old_game }}</p>
+        <h1>{{ ui.resume_title }}</h1>
+        <p>{{ ui.resume_help }}</p>
+      </section>
+      <form class="resume-game-card dashboard-resume-card" method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="resume" />
+        {% if resume_error %}<p class="form-error" role="alert">{{ resume_error }}</p>{% endif %}
+        <label for="resume-room-code">{{ ui.resume_code }}</label>
+        <div class="resume-game-controls">
+          <input id="resume-room-code" name="room_code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" value="{{ resume_code }}" required autofocus />
+          <button type="submit">{{ ui.resume_action }} <span>→</span></button>
+        </div>
+        <a href="{% url 'welcome' %}">← {{ ui.back_dashboard }}</a>
+      </form>
+    </main>
+    {% else %}
     <main class="setup-shell">
       <section class="setup-intro">
         <p class="eyebrow">{{ ui.new_game }}</p>
         <h1>{{ ui.compose|safe }}</h1>
         <p>{{ ui.compose_help }}</p>
-        <form class="resume-game-card" method="post">
-          {% csrf_token %}
-          <input type="hidden" name="action" value="resume" />
-          <span class="step-label">{{ ui.resume_title }}</span>
-          <p>{{ ui.resume_help }}</p>
-          {% if resume_error %}<p class="form-error" role="alert">{{ resume_error }}</p>{% endif %}
-          <label for="resume-room-code">{{ ui.resume_code }}</label>
-          <div class="resume-game-controls">
-            <input id="resume-room-code" name="room_code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" value="{{ resume_code }}" required />
-            <button type="submit">{{ ui.resume_action }} <span>→</span></button>
-          </div>
-        </form>
+        <a class="secondary-link dashboard-back-link" href="{% url 'welcome' %}">← {{ ui.back_dashboard }}</a>
       </section>
 
       <section class="setup-panel">
@@ -180,6 +217,8 @@
       </section>
     </main>
 
+    {% endif %}
+    {% if dashboard_mode == "new" %}
     <script>
       const playerInput = document.getElementById("player-count");
       const roleInputs = [...document.querySelectorAll(".role-row input")];
@@ -248,5 +287,6 @@
       document.getElementById("suggest-button").addEventListener("click", suggestRoles);
       suggestRoles();
     </script>
+    {% endif %}
   </body>
 </html>

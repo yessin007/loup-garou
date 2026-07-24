@@ -39,7 +39,7 @@
           <input id="password" name="password" type="password" autocomplete="current-password" placeholder="{{ ui.password_placeholder }}" required />
 
           <button type="submit">{{ ui.enter }} <span aria-hidden="true">&#8594;</span></button>
-          <a class="role-guide-link room-entry-link" href="{% url 'room_portal' %}">{{ ui.room_access }} <span aria-hidden="true">&#8594;</span></a>
+          <a class="role-guide-link room-entry-link" href="{% url 'room_history_list' %}">{{ ui.room_access }} <span aria-hidden="true">&#8594;</span></a>
           <a class="role-guide-link" href="{% url 'roles_guide' %}">{{ ui.roles_guide_link }} <span aria-hidden="true">&#8594;</span></a>
           <p class="demo-hint">{{ ui.temporary_access }} : <strong>admin / admin</strong></p>
         </form>

@@ -270,6 +270,8 @@ def room_portal(request):
     initial_code = request.GET.get("code", "").strip()
     if not (initial_code.isdigit() and len(initial_code) == 6):
         initial_code = ""
+    if request.method == "GET" and not initial_code:
+        return redirect("room_history_list")
     if request.method == "POST":
         code = request.POST.get("room_code", "").strip()
         room = GameRoom.objects.filter(code=code).first() if code.isdigit() and len(code) == 6 else None
@@ -361,8 +363,12 @@ def welcome(request):
     error = None
     resume_error = None
     resume_code = ""
+    dashboard_mode = request.GET.get("mode", "dashboard")
+    if dashboard_mode not in {"dashboard", "new", "resume"}:
+        dashboard_mode = "dashboard"
     if request.method == "POST":
         if request.POST.get("action") == "resume":
+            dashboard_mode = "resume"
             resume_code = request.POST.get("room_code", "").strip()
             if not (resume_code.isdigit() and len(resume_code) == 6):
                 resume_error = UI[current_language(request)]["resume_invalid_code"]
@@ -383,8 +389,10 @@ def welcome(request):
                 "error": error,
                 "resume_error": resume_error,
                 "resume_code": resume_code,
+                "dashboard_mode": dashboard_mode,
             })
 
+        dashboard_mode = "new"
         try:
             player_count = int(request.POST.get("player_count", 0))
             composition = {
@@ -418,6 +426,7 @@ def welcome(request):
         "error": error,
         "resume_error": resume_error,
         "resume_code": resume_code,
+        "dashboard_mode": dashboard_mode,
     })
 
 

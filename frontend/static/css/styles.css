@@ -216,6 +216,37 @@ button:hover, .logout-link:hover { filter: brightness(1.08); }
 .text-link, .secondary-link { color: #929da2; font-size: .76rem; text-decoration: none; }
 .text-link:hover, .secondary-link:hover { color: var(--ivory); }
 
+.admin-dashboard-shell {
+  width: min(100% - 40px, 1220px);
+  margin: 0 auto;
+  padding: clamp(55px, 9vw, 115px) 0 90px;
+}
+.admin-dashboard-hero { max-width: 760px; margin-bottom: 42px; }
+.admin-dashboard-hero h1 { margin: 10px 0 18px; font-size: clamp(3rem, 7vw, 6.5rem); line-height: .92; letter-spacing: -.05em; text-transform: uppercase; }
+.admin-dashboard-hero > p:last-child { max-width: 590px; color: var(--mist); line-height: 1.7; }
+.admin-dashboard-actions { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.admin-dashboard-card {
+  display: flex;
+  flex-direction: column;
+  min-height: 280px;
+  padding: clamp(24px, 3vw, 36px);
+  border: 1px solid rgba(255,255,255,.11);
+  color: var(--ivory);
+  text-decoration: none;
+  background: rgba(9,16,22,.84);
+  transition: transform .2s, border-color .2s, background .2s;
+}
+.admin-dashboard-card:hover { border-color: rgba(199,139,69,.48); background: rgba(199,139,69,.07); transform: translateY(-3px); }
+.admin-dashboard-card.danger:hover { border-color: rgba(197,74,65,.55); background: rgba(145,45,39,.09); }
+.admin-dashboard-card > span { color: var(--ember); font: 700 .68rem "Cinzel", serif; letter-spacing: .12em; }
+.admin-dashboard-card h2 { margin: 17px 0 14px; font-size: clamp(1.35rem, 2.2vw, 2rem); }
+.admin-dashboard-card p { margin: 0 0 28px; color: #89969c; line-height: 1.65; }
+.admin-dashboard-card strong { display: flex; align-items: center; justify-content: space-between; margin-top: auto; padding-top: 18px; border-top: 1px solid rgba(255,255,255,.09); color: var(--ember-light); font-size: .75rem; text-transform: uppercase; letter-spacing: .12em; }
+.admin-dashboard-card strong i { font-size: 1rem; font-style: normal; }
+.compact-dashboard { width: min(100% - 40px, 760px); }
+.dashboard-resume-card { max-width: 620px; margin-top: 0; padding: clamp(24px, 4vw, 36px); }
+.dashboard-back-link { display: inline-flex; margin-top: 28px; }
+
 .setup-shell {
   display: grid;
   grid-template-columns: minmax(260px, .72fr) minmax(550px, 1.28fr);
@@ -305,6 +336,8 @@ button.start-button:disabled { opacity: .38; cursor: not-allowed; filter: graysc
 .next-step { margin: 0 auto 25px; }
 
 @media (max-width: 850px) {
+  .admin-dashboard-actions { grid-template-columns: 1fr; }
+  .admin-dashboard-card { min-height: 210px; }
   .setup-shell { grid-template-columns: 1fr; padding-top: 45px; }
   .setup-intro { position: static; }
   .setup-intro h1 { font-size: clamp(3rem, 11vw, 5rem); }
@@ -315,6 +348,12 @@ button.start-button:disabled { opacity: .38; cursor: not-allowed; filter: graysc
   .setup-header .narrator-badge { display: none; }
   .setup-header > div { gap: 10px; }
   .setup-header .language-selector select { min-width: 48px; max-width: 115px; }
+  .admin-dashboard-shell { width: 100%; padding: 38px 14px 55px; }
+  .admin-dashboard-hero { margin-bottom: 28px; }
+  .admin-dashboard-hero h1 { font-size: clamp(2.8rem, 15vw, 4.4rem); }
+  .admin-dashboard-card { min-height: 190px; padding: 22px 19px; }
+  .dashboard-resume-card { padding: 22px 18px; }
+  .dashboard-resume-card .resume-game-controls { grid-template-columns: 1fr; }
   .setup-shell { width: 100%; padding: 35px 14px 45px; gap: 32px; }
   .setup-panel { padding: 20px 15px; }
   .players-row { align-items: flex-end; }

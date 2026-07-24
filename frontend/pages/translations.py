@@ -14,6 +14,7 @@ UI = {
         "roles_guide_link": "Guide complet des rôles", "roles_guide_title": "Guide des rôles", "roles_guide_eyebrow": "Toutes les règles au même endroit", "roles_guide_intro": "Pouvoirs, blocages du Loup Cerbère, infections, couples et cas particuliers de chaque rôle.", "roles_guide_search": "Rechercher un rôle ou une règle", "roles_guide_all": "Tous", "roles_guide_wolves": "Loups", "roles_guide_village": "Village", "roles_guide_solo": "Solo / variable", "roles_guide_back": "Retour à la connexion", "roles_guide_no_result": "Aucun rôle ne correspond à cette recherche.", "roles_guide_rules": "Règles et interactions", "roles_guide_camp": "Camp",
         "temporary_access": "Accès temporaire", "chapter": "Chapitre I", "village_sleeps": "Le village s'endort",
         "auth_error": "Nom d'utilisateur ou mot de passe incorrect.", "setup_title": "Préparer la partie",
+        "dashboard_title": "Que veux-tu faire ?", "dashboard_help": "Choisis une action pour gérer les parties du narrateur.", "manage_history": "Supprimer un historique", "manage_history_help": "Ouvre les archives, choisis la partie concernée puis confirme sa suppression.", "start_new_game": "Commencer une nouvelle partie", "start_new_game_help": "Prépare le nombre de joueurs et la composition des rôles.", "continue_old_game": "Continuer une ancienne partie", "continue_old_game_help": "Entre le code de la room pour reprendre exactement où tu t'es arrêté.", "choose_action": "Ouvrir", "back_dashboard": "Retour au tableau de bord",
         "narrator_mode": "Mode narrateur", "logout": "Déconnexion", "new_game": "Nouvelle partie",
         "compose": "Composez<br>votre village", "compose_help": "Indiquez le nombre de joueurs. Nous proposons une composition équilibrée, puis vous gardez le dernier mot.",
         "participants": "Participants", "player_count": "Nombre de joueurs", "narrator_not_counted": "Le narrateur n'est pas compté.",
@@ -26,7 +27,7 @@ UI = {
         "resume_not_found": "Aucune room ne correspond à ce code.", "resume_finished": "La partie {code} est déjà terminée.", "resume_history": "Voir son historique",
         "player_range": "Le nombre de joueurs doit être compris entre 8 et 30.", "negative_roles": "Le nombre de rôles ne peut pas être négatif.",
         "roles_sum": "La somme des rôles doit correspondre au nombre de joueurs.", "wolf_required": "La partie doit contenir au moins un loup.", "non_wolf_required": "Ajoute au moins un joueur qui n'est pas un loup.", "singleton_roles": "Chaque rôle spécial est limité à un seul joueur.",
-        "game_title": "Table du narrateur", "preparation": "Préparation", "players": "Les joueurs", "restart": "Recommencer", "room_access": "Rejoindre une room / historique",
+        "game_title": "Table du narrateur", "preparation": "Préparation", "players": "Les joueurs", "restart": "Recommencer", "room_access": "Bilan et historique",
     },
     "en": {
         "login_title": "Sign in", "login_eyebrow": "Night falls over the village",
@@ -35,6 +36,7 @@ UI = {
         "password_placeholder": "Your password", "enter": "Enter the village", "temporary_access": "Temporary access",
         "roles_guide_link": "Complete role guide", "roles_guide_title": "Role guide", "roles_guide_eyebrow": "Every rule in one place", "roles_guide_intro": "Powers, Cerberus Wolf blocks, infections, couples and special cases for every role.", "roles_guide_search": "Search for a role or rule", "roles_guide_all": "All", "roles_guide_wolves": "Wolves", "roles_guide_village": "Village", "roles_guide_solo": "Solo / variable", "roles_guide_back": "Back to sign in", "roles_guide_no_result": "No role matches this search.", "roles_guide_rules": "Rules and interactions", "roles_guide_camp": "Team",
         "chapter": "Chapter I", "village_sleeps": "The village falls asleep", "auth_error": "Incorrect username or password.",
+        "dashboard_title": "What do you want to do?", "dashboard_help": "Choose an action to manage the narrator's games.", "manage_history": "Delete game history", "manage_history_help": "Open the archive, choose the game, then confirm its deletion.", "start_new_game": "Start a new game", "start_new_game_help": "Set the player count and role composition.", "continue_old_game": "Continue an old game", "continue_old_game_help": "Enter the room code to resume exactly where you stopped.", "choose_action": "Open", "back_dashboard": "Back to dashboard",
         "setup_title": "Set up the game", "narrator_mode": "Narrator mode", "logout": "Sign out", "new_game": "New game",
         "compose": "Build<br>your village", "compose_help": "Enter the number of players. We suggest a balanced setup, and you keep the final say.",
         "participants": "Players", "player_count": "Number of players", "narrator_not_counted": "The narrator is not included.",
@@ -47,7 +49,7 @@ UI = {
         "resume_not_found": "No room matches this code.", "resume_finished": "Game {code} has already finished.", "resume_history": "View its history",
         "player_range": "The number of players must be between 8 and 30.", "negative_roles": "Role counts cannot be negative.",
         "roles_sum": "The total number of roles must match the number of players.", "wolf_required": "The game must contain at least one wolf.", "non_wolf_required": "Add at least one player who is not a wolf.", "singleton_roles": "Each special role is limited to one player.",
-        "game_title": "Narrator table", "preparation": "Setup", "players": "Players", "restart": "Restart", "room_access": "Join a room / history",
+        "game_title": "Narrator table", "preparation": "Setup", "players": "Players", "restart": "Restart", "room_access": "Game history",
     },
     "tn": {
         "login_title": "Connexion", "login_eyebrow": "El lil habet 3al village", "tagline": "Od5ol lel game. Ra9eb. Chok. W ab9a 7ay.",
@@ -55,6 +57,7 @@ UI = {
         "password": "Mot de passe", "password_placeholder": "Ekteb el mot de passe", "enter": "Od5ol lel village", "temporary_access": "Acces temporaire",
         "roles_guide_link": "Guide kemel mta3 les roles", "roles_guide_title": "Guide mta3 les roles", "roles_guide_eyebrow": "El regles lkol fi blasa wa7da", "roles_guide_intro": "Pouvoirs, blocage mta3 Loup Cerbere, infection, couples w les cas speciaux mta3 kol role.", "roles_guide_search": "Lawwej 3la role wala regle", "roles_guide_all": "El kol", "roles_guide_wolves": "Loups", "roles_guide_village": "Village", "roles_guide_solo": "Solo / variable", "roles_guide_back": "Erja3 lel connexion", "roles_guide_no_result": "Ma fama 7atta role ymatchi el recherche.", "roles_guide_rules": "Regles w interactions", "roles_guide_camp": "Camp",
         "chapter": "Chapitre I", "village_sleeps": "El village yor9od", "auth_error": "Esm el utilisateur wala el mot de passe 8altin.",
+        "dashboard_title": "Chnouwa t7eb ta3mel?", "dashboard_help": "E5tar action bech tetsarref fi games mta3 el narrateur.", "manage_history": "Fasa5 historique", "manage_history_help": "7ell el archive, e5tar historique mta3 el game w confirmi el suppression.", "start_new_game": "Abda game jdida", "start_new_game_help": "7adher 3dad el joueurs w composition mta3 les roles.", "continue_old_game": "Kammel game 9dima", "continue_old_game_help": "Da5el code mta3 el room w kammel men win wa9eft.", "choose_action": "7ell", "back_dashboard": "Erja3 lel dashboard",
         "setup_title": "7adher el game", "narrator_mode": "Mode narrateur", "logout": "Deconnecti", "new_game": "Game jdida",
         "compose": "Rakkeb<br>el village mte3ek", "compose_help": "7ot 3dad el joueurs. Na3tiwek composition equilibree, w enti 3andek e5er kelma.",
         "participants": "El joueurs", "player_count": "3dad el joueurs", "narrator_not_counted": "El narrateur ma yet7sebch.",
@@ -67,7 +70,7 @@ UI = {
         "resume_not_found": "Ma fama 7atta room bel code hedha.", "resume_finished": "El game {code} wfet deja.", "resume_history": "Chouf historique mte3ha",
         "negative_roles": "3dad el roles ma ynajjemch ykoun negatif.", "roles_sum": "Total el roles lezem ysewi 3dad el joueurs.",
         "wolf_required": "Lezem fel game fama loup wa7ed 3al a9al.", "non_wolf_required": "Lezem fama joueur wa7ed 3al a9al moch loup.", "singleton_roles": "Kol role special ynajem ykoun 3and joueur wa7ed bark.", "game_title": "Table du narrateur",
-        "preparation": "Preparation", "players": "El joueurs", "restart": "3awed mel lowel", "room_access": "Od5ol room / historique",
+        "preparation": "Preparation", "players": "El joueurs", "restart": "3awed mel lowel", "room_access": "Bilan w historique",
     },
 }
 

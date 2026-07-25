@@ -68,6 +68,7 @@ class RoomFlowTests(TestCase):
         self.assertContains(game, 'class="bilan-section night-death-section"')
         self.assertContains(game, 'class="bilan-section village-info-section"')
         self.assertContains(game, 'class="bilan-section day-instruction-section"')
+        self.assertContains(game, 'classList.toggle("bilan-mode"')
         self.assertContains(game, 'class="bear-neighbor-card ${factionClass}"')
         self.assertContains(game, "status.leftNeighbor")
         self.assertContains(game, "status.rightNeighbor")

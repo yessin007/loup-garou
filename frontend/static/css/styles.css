@@ -1322,3 +1322,50 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
   .scene-panel h1 { font-size: clamp(2.1rem, 11.8vw, 2.65rem); }
   .reveal-grid { grid-template-columns: 1fr; }
 }
+
+/* Night and day summaries must stay readable from the narrator's table. */
+.bilan-mode .scene-kicker { font-size: .78rem; }
+.bilan-mode .scene-panel > h1 { font-size: clamp(4.2rem, 8vw, 7rem); }
+.bilan-mode .phase-bilan-copy > span { font-size: .76rem; }
+.bilan-mode .phase-bilan-copy > strong { font-size: 1.32rem; }
+.bilan-mode .phase-bilan-copy > p { font-size: .96rem; }
+.bilan-mode .phase-bilan-stats strong { font-size: 1.9rem; }
+.bilan-mode .phase-bilan-stats span { font-size: .68rem; }
+.bilan-mode .bilan-section > h2 { font-size: 1.38rem; }
+.bilan-mode .night-death-row strong { font-size: 1.34rem; }
+.bilan-mode .night-death-row span { font-size: 1.22rem; }
+.bilan-mode .peace-card { font-size: 1.12rem; line-height: 1.6; }
+.bilan-mode .seer-summary span, .bilan-mode .final-vision > span { font-size: .78rem; }
+.bilan-mode .village-info-section .seer-summary strong { font-size: 1.38rem; }
+.bilan-mode .village-info-section .seer-summary p { font-size: 1.12rem; }
+.bilan-mode .village-info-section .judge-summary strong { font-size: 1.38rem; }
+.bilan-mode .final-vision h2 { font-size: 1.58rem; }
+.bilan-mode .final-vision p { font-size: 1.04rem; }
+.bilan-mode .day-effect-card span { font-size: .78rem; }
+.bilan-mode .day-instruction-section .day-effect-card strong,
+.bilan-mode .day-instruction-section .speaker-card strong { font-size: 1.38rem; }
+.bilan-mode .day-instruction-section .day-effect-card p { font-size: 1.08rem; }
+.bilan-mode .day-instruction-section .speaker-card span { font-size: 1.06rem; }
+.bilan-mode .verdict-card span, .bilan-mode .verdict-card small { font-size: .84rem; }
+.bilan-mode .verdict-card strong { font-size: 1.52rem; }
+.bilan-mode .tie-card span { font-size: .82rem; }
+.bilan-mode .tie-card strong { font-size: 1.5rem; }
+.bilan-mode .tie-card p { font-size: 1.02rem; }
+.bilan-mode .player-inline-role { font-size: .82em; }
+.bilan-mode button.scene-action { font-size: .95rem; }
+
+@media (max-width: 700px) {
+  .bilan-mode .scene-panel > h1 { font-size: clamp(2.8rem, 13vw, 4rem); }
+  .bilan-mode .phase-bilan-copy > strong { font-size: 1.18rem; }
+  .bilan-mode .phase-bilan-copy > p { font-size: .9rem; }
+  .bilan-mode .phase-bilan-stats strong { font-size: 1.55rem; }
+  .bilan-mode .phase-bilan-stats span { font-size: .6rem; }
+  .bilan-mode .bilan-section > h2 { font-size: 1.18rem; }
+  .bilan-mode .night-death-row strong,
+  .bilan-mode .village-info-section .seer-summary strong,
+  .bilan-mode .village-info-section .judge-summary strong,
+  .bilan-mode .day-instruction-section .day-effect-card strong,
+  .bilan-mode .day-instruction-section .speaker-card strong,
+  .bilan-mode .verdict-card strong { font-size: 1.18rem; }
+  .bilan-mode .night-death-row span { font-size: 1.06rem; }
+}

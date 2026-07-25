@@ -1167,6 +1167,7 @@
         const signalStages = ["dawn", "accusation"];
         document.body.classList.toggle("day-mode", dayStages.includes(state.stage));
         document.body.classList.toggle("night-mode", !dayStages.includes(state.stage));
+        document.body.classList.toggle("bilan-mode", state.stage === "dawn" || state.stage === "day_end");
         renderSidebar();
         const views = { roster: renderRoster, player_reveal: renderPlayerReveal, roles: renderRoles, cupid: renderCupid, couple_reveal: renderCoupleReveal, wild_child: renderWildChild, protector: renderProtector, prostitute: renderProstitute, wolves: renderWolves, cerberus: renderCerberus, infection: renderInfection, infection_result: renderInfectionResult, white_wolf: renderWhiteWolf, bear: renderBear, shepherd: renderShepherd, shepherd_result: renderShepherdResult, judge: renderJudge, judge_result: renderJudgeResult, black_wolf: renderBlackWolf, talkative_wolf: renderTalkativeWolf, talkative_reveal: renderTalkativeReveal, barber_signal: renderBarberSignal, alien_signal: renderAlienSignal, witch: renderWitch, seer: renderSeer, dawn: renderDawn, accusation: renderAccusation, barber_shot: renderBarberShot, barber_result: renderBarberResult, alien_guess: renderAlienGuess, alien_result: renderAlienResult, final_vote: renderFinalVote, servant_choice: renderServantChoice, hunter_shot: renderHunterShot, day_end: renderDayEnd, game_over: renderGameOver };
         (views[state.stage] || renderRoster)();

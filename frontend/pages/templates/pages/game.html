@@ -1021,8 +1021,9 @@
         const shepherdReport = shepherdExists && (state.shepherdReportedThisNight || shepherdCards || state.sheepRemaining <= 0) ? `<div class="seer-summary"><span>${L.shepherd_result}</span><strong>${t("sheep_remaining", {count: state.sheepRemaining})}</strong>${shepherdStatus}${shepherdCards}</div>` : "";
         const judgeFirst = player(state.judgeFirstId);
         const judgeSecond = player(state.judgeSecondId);
+        const judgeVerdict = state.judgeSameClan ? L.judge_same_clan : L.judge_different_clans;
         const judgeReport = judgeFirst && judgeSecond && state.judgeSameClan !== null
-          ? `<div class="seer-summary judge-summary"><span>${L.judge_result}</span><strong>${playerIdentity(judgeFirst)} / ${playerIdentity(judgeSecond)}</strong><p>${state.judgeSameClan ? L.judge_same_clan : L.judge_different_clans}</p></div>`
+          ? `<div class="seer-summary judge-summary"><span>${L.judge_result}</span><strong>${L.judge_saw} ${playerIdentity(judgeFirst)} / ${playerIdentity(judgeSecond)} <mark>(${judgeVerdict})</mark></strong></div>`
           : "";
         const speaker = player(state.speakerId);
         const seerTarget = player(state.seerTargetId);
@@ -1032,7 +1033,7 @@
         const finalVision = deadSeers.length && (seerTarget || state.seerWasBlocked) ? `<div class="final-vision"><span>${L.last_vision}</span><h2>${t("seer_died", {name: deadNames})}</h2><p>${state.seerWasBlocked ? L.seer_saw_cerberus : `${L.before_dying} <strong>#${String(seerTarget.id).padStart(2, "0")} · ${escapeHtml(seerTarget.name)}</strong> ${L.is_role} <strong>${roleMeta[seerRole].name}</strong>.`}</p></div>` : "";
         const seerReport = !deadSeers.length && state.seerWasBlocked
           ? `<div class="seer-summary"><span>${L.seer_vision}</span><strong>${L.seer_saw_cerberus}</strong></div>`
-          : seerTarget && !deadSeers.length ? `<div class="seer-summary"><span>${L.seer_vision}</span><strong>${t("seer_saw", {id: String(seerTarget.id).padStart(2, "0"), name: escapeHtml(seerTarget.name)})}</strong><p>${t("role_is", {role: roleMeta[seerRole].name})}</p></div>` : "";
+          : seerTarget && !deadSeers.length ? `<div class="seer-summary seer-result-summary"><span>${L.seer_vision}</span><strong>${t("seer_saw", {id: String(seerTarget.id).padStart(2, "0"), name: escapeHtml(seerTarget.name)})} <mark>(${roleMeta[seerRole].name})</mark></strong></div>` : "";
         const villageInfo = `${ancientReport}${bearReport}${shepherdReport}${judgeReport}${finalVision}${seerReport}`;
         const villageSection = villageInfo ? `<section class="bilan-section village-info-section"><h2>${L.village_night_info}</h2>${villageInfo}</section>` : "";
         const instructions = `${dayConstraints()}${!state.winner && speaker ? `<div class="speaker-card"><span>${L.speaking_starts}</span><strong>${playerIdentity(speaker)}</strong></div>` : ""}`;

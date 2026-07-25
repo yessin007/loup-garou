@@ -19,12 +19,18 @@
               <span class="history-room-arrow">→</span>
             </a>
             {% if game_room.status == "active" and can_delete_history %}
-              <form method="post" action="{% url 'welcome' %}">
-                {% csrf_token %}
-                <input type="hidden" name="action" value="resume" />
-                <input type="hidden" name="room_code" value="{{ game_room.code }}" />
-                <button class="history-continue-button" type="submit"><span aria-hidden="true">▶</span><strong>{{ room.continue_game }}</strong></button>
-              </form>
+              <div class="history-active-actions">
+                <form method="post" action="{% url 'welcome' %}">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="resume" />
+                  <input type="hidden" name="room_code" value="{{ game_room.code }}" />
+                  <button class="history-continue-button" type="submit"><span aria-hidden="true">▶</span><strong>{{ room.continue_game }}</strong></button>
+                </form>
+                <form method="post" action="{% url 'room_history_finish' game_room.code %}" onsubmit="return confirm('{{ room.finish_game_confirm|escapejs }}');">
+                  {% csrf_token %}
+                  <button class="history-finish-button" type="submit"><span aria-hidden="true">■</span><strong>{{ room.finish_game }}</strong></button>
+                </form>
+              </div>
             {% elif can_delete_history %}
               <form method="post" action="{% url 'room_history_delete' game_room.code %}" onsubmit="return confirm('{{ room.delete_history_confirm|escapejs }}');">
                 {% csrf_token %}

@@ -63,10 +63,11 @@ class RoomFlowTests(TestCase):
         self.assertContains(game, "autoDistributeTestPlayers")
 
     @override_settings(DEBUG=False)
-    def test_production_mode_disables_automatic_test_distribution(self):
+    def test_production_mode_exposes_automatic_test_distribution_to_narrator(self):
         self.create_room()
         game = self.narrator.get(reverse("game"))
-        self.assertContains(game, 'id="test-mode" type="application/json">false</script>')
+        self.assertContains(game, 'id="test-mode" type="application/json">true</script>')
+        self.assertContains(game, '"auto-distribute-test"')
 
     def test_narrator_login_accepts_text_credentials_only(self):
         login_page = Client().get(reverse("home"))
@@ -285,6 +286,7 @@ class RoomFlowTests(TestCase):
         history_list = returning_admin.get(reverse("room_history_list"))
         self.assertContains(history_list, room.code)
         self.assertContains(history_list, 'class="history-continue-button"')
+        self.assertContains(history_list, 'class="history-finish-button"')
         self.assertContains(history_list, f'name="room_code" value="{room.code}"')
         self.assertEqual(returning_admin.get(reverse("room_history", args=[room.code])).status_code, 200)
 
@@ -293,6 +295,22 @@ class RoomFlowTests(TestCase):
             {"action": "resume", "room_code": room.code},
         )
         self.assertRedirects(response, reverse("game"), fetch_redirect_response=False)
+
+    def test_admin_can_finish_then_delete_an_active_game_without_events(self):
+        room = self.create_room()
+        self.narrator.post(reverse("room_start_api", args=[room.code]))
+        finish_url = reverse("room_history_finish", args=[room.code])
+
+        self.assertEqual(Client().post(finish_url).status_code, 403)
+        response = self.narrator.post(finish_url)
+        self.assertRedirects(response, reverse("room_history_list"), fetch_redirect_response=False)
+
+        room.refresh_from_db()
+        self.assertEqual(room.status, GameRoom.Status.FINISHED)
+        archive = self.narrator.get(reverse("room_history_list"))
+        self.assertContains(archive, room.code)
+        self.assertContains(archive, reverse("room_history_delete", args=[room.code]))
+        self.assertNotContains(archive, finish_url)
 
     def test_room_join_rejects_non_numeric_code(self):
         response = Client().post(

@@ -16,6 +16,7 @@
   <body class="narrator-page">
     {{ game_setup|json_script:"game-setup" }}
     {{ game_text|json_script:"game-translations" }}
+    {{ test_mode|json_script:"test-mode" }}
     {{ resume_requested|json_script:"resume-requested" }}
     {{ server_game_state|json_script:"server-game-state" }}
     <header class="narrator-header">
@@ -65,6 +66,7 @@
     <script>
       const setup = JSON.parse(document.getElementById("game-setup").textContent);
       const L = JSON.parse(document.getElementById("game-translations").textContent);
+      const testMode = JSON.parse(document.getElementById("test-mode").textContent);
       const resumeRequested = JSON.parse(document.getElementById("resume-requested").textContent);
       const serverGameState = JSON.parse(document.getElementById("server-game-state").textContent);
       const roomCode = "{{ room_code|escapejs }}";
@@ -495,8 +497,8 @@
       function nameOnlyOptions(players, placeholder = L.choose_probe) {
         return `<option value="">${placeholder}</option>${players.map(item => `<option value="${item.id}">#${String(item.id).padStart(2, "0")} — ${escapeHtml(item.name)}</option>`).join("")}`;
       }
-      function actionButton(label, action, disabled = false, secondary = false) {
-        return `<button class="scene-action ${secondary ? "secondary" : ""}" type="button" data-action="${action}" ${disabled ? "disabled" : ""}>${label}<span>→</span></button>`;
+      function actionButton(label, action, disabled = false, secondary = false, compact = false) {
+        return `<button class="scene-action ${secondary ? "secondary" : ""} ${compact ? "test-action" : ""}" type="button" data-action="${action}" ${disabled ? "disabled" : ""}>${label}<span>→</span></button>`;
       }
 
       function setHeading(cycle, phase) {
@@ -524,14 +526,14 @@
         const number = state.players.length + 1;
         setHeading(L.distribution, t("player", {n: String(number).padStart(2, "0")}));
         if (!state.roomStarted) {
-          scene.innerHTML = `<div class="scene-kicker">Room · ${roomCode}</div><h1>Lobby joueurs</h1><p class="scene-lead">{{ room.qr_help|escapejs }}</p><div class="lobby-share"><img src="${roomQrUrl}" alt="QR code room ${roomCode}" width="220" height="220"><div><span>{{ room.scan_qr|escapejs }}</span><strong>${roomCode}</strong><small>{{ room.room_code|escapejs }}</small></div></div><div id="online-player-list" class="online-player-list"><p>Chargement…</p></div><div class="scene-actions">${actionButton("Lancer la distribution", "start-room")}</div>`;
+          scene.innerHTML = `<div class="scene-kicker">Room · ${roomCode}</div><h1>Lobby joueurs</h1><p class="scene-lead">{{ room.qr_help|escapejs }}</p><div class="lobby-share"><img src="${roomQrUrl}" alt="QR code room ${roomCode}" width="220" height="220"><div><span>{{ room.scan_qr|escapejs }}</span><strong>${roomCode}</strong><small>{{ room.room_code|escapejs }}</small></div></div><div id="online-player-list" class="online-player-list"><p>Chargement…</p></div><div class="scene-actions">${actionButton("Lancer la distribution", "start-room")}${testMode ? actionButton(L.auto_distribution_test, "auto-distribute-test", false, true, true) : ""}</div>`;
           refreshLobby();
           return;
         }
         scene.innerHTML = `<div class="pass-player-number">${String(number).padStart(2, "0")}</div><div class="scene-kicker">${t("phone_player", {n: number})}</div><h1>${L.first_name_q}</h1>
           <p class="scene-lead">${L.name_help} · ${state.players.length} joueur(s) ont reçu leur rôle en ligne.</p>
           <label class="single-name"><span>${t("player_name", {n: String(number).padStart(2, "0")})}</span><input id="current-player-name" type="text" placeholder="${L.your_name}" autocomplete="off" autofocus></label>
-          ${actionButton(L.discover_role, "register-player")}`;
+          <div class="scene-actions">${actionButton(L.discover_role, "register-player")}${testMode ? actionButton(L.auto_distribution_test, "auto-distribute-test", false, true, true) : ""}</div>`;
       }
 
       let lobbyRefreshTimer = null;
@@ -559,6 +561,21 @@
         state.roomStarted = true;
         state.stage = state.players.length === setup.player_count ? "roles" : "roster";
         save(); render();
+      }
+
+      function autoDistributeTestPlayers() {
+        if (!testMode || !state.roomStarted) return;
+        while (state.players.length < setup.player_count) {
+          const id = state.players.length + 1;
+          let name = `Test ${String(id).padStart(2, "0")}`;
+          let suffix = 2;
+          while (state.players.some(item => item.name.toLowerCase() === name.toLowerCase())) name = `Test ${String(id).padStart(2, "0")}-${suffix++}`;
+          state.players.push({id, name, role: state.roleDeck[id - 1], alive: true});
+        }
+        state.revealVisible = false;
+        state.stage = "roles";
+        save();
+        render();
       }
 
       function renderPlayerReveal() {
@@ -1273,6 +1290,10 @@
         const action = button.dataset.action;
         if (action === "start-room") {
           startRoomDistribution(button); return;
+        } else if (action === "auto-distribute-test") {
+          if (state.roomStarted) autoDistributeTestPlayers();
+          else startRoomDistribution(button).then(() => autoDistributeTestPlayers());
+          return;
         } else if (action === "register-player") {
           const name = document.getElementById("current-player-name").value.trim();
           if (!name) { alert(L.name_required); return; }

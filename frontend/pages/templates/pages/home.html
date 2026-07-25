@@ -19,7 +19,7 @@
       <section class="login-content" aria-labelledby="game-title">
         <p class="eyebrow">{{ ui.login_eyebrow }}</p>
         <h1 id="game-title"><span>Loup</span> Garou</h1>
-        <p class="tagline">{{ ui.tagline }}</p>
+        {% if ui.tagline %}<p class="tagline">{{ ui.tagline }}</p>{% endif %}
 
         <form class="login-card" method="post" novalidate>
           {% csrf_token %}

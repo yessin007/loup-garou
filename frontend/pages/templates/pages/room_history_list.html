@@ -7,18 +7,25 @@
     <title>{{ room.all_histories }} | Loup Garou</title><link rel="stylesheet" href="{% static 'css/styles.css' %}" />
   </head>
   <body class="room-page">
-    <header class="guide-header"><a class="brand" href="{% url 'home' %}">Loup <span>Garou</span></a><div class="guide-header-actions">{% include "pages/_language_selector.html" %}<a class="guide-back" href="{% url 'room_portal' %}">{{ room.back }}</a></div></header>
+    <header class="guide-header"><a class="brand" href="{% url 'home' %}">Loup <span>Garou</span></a><div class="guide-header-actions">{% include "pages/_language_selector.html" %}<a class="guide-back" href="{% url 'home' %}">{{ room.back }}</a></div></header>
     <main class="room-shell">
-      <section class="room-hero history-hero"><div><p class="eyebrow">{{ room.archive }}</p><h1>{{ room.all_histories }}</h1><p>{{ room.history_intro }}</p></div></section>
+      <section class="room-hero history-hero"><div><p class="eyebrow">{{ room.archive }}</p><h1>{{ room.all_histories }}</h1>{% if room.history_intro %}<p>{{ room.history_intro }}</p>{% endif %}</div></section>
       <div class="history-room-list">
         {% for game_room in history_rooms %}
-          <article class="history-room-entry">
+          <article class="history-room-entry{% if game_room.status == 'active' %} active{% endif %}">
             <a class="history-room-link" href="{% url 'room_history' game_room.code %}">
               <span class="history-room-code">{{ game_room.code|slice:":2" }}</span>
-              <span><strong>{{ room.room_label }} {{ game_room.code }}</strong><small>{{ game_room.event_count }} {{ room.events }} · {{ game_room.updated_at|date:"d/m/Y H:i" }}</small></span>
+              <span><strong>{{ room.room_label }} {{ game_room.code }}</strong><small>{% if game_room.status == "active" %}{{ room.history_live }} · {% endif %}{{ game_room.event_count }} {{ room.events }} · {{ game_room.updated_at|date:"d/m/Y H:i" }}</small></span>
               <span class="history-room-arrow">→</span>
             </a>
-            {% if can_delete_history %}
+            {% if game_room.status == "active" and can_delete_history %}
+              <form method="post" action="{% url 'welcome' %}">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="resume" />
+                <input type="hidden" name="room_code" value="{{ game_room.code }}" />
+                <button class="history-continue-button" type="submit"><span aria-hidden="true">▶</span><strong>{{ room.continue_game }}</strong></button>
+              </form>
+            {% elif can_delete_history %}
               <form method="post" action="{% url 'room_history_delete' game_room.code %}" onsubmit="return confirm('{{ room.delete_history_confirm|escapejs }}');">
                 {% csrf_token %}
                 <button class="history-delete-button" type="submit" aria-label="{{ room.delete_history }} {{ game_room.code }}"><span aria-hidden="true">×</span><strong>{{ room.delete_history }}</strong></button>
@@ -29,6 +36,7 @@
           <p class="history-empty">{{ room.history_empty }}</p>
         {% endfor %}
       </div>
+      <a class="history-home-link" href="{% url 'home' %}"><span>←</span>{{ room.back_home }}</a>
     </main>
   </body>
 </html>

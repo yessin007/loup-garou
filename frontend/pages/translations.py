@@ -52,12 +52,12 @@ UI = {
         "game_title": "Narrator table", "preparation": "Setup", "players": "Players", "restart": "Restart", "room_access": "Game history",
     },
     "tn": {
-        "login_title": "Connexion", "login_eyebrow": "El lil habet 3al village", "tagline": "Od5ol lel game. Ra9eb. Chok. W ab9a 7ay.",
+        "login_title": "Connexion", "login_eyebrow": "El lil habet 3al village", "tagline": "",
         "player_area": "Espace joueur", "login": "Connecti", "username": "Esm el utilisateur", "username_placeholder": "Ekteb esm el utilisateur",
         "password": "Mot de passe", "password_placeholder": "Ekteb el mot de passe", "enter": "Od5ol lel village", "temporary_access": "Acces temporaire",
-        "roles_guide_link": "Guide kemel mta3 les roles", "roles_guide_title": "Guide mta3 les roles", "roles_guide_eyebrow": "El regles lkol fi blasa wa7da", "roles_guide_intro": "Pouvoirs, blocage mta3 Loup Cerbere, infection, couples w les cas speciaux mta3 kol role.", "roles_guide_search": "Lawwej 3la role wala regle", "roles_guide_all": "El kol", "roles_guide_wolves": "Loups", "roles_guide_village": "Village", "roles_guide_solo": "Solo / variable", "roles_guide_back": "Erja3 lel connexion", "roles_guide_no_result": "Ma fama 7atta role ymatchi el recherche.", "roles_guide_rules": "Regles w interactions", "roles_guide_camp": "Camp",
+        "roles_guide_link": "Guide kemel mta3 les roles", "roles_guide_title": "Guide mta3 les roles", "roles_guide_eyebrow": "El regles lkol fi blasa wa7da", "roles_guide_intro": "", "roles_guide_search": "Lawwej 3la role wala regle", "roles_guide_all": "El kol", "roles_guide_wolves": "Loups", "roles_guide_village": "Village", "roles_guide_solo": "Solo / variable", "roles_guide_back": "Erja3 lel connexion", "roles_guide_no_result": "Ma fama 7atta role ymatchi el recherche.", "roles_guide_rules": "Regles w interactions", "roles_guide_camp": "Camp",
         "chapter": "Chapitre I", "village_sleeps": "El village yor9od", "auth_error": "Esm el utilisateur wala el mot de passe 8altin.",
-        "dashboard_title": "Chnouwa t7eb ta3mel?", "dashboard_help": "E5tar action bech tetsarref fi games mta3 el narrateur.", "manage_history": "Fasa5 historique", "manage_history_help": "7ell el archive, e5tar historique mta3 el game w confirmi el suppression.", "start_new_game": "Abda game jdida", "start_new_game_help": "7adher 3dad el joueurs w composition mta3 les roles.", "continue_old_game": "Kammel game 9dima", "continue_old_game_help": "Da5el code mta3 el room w kammel men win wa9eft.", "choose_action": "7ell", "back_dashboard": "Erja3 lel dashboard",
+        "dashboard_title": "Chnouwa t7eb ta3mel?", "dashboard_help": "", "manage_history": "Fasa5 historique", "manage_history_help": "7ell el archive, e5tar historique mta3 el game w confirmi el suppression.", "start_new_game": "Abda game jdida", "start_new_game_help": "7adher 3dad el joueurs w composition mta3 les roles.", "continue_old_game": "Kammel game 9dima", "continue_old_game_help": "Da5el code el room w kammel el game.", "choose_action": "7ell", "back_dashboard": "Erja3 lel dashboard",
         "setup_title": "7adher el game", "narrator_mode": "Mode narrateur", "logout": "Deconnecti", "new_game": "Game jdida",
         "compose": "Rakkeb<br>el village mte3ek", "compose_help": "7ot 3dad el joueurs. Na3tiwek composition equilibree, w enti 3andek e5er kelma.",
         "participants": "El joueurs", "player_count": "3dad el joueurs", "narrator_not_counted": "El narrateur ma yet7sebch.",
@@ -163,7 +163,7 @@ ROLES = {
 GAME = {
     "fr": {
         "quick_vote_help": "{count} voix normales disponibles", "quick_vote_hint": "Compte rapidement les mains levées puis ajoute seulement le total sur chaque candidat.",
-        "registered": "joueurs enregistrés", "village": "Le village", "alive_count": "{n} en vie", "alive": "En vie", "eliminated": "Éliminé",
+        "registered": "joueurs enregistrés", "auto_distribution_test": "Distribution automatique (test)", "village": "Le village", "alive_count": "{n} en vie", "alive": "En vie", "eliminated": "Éliminé",
         "distribution": "Distribution", "player": "Joueur {n}", "phone_player": "Le téléphone est au joueur {n}", "first_name_q": "Quel est<br>ton prénom ?",
         "name_help": "Entre ton prénom, puis découvre ton rôle à l'abri des regards.", "player_name": "Prénom du joueur #{n}", "your_name": "Ton prénom", "discover_role": "Découvrir mon rôle",
         "secret_distribution": "Distribution secrète", "nobody_look": "{name}, personne ne doit regarder", "sealed": "Ton rôle<br>est scellé",
@@ -206,7 +206,7 @@ GAME = {
     },
     "en": {
         "quick_vote_help": "{count} normal votes available", "quick_vote_hint": "Quickly count raised hands, then enter only the total for each candidate.",
-        "registered": "players registered", "village": "The village", "alive_count": "{n} alive", "alive": "Alive", "eliminated": "Eliminated",
+        "registered": "players registered", "auto_distribution_test": "Automatic distribution (test)", "village": "The village", "alive_count": "{n} alive", "alive": "Alive", "eliminated": "Eliminated",
         "distribution": "Distribution", "player": "Player {n}", "phone_player": "The phone is with player {n}", "first_name_q": "What is<br>your name?", "name_help": "Enter your name, then discover your role away from prying eyes.", "player_name": "Player #{n}'s name", "your_name": "Your name", "discover_role": "Discover my role",
         "secret_distribution": "Secret distribution", "nobody_look": "{name}, nobody else should look", "sealed": "Your role<br>is sealed", "alone_help": "Make sure you are the only one who can see the screen before continuing.", "reveal_role": "Reveal my role", "you_are": "You are", "return_narrator": "Return the phone to the narrator", "pass_next": "Hide and pass to the next player", "preparation": "Setup", "distributed": "Roles distributed", "roles_assigned": "The roles<br>are assigned", "roles_help": "The narrator can check the distribution before putting the screen down. Each player then discovers their role.", "begin_night": "Let night fall",
         "night": "Night {n}", "protector": "The Protector", "village_sleeps": "The village sleeps", "protector_wake": "Protector,<br>wake up", "protect_q": "Who do you want to protect tonight?", "choose_protected": "Choose the protected player", "confirm_protection": "Confirm protection", "protected_previous_target": "Protected last night", "protector_no_repeat": "This player will be available again next night.",
@@ -240,7 +240,7 @@ GAME = {
     },
     "tn": {
         "quick_vote_help": "3andek {count} voix normales", "quick_vote_hint": "E7seb el ydin eli tla3ou w zid ken total 3la kol candidat, bla vote mta3 kol joueur.",
-        "registered": "joueurs msajlin", "village": "El village", "alive_count": "{n} 3aychin", "alive": "3ayech", "eliminated": "5raj",
+        "registered": "joueurs msajlin", "auto_distribution_test": "Distribution automatique (test)", "village": "El village", "alive_count": "{n} 3aychin", "alive": "3ayech", "eliminated": "5raj",
         "distribution": "Distribution", "player": "Joueur {n}", "phone_player": "El telephone 3and joueur {n}", "first_name_q": "Chnouwa<br>esmek?", "name_help": "Ekteb esmek, ba3d odkhol chouf role mte3ek bel sir.", "player_name": "Esm joueur #{n}", "your_name": "Esmek", "discover_role": "Nchouf role mte3i",
         "secret_distribution": "Distribution bel sir", "nobody_look": "{name}, 7ad ma ychouf", "sealed": "Role mte3ek<br>me5bi", "alone_help": "T2akked elli enti wa7dek tchouf fel ecran 9bal ma tkammel.", "reveal_role": "Nekchef role mte3i", "you_are": "Enti", "return_narrator": "Rajja3 el telephone lel narrateur", "pass_next": "5abbi w 3addi lel joueur elli ba3dek", "preparation": "Preparation", "distributed": "El composition twaz3et", "roles_assigned": "El roles<br>twaz3ou", "roles_help": "El narrateur ynajjem yetthabet fel distribution. Ba3d kol joueur ychouf role mte3ou bel sir.", "begin_night": "5alli el lil yhabt",
         "night": "Lil {n}", "protector": "Protecteur / Salvateur", "village_sleeps": "El village yor9od", "protector_wake": "Ya Protecteur / Salvateur,<br>fi9", "protect_q": "Chkoun t7eb ta7mi ellila?", "choose_protected": "E5tar chkoun ta7mi", "confirm_protection": "Thabet el protection", "protected_previous_target": "T7ama ellila elli fetet", "protector_no_repeat": "El joueur he4a yarja3 disponible ellila jeya.",

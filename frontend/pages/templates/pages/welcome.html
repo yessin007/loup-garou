@@ -28,7 +28,7 @@
       <section class="admin-dashboard-hero">
         <p class="eyebrow">{{ ui.narrator_mode }}</p>
         <h1>{{ ui.dashboard_title }}</h1>
-        <p>{{ ui.dashboard_help }}</p>
+        {% if ui.dashboard_help %}<p>{{ ui.dashboard_help }}</p>{% endif %}
       </section>
       <section class="admin-dashboard-actions">
         <a class="admin-dashboard-card danger" href="{% url 'room_history_list' %}">
@@ -132,7 +132,7 @@
             </article>
             <article class="role-row wolf-role" data-role="simple_wolves">
               <div class="role-mark">LG</div><div class="role-copy"><strong>{{ role_text.simple_wolves.0 }}</strong><span>{{ role_text.simple_wolves.1 }}</span></div>
-              <div class="counter"><button type="button" data-step="-1">−</button><input name="simple_wolves" type="number" min="0" value="1" readonly /><button type="button" data-step="1">+</button></div>
+              <div class="counter"><button type="button" data-step="-1">−</button><input name="simple_wolves" type="number" min="0" value="1" inputmode="numeric" /><button type="button" data-step="1">+</button></div>
             </article>
             <article class="role-row" data-role="seers">
               <div class="role-mark">VO</div><div class="role-copy"><strong>{{ role_text.seers.0 }}</strong><span>{{ role_text.seers.1 }}</span></div>
@@ -204,7 +204,7 @@
             </article>
             <article class="role-row villager-role" data-role="villagers">
               <div class="role-mark">VI</div><div class="role-copy"><strong>{{ role_text.villagers.0 }}</strong><span>{{ role_text.villagers.1 }}</span></div>
-              <div class="counter"><button type="button" data-step="-1">−</button><input name="villagers" type="number" min="0" value="5" readonly /><button type="button" data-step="1">+</button></div>
+              <div class="counter"><button type="button" data-step="-1">−</button><input name="villagers" type="number" min="0" value="5" inputmode="numeric" /><button type="button" data-step="1">+</button></div>
             </article>
           </div>
 
@@ -229,6 +229,55 @@
 
       function inputFor(role) { return document.querySelector(`[name="${role}"]`); }
 
+      function syncRoleToggle(row, checkbox, input) {
+        input.value = checkbox.checked ? "1" : "0";
+        row.classList.toggle("selected", checkbox.checked);
+      }
+
+      function prepareSingletonRoleToggles() {
+        document.querySelectorAll(".role-row").forEach(row => {
+          if (["simple_wolves", "villagers"].includes(row.dataset.role)) return;
+          const counter = row.querySelector(".counter");
+          const input = counter.querySelector("input");
+          const checkbox = document.createElement("input");
+          const indicator = document.createElement("span");
+          const label = document.createElement("label");
+          checkbox.type = "checkbox";
+          checkbox.className = "role-selection-checkbox";
+          checkbox.checked = Number(input.value) === 1;
+          checkbox.setAttribute("aria-label", row.querySelector(".role-copy strong").textContent.trim());
+          indicator.setAttribute("aria-hidden", "true");
+          indicator.textContent = "✓";
+          label.className = "role-selection-toggle";
+          label.append(checkbox, indicator);
+          input.type = "hidden";
+          input.readOnly = false;
+          counter.className = "role-toggle-control";
+          counter.replaceChildren(input, label);
+          row.classList.add("toggle-role");
+          syncRoleToggle(row, checkbox, input);
+          checkbox.addEventListener("change", () => {
+            syncRoleToggle(row, checkbox, input);
+            updateTotal();
+          });
+          row.addEventListener("click", event => {
+            if (event.target.closest(".role-selection-toggle")) return;
+            checkbox.checked = !checkbox.checked;
+            syncRoleToggle(row, checkbox, input);
+            updateTotal();
+          });
+        });
+      }
+
+      function refreshRoleToggles() {
+        document.querySelectorAll(".toggle-role").forEach(row => {
+          const input = row.querySelector('input[type="hidden"]');
+          const checkbox = row.querySelector(".role-selection-checkbox");
+          checkbox.checked = Number(input.value) === 1;
+          syncRoleToggle(row, checkbox, input);
+        });
+      }
+
       function updateTotal() {
         const target = Number(playerInput.value);
         const assigned = roleInputs.reduce((sum, input) => sum + Number(input.value), 0);
@@ -244,35 +293,19 @@
         const players = Math.max(8, Math.min(30, Number(playerInput.value) || 8));
         playerInput.value = players;
         const wolves = players <= 11 ? 2 : players <= 16 ? 3 : Math.ceil(players / 5);
-        const specials = players >= 10 ? 3 : 2;
-        inputFor("infecting_fathers").value = 1;
-        inputFor("cerberus_wolves").value = 1;
-        inputFor("black_wolves").value = 0;
-        inputFor("talkative_wolves").value = 0;
-        inputFor("blue_wolves").value = 0;
-        inputFor("white_wolves").value = 0;
-        inputFor("simple_wolves").value = Math.max(0, wolves - 2);
-        inputFor("seers").value = 1;
-        inputFor("witches").value = 1;
-        inputFor("protectors").value = specials === 3 ? 1 : 0;
-        inputFor("barbers").value = 0;
-        inputFor("aliens").value = 0;
-        inputFor("prostitutes").value = 0;
-        inputFor("servants").value = 0;
-        inputFor("ancients").value = 0;
-        inputFor("hunters").value = 0;
-        inputFor("bears").value = 0;
-        inputFor("shepherds").value = 0;
-        inputFor("cupids").value = 0;
-        inputFor("judges").value = 0;
-        inputFor("wild_children").value = 0;
-        inputFor("angels").value = 0;
-        inputFor("ankous").value = 0;
-        inputFor("little_girls").value = 0;
-        inputFor("villagers").value = players - wolves - specials;
+        const wolfRolePriority = ["infecting_fathers", "cerberus_wolves", "black_wolves", "talkative_wolves", "blue_wolves", "white_wolves"];
+        const specialRolePriority = ["seers", "witches", "protectors", "hunters", "bears", "shepherds", "judges", "cupids", "prostitutes", "ancients", "barbers", "servants", "wild_children", "ankous", "little_girls", "aliens", "angels"];
+        [...wolfRolePriority, ...specialRolePriority, "simple_wolves", "villagers"].forEach(role => { inputFor(role).value = 0; });
+        wolfRolePriority.slice(0, wolves).forEach(role => { inputFor(role).value = 1; });
+        inputFor("simple_wolves").value = Math.max(0, wolves - wolfRolePriority.length);
+        const nonWolfSlots = players - wolves;
+        specialRolePriority.slice(0, nonWolfSlots).forEach(role => { inputFor(role).value = 1; });
+        inputFor("villagers").value = Math.max(0, nonWolfSlots - specialRolePriority.length);
+        refreshRoleToggles();
         updateTotal();
       }
 
+      prepareSingletonRoleToggles();
       document.querySelectorAll("[data-player-step]").forEach(button => button.addEventListener("click", () => {
         playerInput.value = Math.max(8, Math.min(30, Number(playerInput.value) + Number(button.dataset.playerStep)));
         suggestRoles();
@@ -283,6 +316,13 @@
         input.value = Math.max(0, Math.min(maximum, Number(input.value) + Number(button.dataset.step)));
         updateTotal();
       }));
+      document.querySelectorAll(".counter input").forEach(input => {
+        input.addEventListener("input", updateTotal);
+        input.addEventListener("change", () => {
+          input.value = Math.max(0, Number(input.value) || 0);
+          updateTotal();
+        });
+      });
       playerInput.addEventListener("change", suggestRoles);
       document.getElementById("suggest-button").addEventListener("click", suggestRoles);
       suggestRoles();

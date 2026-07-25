@@ -314,8 +314,19 @@ button.ghost-button { width: auto; margin: 0; padding: 9px 13px; border: 1px sol
 .role-copy strong { font: 600 .84rem "Cinzel", serif; }
 .role-copy span { margin-top: 4px; color: #77848a; font-size: .68rem; }
 .counter { gap: 6px; }
-.counter input { width: 30px; padding: 0; border: 0; color: var(--ivory); font-weight: 700; text-align: center; background: transparent; }
+.counter input { width: 38px; padding: 0; border: 0; color: var(--ivory); font-weight: 700; text-align: center; background: transparent; -moz-appearance: textfield; }
+.counter input::-webkit-inner-spin-button { display: none; }
 .counter button { width: 27px; height: 27px; font-size: .9rem; }
+.toggle-role { cursor: pointer; transition: border-color .2s, background .2s; }
+.toggle-role:hover { background: rgba(255,255,255,.025); }
+.toggle-role.selected { background: rgba(199,139,69,.055); }
+.role-toggle-control { display: grid; place-items: center; }
+.role-selection-toggle { position: relative; display: grid; place-items: center; width: 34px; height: 34px; margin: 0; cursor: pointer; }
+.role-selection-checkbox { position: absolute; width: 1px; height: 1px; opacity: 0; pointer-events: none; }
+.role-selection-toggle span { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid rgba(255,255,255,.18); border-radius: 50%; color: transparent; font-size: .82rem; background: rgba(255,255,255,.035); transition: border-color .2s, color .2s, background .2s, transform .2s; }
+.role-selection-checkbox:checked + span { border-color: rgba(199,139,69,.72); color: #171006; background: var(--ember-light); transform: scale(1.04); }
+.wolf-role .role-selection-checkbox:checked + span { border-color: rgba(220,105,83,.75); color: var(--ivory); background: #9b4637; }
+.role-selection-checkbox:focus-visible + span { outline: 2px solid var(--ember-light); outline-offset: 3px; }
 
 .setup-footer { margin-top: 28px; }
 .total-status { font: 700 1.4rem "Cinzel", serif; }
@@ -452,6 +463,7 @@ button.header-action { justify-self: end; width: auto; margin: 0; padding: 8px 1
 .scene-actions { display: flex; gap: 12px; margin-top: 32px; }
 button.scene-action { width: min(100%, 310px); margin: 0; }
 button.scene-action.secondary { border: 1px solid rgba(255,255,255,.12); color: #a4aeb2; background: transparent; }
+button.scene-action.test-action { width: auto; min-width: 190px; padding: 10px 13px; font-size: .68rem; }
 button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 
 .name-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; margin: 32px 0; }
@@ -826,6 +838,11 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .history-room-list .history-room-link { margin-top: 0; align-items: center; }
 .history-room-entry > form { display: flex; }
 .history-delete-button { justify-content: center; gap: 8px; width: auto; min-width: 112px; min-height: 100%; margin: 0; border: 1px solid rgba(197,74,65,.32); color: #e49a91; background: rgba(145,45,39,.1); }
+.history-continue-button { justify-content: center; gap: 8px; width: auto; min-width: 150px; min-height: 100%; margin: 0; border: 1px solid rgba(88,170,119,.38); color: #9ed6b3; background: rgba(48,119,76,.12); }
+.history-continue-button:hover { border-color: rgba(88,170,119,.65); background: rgba(48,119,76,.2); }
+.history-home-link { display: flex; align-items: center; justify-content: center; gap: 10px; width: min(100%, 340px); min-height: 52px; margin: 38px auto 0; padding: 13px 18px; border: 1px solid rgba(199,139,69,.38); color: var(--ivory); font-weight: 700; text-decoration: none; background: rgba(199,139,69,.08); }
+.history-home-link span { color: var(--ember-light); font-size: 1rem; }
+.history-home-link:hover { border-color: rgba(199,139,69,.65); background: rgba(199,139,69,.14); }
 .history-delete-button:hover { border-color: rgba(220,91,80,.62); background: rgba(159,48,41,.2); }
 .history-delete-button span { font-size: 1.25rem; line-height: 1; }
 .history-delete-button strong { font-size: .68rem; }
@@ -1003,6 +1020,8 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
   .history-event summary { padding: 9px 13px; }
   .history-event li { min-width: 0; padding: 11px 10px; }
   .history-room-entry { grid-template-columns: minmax(0, 1fr) 48px; }
+  .history-room-entry.active { grid-template-columns: 1fr; }
+  .history-room-entry.active .history-continue-button { width: 100%; min-height: 48px; }
   .history-delete-button { min-width: 48px; padding: 8px; }
   .history-delete-button strong { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .room-shell { width: min(100% - 24px, 960px); padding-top: 34px; }

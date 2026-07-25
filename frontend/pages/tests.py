@@ -40,10 +40,33 @@ class RoomFlowTests(TestCase):
         new_game = self.narrator.get(reverse("welcome"), {"mode": "new"})
         self.assertContains(new_game, 'id="setup-form"')
         self.assertNotContains(new_game, 'id="resume-room-code"')
+        self.assertContains(new_game, "const wolfRolePriority")
+        self.assertContains(new_game, "const specialRolePriority")
+        self.assertContains(new_game, 'nonWolfSlots - specialRolePriority.length')
+        self.assertContains(new_game, "prepareSingletonRoleToggles()")
+        self.assertContains(new_game, '["simple_wolves", "villagers"]')
 
         resume_game = self.narrator.get(reverse("welcome"), {"mode": "resume"})
         self.assertContains(resume_game, 'id="resume-room-code"')
         self.assertNotContains(resume_game, 'id="setup-form"')
+
+        history = self.narrator.get(reverse("room_history_list"))
+        self.assertContains(history, 'class="history-home-link"')
+        self.assertContains(history, f'href="{reverse("home")}"')
+
+    @override_settings(DEBUG=True)
+    def test_development_mode_exposes_automatic_test_distribution(self):
+        self.create_room()
+        game = self.narrator.get(reverse("game"))
+        self.assertContains(game, 'id="test-mode" type="application/json">true</script>')
+        self.assertContains(game, '"auto-distribute-test"')
+        self.assertContains(game, "autoDistributeTestPlayers")
+
+    @override_settings(DEBUG=False)
+    def test_production_mode_disables_automatic_test_distribution(self):
+        self.create_room()
+        game = self.narrator.get(reverse("game"))
+        self.assertContains(game, 'id="test-mode" type="application/json">false</script>')
 
     def test_narrator_login_accepts_text_credentials_only(self):
         login_page = Client().get(reverse("home"))
@@ -59,6 +82,20 @@ class RoomFlowTests(TestCase):
         response = text_credentials.post(reverse("home"), {"username": "admin", "password": "admin"})
         self.assertRedirects(response, reverse("welcome"), fetch_redirect_response=False)
         self.assertTrue(text_credentials.session["authenticated"])
+
+    def test_tunisian_pages_omit_removed_intro_copy(self):
+        visitor = Client()
+        session = visitor.session
+        session["language"] = "tn"
+        session.save()
+        self.assertNotContains(visitor.get(reverse("home")), "Od5ol lel game. Ra9eb. Chok. W ab9a 7ay.")
+        self.assertNotContains(visitor.get(reverse("roles_guide")), "Pouvoirs, blocage mta3 Loup Cerbere")
+        self.assertNotContains(visitor.get(reverse("room_history_list")), "Tal9a houni bilan mta3 kol lil")
+
+        session = self.narrator.session
+        session["language"] = "tn"
+        session.save()
+        self.assertNotContains(self.narrator.get(reverse("welcome")), "E5tar action bech tetsarref")
 
     def test_player_joins_and_receives_role_after_narrator_starts(self):
         room = self.create_room()
@@ -234,6 +271,28 @@ class RoomFlowTests(TestCase):
             list(RoomEvent.objects.filter(room=room).values_list("event_type", flat=True)),
             ["night", "day"],
         )
+
+    def test_admin_history_lists_and_resumes_active_games(self):
+        room = self.create_room()
+        self.narrator.post(reverse("room_start_api", args=[room.code]))
+
+        visitor = Client()
+        self.assertNotContains(visitor.get(reverse("room_history_list")), room.code)
+        self.assertEqual(visitor.get(reverse("room_history", args=[room.code])).status_code, 403)
+
+        returning_admin = Client()
+        returning_admin.post(reverse("home"), {"username": "admin", "password": "admin"})
+        history_list = returning_admin.get(reverse("room_history_list"))
+        self.assertContains(history_list, room.code)
+        self.assertContains(history_list, 'class="history-continue-button"')
+        self.assertContains(history_list, f'name="room_code" value="{room.code}"')
+        self.assertEqual(returning_admin.get(reverse("room_history", args=[room.code])).status_code, 200)
+
+        response = returning_admin.post(
+            reverse("welcome"),
+            {"action": "resume", "room_code": room.code},
+        )
+        self.assertRedirects(response, reverse("game"), fetch_redirect_response=False)
 
     def test_room_join_rejects_non_numeric_code(self):
         response = Client().post(

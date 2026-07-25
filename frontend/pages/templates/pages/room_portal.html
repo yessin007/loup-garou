@@ -31,7 +31,7 @@
         </form>
         <section class="room-card">
           <span>02</span><h2>{{ room.history }}</h2>
-          <p>{{ room.history_intro }}</p>
+          {% if room.history_intro %}<p>{{ room.history_intro }}</p>{% endif %}
           <a class="room-card-action" href="{% url 'room_history_list' %}">{{ room.all_histories }} <span>→</span></a>
         </section>
       </div>

@@ -26,7 +26,7 @@
       <section class="guide-hero" aria-labelledby="guide-title">
         <p class="eyebrow">{{ ui.roles_guide_eyebrow }}</p>
         <h1 id="guide-title">{{ ui.roles_guide_title }}</h1>
-        <p>{{ ui.roles_guide_intro }}</p>
+        {% if ui.roles_guide_intro %}<p>{{ ui.roles_guide_intro }}</p>{% endif %}
       </section>
 
       <section class="guide-tools" aria-label="{{ ui.roles_guide_search }}">

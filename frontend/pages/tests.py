@@ -62,6 +62,35 @@ class RoomFlowTests(TestCase):
         self.assertContains(game, '"auto-distribute-test"')
         self.assertContains(game, "autoDistributeTestPlayers")
 
+    def test_night_summary_sections_and_single_candidate_majority_rule_are_present(self):
+        self.create_room()
+        game = self.narrator.get(reverse("game"))
+        self.assertContains(game, 'class="bilan-section night-death-section"')
+        self.assertContains(game, 'class="bilan-section village-info-section"')
+        self.assertContains(game, 'class="bilan-section day-instruction-section"')
+        self.assertContains(game, 'class="bear-neighbor-card ${factionClass}"')
+        self.assertContains(game, "status.leftNeighbor")
+        self.assertContains(game, "status.rightNeighbor")
+        self.assertContains(game, 'id="shepherd-selection-count"')
+        self.assertContains(game, 'class="sheep-check"')
+        self.assertNotContains(game, "button.disabled = !rows.length")
+        self.assertNotContains(game, "if (!rows.length || rows.some")
+        self.assertContains(game, "max > alive().length / 2")
+        self.assertContains(game, '"insufficient_majority"')
+
+    def test_barber_kills_only_a_wolf_or_dies_with_a_non_wolf_target(self):
+        self.create_room()
+        game = self.narrator.get(reverse("game"))
+        self.assertContains(game, "state.barberHit = isWolfPlayer(target)")
+        self.assertContains(
+            game,
+            "killPlayersWithLovers(state.barberHit ? [target.id] : [barber.id, target.id])",
+        )
+        self.assertContains(
+            game,
+            'roleMeta[item.role].faction === "wolf" || item.infected || item.wildTurned',
+        )
+
     @override_settings(DEBUG=False)
     def test_production_mode_exposes_automatic_test_distribution_to_narrator(self):
         self.create_room()

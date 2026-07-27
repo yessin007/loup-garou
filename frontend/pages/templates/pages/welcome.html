@@ -154,6 +154,10 @@
               <div class="role-mark">AL</div><div class="role-copy"><strong>{{ role_text.aliens.0 }}</strong><span>{{ role_text.aliens.1 }}</span></div>
               <div class="counter"><button type="button" data-step="-1">−</button><input name="aliens" type="number" min="0" max="1" value="0" readonly /><button type="button" data-step="1">+</button></div>
             </article>
+            <article class="role-row" data-role="pyromaniacs">
+              <div class="role-mark">PY</div><div class="role-copy"><strong>{{ role_text.pyromaniacs.0 }}</strong><span>{{ role_text.pyromaniacs.1 }}</span></div>
+              <div class="counter"><button type="button" data-step="-1">−</button><input name="pyromaniacs" type="number" min="0" max="1" value="0" readonly /><button type="button" data-step="1">+</button></div>
+            </article>
             <article class="role-row" data-role="prostitutes">
               <div class="role-mark">PU</div><div class="role-copy"><strong>{{ role_text.prostitutes.0 }}</strong><span>{{ role_text.prostitutes.1 }}</span></div>
               <div class="counter"><button type="button" data-step="-1">−</button><input name="prostitutes" type="number" min="0" max="1" value="0" readonly /><button type="button" data-step="1">+</button></div>
@@ -169,6 +173,10 @@
             <article class="role-row" data-role="hunters">
               <div class="role-mark">CH</div><div class="role-copy"><strong>{{ role_text.hunters.0 }}</strong><span>{{ role_text.hunters.1 }}</span></div>
               <div class="counter"><button type="button" data-step="-1">−</button><input name="hunters" type="number" min="0" max="1" value="0" readonly /><button type="button" data-step="1">+</button></div>
+            </article>
+            <article class="role-row" data-role="red_riding_hoods">
+              <div class="role-mark">CR</div><div class="role-copy"><strong>{{ role_text.red_riding_hoods.0 }}</strong><span>{{ role_text.red_riding_hoods.1 }}</span></div>
+              <div class="counter"><button type="button" data-step="-1">−</button><input name="red_riding_hoods" type="number" min="0" max="1" value="0" readonly /><button type="button" data-step="1">+</button></div>
             </article>
             <article class="role-row" data-role="bears">
               <div class="role-mark">OU</div><div class="role-copy"><strong>{{ role_text.bears.0 }}</strong><span>{{ role_text.bears.1 }}</span></div>
@@ -294,7 +302,7 @@
         playerInput.value = players;
         const wolves = players <= 11 ? 2 : players <= 16 ? 3 : Math.ceil(players / 5);
         const wolfRolePriority = ["infecting_fathers", "cerberus_wolves", "black_wolves", "talkative_wolves", "blue_wolves", "white_wolves"];
-        const specialRolePriority = ["seers", "witches", "protectors", "hunters", "bears", "shepherds", "judges", "cupids", "prostitutes", "ancients", "barbers", "servants", "wild_children", "ankous", "little_girls", "aliens", "angels"];
+        const specialRolePriority = ["seers", "witches", "protectors", "hunters", "red_riding_hoods", "bears", "shepherds", "judges", "cupids", "prostitutes", "ancients", "barbers", "servants", "wild_children", "ankous", "little_girls", "aliens", "pyromaniacs", "angels"];
         [...wolfRolePriority, ...specialRolePriority, "simple_wolves", "villagers"].forEach(role => { inputFor(role).value = 0; });
         wolfRolePriority.slice(0, wolves).forEach(role => { inputFor(role).value = 1; });
         inputFor("simple_wolves").value = Math.max(0, wolves - wolfRolePriority.length);

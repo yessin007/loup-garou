@@ -44,6 +44,7 @@
       function display(key, value) {
         if (Array.isArray(value)) return value.join(", ");
         if (key === "seer_role") return roleLabels[value] || value;
+        if (key === "pyromaniac_action") return H[`pyro_action_${value}`] || value;
         if (key === "vote_outcome") return H[`outcome_${value}`] || value;
         if (key === "winner") return H[`winner_${value}`] || value;
         if (value === true) return H.yes;

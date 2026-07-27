@@ -65,6 +65,21 @@ class RoomFlowTests(TestCase):
     def test_night_summary_sections_and_single_candidate_majority_rule_are_present(self):
         self.create_room()
         game = self.narrator.get(reverse("game"))
+        self.assertContains(game, 'id="village-state-open"')
+        self.assertContains(game, 'id="village-state-dialog"')
+        self.assertContains(game, "applyVillageStateModification")
+        self.assertContains(game, 'action === "disqualify"')
+        self.assertContains(game, 'action === "revive"')
+        self.assertContains(game, 'action === "change_role"')
+        self.assertContains(game, "changeVillagePlayerRole")
+        self.assertContains(
+            game,
+            'if (stage === "wild_child") return hasAliveRole("wild_children") && !state.wildChildLinked',
+        )
+        self.assertContains(
+            game,
+            '"protector", "prostitute", "cerberus", "pyromaniac", "wolves", "infection"',
+        )
         self.assertContains(game, 'class="bilan-section night-death-section"')
         self.assertContains(game, 'class="bilan-section village-info-section"')
         self.assertContains(game, 'class="bilan-section day-instruction-section"')
@@ -82,6 +97,28 @@ class RoomFlowTests(TestCase):
     def test_barber_kills_only_a_wolf_or_dies_with_a_non_wolf_target(self):
         self.create_room()
         game = self.narrator.get(reverse("game"))
+        self.assertContains(game, 'const signalStages = ["dawn", "accusation", "final_vote"]')
+        self.assertContains(
+            game,
+            'return barberPowerAvailable() && !isRoleBlocked("barbers")',
+        )
+        self.assertContains(
+            game,
+            'return alienPowerAvailable() && !isRoleBlocked("aliens")',
+        )
+        self.assertContains(
+            game,
+            '"cerberus-blocked-action"',
+        )
+        self.assertContains(
+            game,
+            "L.cerberus_day_blocked",
+        )
+        self.assertContains(
+            game,
+            "state.qualifiers.map(player).filter(item => item?.alive)",
+        )
+        self.assertContains(game, "state.stage = daySpecialReturnStage()")
         self.assertContains(game, "state.barberHit = isWolfPlayer(target)")
         self.assertContains(
             game,
@@ -90,6 +127,80 @@ class RoomFlowTests(TestCase):
         self.assertContains(
             game,
             'roleMeta[item.role].faction === "wolf" || item.infected || item.wildTurned',
+        )
+
+    def test_red_riding_hood_is_protected_by_a_living_hunter_unless_cerberus_blocks_it(self):
+        self.composition.update({"red_riding_hoods": 1, "villagers": 5})
+        self.create_room()
+        game = self.narrator.get(reverse("game"))
+        self.assertContains(game, 'red_riding_hoods: { short: "CR"')
+        self.assertContains(
+            game,
+            'item?.role === "red_riding_hoods" && hasAliveRole("hunters") && !isRoleBlocked("red_riding_hoods")',
+        )
+        self.assertContains(
+            game,
+            "!redHoodProtectionActive(wolfVictim)",
+        )
+        self.assertContains(game, "savedByProtector || savedByRedHood")
+        self.assertContains(game, 't("red_hood_saved"')
+        self.assertContains(game, "L.red_hood_protection_blocked")
+        self.assertContains(game, 'class="day-effect-card passive-blocked"')
+
+        setup = self.narrator.get(reverse("welcome"), {"mode": "new"})
+        self.assertContains(setup, 'data-role="red_riding_hoods"')
+        self.assertContains(setup, 'name="red_riding_hoods"')
+        guide = Client().get(reverse("roles_guide"))
+        self.assertContains(guide, "Chaperon Rouge")
+        self.assertContains(guide, "Protection bloquée par le Loup Cerbère")
+
+    def test_pyromaniac_douses_or_ignites_once_per_night_and_can_be_blocked(self):
+        self.composition.update({"pyromaniacs": 1, "villagers": 5})
+        self.create_room()
+        game = self.narrator.get(reverse("game"))
+        self.assertContains(game, 'pyromaniacs: { short: "PY"')
+        self.assertContains(
+            game,
+            '"cerberus", "pyromaniac", "wolves"',
+        )
+        self.assertContains(game, "pyromaniacOiledIds: []")
+        self.assertContains(game, 'action === "confirm-pyromaniac-douse"')
+        self.assertContains(game, 'action === "confirm-pyromaniac-ignite"')
+        self.assertContains(game, 'action === "finish-pyromaniac-blocked"')
+        self.assertContains(game, 'isRoleBlocked("pyromaniacs")')
+        self.assertContains(game, 'blocked ? "cerberus-blocked-action" : ""')
+        self.assertContains(
+            game,
+            "state.pyromaniacOiledIds = [...new Set([...(state.pyromaniacOiledIds || []), ...selectedIds])]",
+        )
+        self.assertContains(game, "state.pyromaniacIgnitedIds = targetIds")
+        self.assertContains(game, "state.pyromaniacOiledIds = []")
+        self.assertContains(game, "(state.pyromaniacIgnitedIds || []).forEach")
+        self.assertContains(game, 'return "pyromaniac"')
+        self.assertContains(game, "L.pyromaniac_victory_help")
+
+        setup = self.narrator.get(reverse("welcome"), {"mode": "new"})
+        self.assertContains(setup, 'data-role="pyromaniacs"')
+        self.assertContains(setup, 'name="pyromaniacs"')
+        guide = Client().get(reverse("roles_guide"))
+        self.assertContains(guide, "Pyromane")
+        self.assertContains(guide, "exactement une action")
+        self.assertContains(guide, "désactivés et rouges")
+
+    def test_failed_infection_against_ancient_cancels_attack_without_consuming_a_life(self):
+        self.create_room()
+        game = self.narrator.get(reverse("game"))
+        self.assertContains(
+            game,
+            'if (state.infectionAttempted && !isRoleBlocked("infecting_fathers")) return null',
+        )
+        self.assertContains(
+            game,
+            'if (!blocked) state.infectionAvailable = false',
+        )
+        self.assertContains(
+            game,
+            'if (wolfVictimDies && wolfVictim?.role === "ancients" && !state.ancientWolfHits[wolfVictim.id])',
         )
 
     @override_settings(DEBUG=False)
@@ -149,6 +260,27 @@ class RoomFlowTests(TestCase):
         private_state = player.get(reverse("room_player_api", args=[room.code])).json()
         self.assertEqual(private_state["status"], GameRoom.Status.ACTIVE)
         self.assertIsNotNone(private_state["role"])
+
+        assignment = started["assignments"][0]
+        corrected_state = {
+            "stage": "roles",
+            "round": 1,
+            "players": [{
+                "id": 1,
+                "roomPlayerId": assignment["room_player_id"],
+                "name": assignment["name"],
+                "role": "wild_children",
+                "alive": True,
+            }],
+        }
+        response = self.narrator.post(
+            reverse("room_sync_api", args=[room.code]),
+            json.dumps(corrected_state),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        private_state = player.get(reverse("room_player_api", args=[room.code])).json()
+        self.assertEqual(private_state["role"]["code"], "wild_children")
 
     def test_night_and_day_history_are_created_once(self):
         room = self.create_room()

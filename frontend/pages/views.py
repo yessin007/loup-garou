@@ -240,11 +240,13 @@ def home(request):
 
     error = None
     if request.method == "POST":
-        username = request.POST.get("username", "")
+        username = request.POST.get("username", "").strip()
         password = request.POST.get("password", "")
+        expected_password = settings.NARRATOR_CREDENTIALS.get(username)
 
-        if username == "admin" and password == "admin":
+        if expected_password is not None and secrets.compare_digest(password, expected_password):
             request.session["authenticated"] = True
+            request.session["narrator_username"] = username
             return redirect("welcome")
 
         error = UI[current_language(request)]["auth_error"]

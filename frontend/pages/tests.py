@@ -67,11 +67,22 @@ class RoomFlowTests(TestCase):
         game = self.narrator.get(reverse("game"))
         self.assertContains(game, 'id="village-state-open"')
         self.assertContains(game, 'id="village-state-dialog"')
+        self.assertContains(game, 'data-village-state-mode="phase"')
+        self.assertContains(game, 'data-village-state-mode="player"')
+        self.assertContains(game, 'id="village-state-phase"')
+        self.assertContains(game, "setVillageStateMode")
+        self.assertContains(game, "resetStateForManualPhase")
+        self.assertContains(game, 'state.stage = "dawn"')
+        self.assertContains(game, 'nextNightStage("")')
         self.assertContains(game, "applyVillageStateModification")
         self.assertContains(game, 'action === "disqualify"')
         self.assertContains(game, 'action === "revive"')
         self.assertContains(game, 'action === "change_role"')
         self.assertContains(game, "changeVillagePlayerRole")
+        self.assertContains(
+            game,
+            "${escapeHtml(roleMeta[item.role]?.name || item.role)} · ${item.alive ? L.alive : L.eliminated}",
+        )
         self.assertContains(
             game,
             'if (stage === "wild_child") return hasAliveRole("wild_children") && !state.wildChildLinked',
@@ -154,6 +165,20 @@ class RoomFlowTests(TestCase):
         self.assertContains(guide, "Chaperon Rouge")
         self.assertContains(guide, "Protection bloquée par le Loup Cerbère")
 
+    def test_narrator_chooses_shepherd_starting_stock_after_distribution(self):
+        self.composition.update({"shepherds": 1, "villagers": 5})
+        self.create_room()
+        game = self.narrator.get(reverse("game"))
+        self.assertContains(game, 'id="shepherd-starting-stock"')
+        self.assertContains(game, "L.shepherd_stock_title")
+        self.assertContains(game, "Array.from({length: 10}")
+        self.assertContains(game, "state.sheepInitialCount = stock")
+        self.assertContains(game, "state.sheepRemaining = stock")
+        self.assertContains(game, "state.shepherdStockConfigured = true")
+
+        guide = Client().get(reverse("roles_guide"))
+        self.assertContains(guide, "stock initial de un à dix moutons")
+
     def test_pyromaniac_douses_or_ignites_once_per_night_and_can_be_blocked(self):
         self.composition.update({"pyromaniacs": 1, "villagers": 5})
         self.create_room()
@@ -213,6 +238,7 @@ class RoomFlowTests(TestCase):
     def test_narrator_login_accepts_text_credentials_only(self):
         login_page = Client().get(reverse("home"))
         self.assertContains(login_page, "admin / admin")
+        self.assertNotContains(login_page, "yessin / yessin")
         self.assertNotContains(login_page, 'inputmode="numeric"')
 
         old_credentials = Client()
@@ -224,6 +250,35 @@ class RoomFlowTests(TestCase):
         response = text_credentials.post(reverse("home"), {"username": "admin", "password": "admin"})
         self.assertRedirects(response, reverse("welcome"), fetch_redirect_response=False)
         self.assertTrue(text_credentials.session["authenticated"])
+        self.assertEqual(text_credentials.session["narrator_username"], "admin")
+
+        private_credentials = Client()
+        response = private_credentials.post(
+            reverse("home"),
+            {"username": "yessin", "password": "yessin"},
+        )
+        self.assertRedirects(response, reverse("welcome"), fetch_redirect_response=False)
+        self.assertTrue(private_credentials.session["authenticated"])
+        self.assertEqual(private_credentials.session["narrator_username"], "yessin")
+
+    def test_public_and_private_narrators_can_run_separate_rooms_at_the_same_time(self):
+        public_narrator = Client()
+        private_narrator = Client()
+        public_narrator.post(reverse("home"), {"username": "admin", "password": "admin"})
+        private_narrator.post(reverse("home"), {"username": "yessin", "password": "yessin"})
+
+        setup = {"player_count": 8, **self.composition}
+        public_response = public_narrator.post(reverse("welcome"), setup)
+        private_response = private_narrator.post(reverse("welcome"), setup)
+
+        self.assertRedirects(public_response, reverse("game"), fetch_redirect_response=False)
+        self.assertRedirects(private_response, reverse("game"), fetch_redirect_response=False)
+        public_code = public_narrator.session["game_setup"]["room_code"]
+        private_code = private_narrator.session["game_setup"]["room_code"]
+        self.assertNotEqual(public_code, private_code)
+        self.assertEqual(GameRoom.objects.filter(code__in=[public_code, private_code]).count(), 2)
+        self.assertEqual(public_narrator.session["narrator_username"], "admin")
+        self.assertEqual(private_narrator.session["narrator_username"], "yessin")
 
     def test_tunisian_pages_omit_removed_intro_copy(self):
         visitor = Client()

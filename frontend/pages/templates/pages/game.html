@@ -23,6 +23,9 @@
       <a class="brand" href="{% url 'welcome' %}">Loup <span>Garou</span></a>
       <div class="phase-indicator"><span id="cycle-label">{{ ui.preparation }}</span><strong id="phase-label">{{ ui.players }}</strong></div>
       <div class="narrator-actions">
+        <button id="village-state-open" class="header-action village-state-trigger" type="button" disabled>
+          <span aria-hidden="true">⚙</span><strong>{{ game_text.village_state_button }}</strong>
+        </button>
         <details class="room-share">
           <summary class="room-code-chip" title="{{ room.scan_qr }}"><span aria-hidden="true">▦</span>{{ room_code }}</summary>
           <div class="room-share-popover">
@@ -34,9 +37,6 @@
           </div>
         </details>
         <a class="header-action history-header-link" href="{% url 'room_history' room_code %}" target="_blank">{{ room.history }}</a>
-        <button id="village-state-open" class="header-action village-state-trigger" type="button" disabled>
-          <span aria-hidden="true">⚙</span><strong>{{ game_text.village_state_button }}</strong>
-        </button>
         {% include "pages/_language_selector.html" %}
         <button id="reset-game" class="header-action" type="button">{{ ui.restart }}</button>
       </div>
@@ -76,7 +76,29 @@
             <p>{{ game_text.village_state_help }}</p>
           </div>
         </header>
-        <div class="village-state-fields">
+        <div class="village-state-mode-picker" role="tablist" aria-label="{{ game_text.village_state_mode_label }}">
+          <button class="active" type="button" data-village-state-mode="phase">
+            <span aria-hidden="true">☾</span><strong>{{ game_text.village_state_mode_phase }}</strong>
+          </button>
+          <button type="button" data-village-state-mode="player">
+            <span aria-hidden="true">♟</span><strong>{{ game_text.village_state_mode_player }}</strong>
+          </button>
+        </div>
+        <div id="village-state-phase-fields" class="village-state-fields village-state-phase-fields">
+          <div class="village-state-phase-current">
+            <span>{{ game_text.village_state_current_phase }}</span>
+            <strong id="village-state-current-phase"></strong>
+          </div>
+          <label>
+            <span>{{ game_text.village_state_choose_phase }}</span>
+            <select id="village-state-phase">
+              <option value="night">{{ game_text.village_state_night }}</option>
+              <option value="day">{{ game_text.village_state_day }}</option>
+            </select>
+          </label>
+          <p class="village-state-warning">{{ game_text.village_state_phase_warning }}</p>
+        </div>
+        <div id="village-state-player-fields" class="village-state-fields" hidden>
           <label>
             <span>{{ game_text.village_state_player }}</span>
             <select id="village-state-player"></select>
@@ -161,7 +183,7 @@
           ancientWolfHits: {}, ancientResistedPlayerId: null, lostVillagePowerIds: [],
           pendingHunterId: null, pendingHunterSource: null, hunterShotRecords: [],
           bearPlayerId: null, bearGrowled: null, bearNeighborIds: [],
-          sheepRemaining: 3, shepherdLastResults: [], shepherdReportedThisNight: false, shepherdWasBlocked: false,
+          sheepInitialCount: 3, sheepRemaining: 3, shepherdStockConfigured: false, shepherdLastResults: [], shepherdReportedThisNight: false, shepherdWasBlocked: false,
           cupidLinked: false, coupleIds: [],
           judgeFirstId: null, judgeSecondId: null, judgeSameClan: null,
           wildChildLinked: false, wildChildId: null, wildIdolId: null, wildIdolDeathTriggered: false, wildChildTurned: false,
@@ -180,6 +202,8 @@
       if (state.infectionAvailable === undefined) state.infectionAvailable = true;
       if (!state.ancientWolfHits) state.ancientWolfHits = {};
       if (state.sheepRemaining === undefined) state.sheepRemaining = 3;
+      if (state.sheepInitialCount === undefined) state.sheepInitialCount = state.sheepRemaining;
+      if (state.shepherdStockConfigured === undefined) state.shepherdStockConfigured = state.stage !== "roles";
       if (state.shepherdReportedThisNight === undefined) state.shepherdReportedThisNight = false;
       if (state.shepherdWasBlocked === undefined) state.shepherdWasBlocked = false;
       if (!state.coupleIds) state.coupleIds = [];
@@ -229,6 +253,11 @@
       const undoToast = document.getElementById("undo-toast");
       const villageStateOpenButton = document.getElementById("village-state-open");
       const villageStateDialog = document.getElementById("village-state-dialog");
+      const villageStateModeButtons = [...document.querySelectorAll("[data-village-state-mode]")];
+      const villageStatePhaseFields = document.getElementById("village-state-phase-fields");
+      const villageStatePlayerFields = document.getElementById("village-state-player-fields");
+      const villageStatePhaseSelect = document.getElementById("village-state-phase");
+      const villageStateCurrentPhase = document.getElementById("village-state-current-phase");
       const villageStatePlayerSelect = document.getElementById("village-state-player");
       const villageStateActionSelect = document.getElementById("village-state-action");
       const villageStateRoleField = document.getElementById("village-state-role-field");
@@ -295,6 +324,25 @@
         clearTimeout(showVillageStateToast.timer);
         showVillageStateToast.timer = setTimeout(() => villageStateToast.classList.remove("visible"), 2600);
       }
+      const villageDayStages = new Set(["dawn", "accusation", "barber_shot", "barber_result", "alien_guess", "alien_result", "final_vote", "servant_choice", "hunter_shot", "day_end", "game_over"]);
+      let villageStateMode = "phase";
+      function currentVillagePhase() {
+        return villageDayStages.has(state.stage) ? "day" : "night";
+      }
+      function updateVillagePhaseForm() {
+        const current = currentVillagePhase();
+        villageStateCurrentPhase.textContent = current === "day" ? L.village_state_day : L.village_state_night;
+        villageStatePhaseSelect.value = current === "day" ? "night" : "day";
+        villageStateApplyButton.disabled = false;
+      }
+      function setVillageStateMode(mode) {
+        villageStateMode = mode === "player" ? "player" : "phase";
+        villageStateModeButtons.forEach(button => button.classList.toggle("active", button.dataset.villageStateMode === villageStateMode));
+        villageStatePhaseFields.hidden = villageStateMode !== "phase";
+        villageStatePlayerFields.hidden = villageStateMode !== "player";
+        if (villageStateMode === "phase") updateVillagePhaseForm();
+        else updateVillageStateForm(true);
+      }
       function populateVillageStateRoles() {
         villageStateRoleSelect.innerHTML = Object.entries(roleMeta)
           .map(([role, meta]) => `<option value="${role}">${escapeHtml(meta.name)}</option>`)
@@ -302,7 +350,7 @@
       }
       function populateVillageStatePlayers(selectedId = null) {
         villageStatePlayerSelect.innerHTML = state.players
-          .map(item => `<option value="${item.id}">#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)} — ${item.alive ? L.alive : L.eliminated}</option>`)
+          .map(item => `<option value="${item.id}">#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)} · ${escapeHtml(roleMeta[item.role]?.name || item.role)} · ${item.alive ? L.alive : L.eliminated}</option>`)
           .join("");
         const wanted = player(selectedId) || state.players[0];
         if (wanted) villageStatePlayerSelect.value = String(wanted.id);
@@ -330,7 +378,7 @@
         if (!state.players.length) return;
         populateVillageStateRoles();
         populateVillageStatePlayers();
-        updateVillageStateForm(true);
+        setVillageStateMode("phase");
         if (typeof villageStateDialog.showModal === "function") villageStateDialog.showModal();
       }
       function removePlayerFromCurrentSelections(id) {
@@ -437,7 +485,11 @@
           state.pyromaniacIgnitedIds = [];
         }
         if (newRole === "infecting_fathers") state.infectionAvailable = true;
-        if (newRole === "shepherds" && state.sheepRemaining <= 0) state.sheepRemaining = 3;
+        if (newRole === "shepherds" && state.sheepRemaining <= 0) {
+          state.sheepInitialCount = 3;
+          state.sheepRemaining = 3;
+          state.shepherdStockConfigured = true;
+        }
         if (newRole === "witches") {
           state.lifePotion = true;
           state.deathPotion = true;
@@ -445,7 +497,42 @@
         if (newRole === "cupids" && !state.coupleIds.length) state.cupidLinked = false;
         return true;
       }
+      function resetStateForManualPhase(incrementRound = false) {
+        if (incrementRound) state.round += 1;
+        state.eventRound = null;
+        state.protectedId = null; state.wolfTargetId = null; state.wolfInitialTargetId = null; state.wolfTargetChanged = false; state.wolfResolvedTargetId = null;
+        state.prostituteTargetId = null; state.blockedPlayerId = null; state.pyromaniacAction = null; state.pyromaniacDousedIds = []; state.pyromaniacIgnitedIds = [];
+        state.infectionAttempted = false; state.infectionSucceeded = false; state.infectedPlayerId = null; state.whiteWolfTargetId = null;
+        state.bearPlayerId = null; state.bearGrowled = null; state.bearNeighborIds = [];
+        state.shepherdLastResults = []; state.shepherdReportedThisNight = false; state.shepherdWasBlocked = false;
+        state.judgeFirstId = null; state.judgeSecondId = null; state.judgeSameClan = null;
+        state.silencedPlayerId = null; state.talkativePlayerId = null; state.assignedWord = ""; state.talkativeRevealVisible = false;
+        state.witchSave = false; state.witchKillId = null; state.seerTargetId = null; state.seerDisplayedRole = null; state.seerWasBlocked = false;
+        state.ancientResistedPlayerId = null; state.lostVillagePowerIds = []; state.pendingHunterId = null; state.pendingHunterSource = null; state.hunterShotRecords = [];
+        state.deaths = []; state.qualifiers = []; state.accusationDraftIds = []; state.lastVote = null; state.voteDeathIds = []; state.voteOutcome = null; state.voteRevealedRole = null;
+        state.servantAccepted = null; state.specialReturnStage = null;
+        state.voteBreakdown = {normal: [], cancelled: [], secret: [], totals: []};
+        state.winner = null;
+      }
       function applyVillageStateModification() {
+        if (villageStateMode === "phase") {
+          const desiredPhase = villageStatePhaseSelect.value;
+          if (!["night", "day"].includes(desiredPhase)) return;
+          const previousPhase = currentVillagePhase();
+          resetStateForManualPhase(desiredPhase === "night" && previousPhase === "day");
+          villageStateDialog.close();
+          showVillageStateToast();
+          if (desiredPhase === "night") {
+            nextNightStage("");
+          } else {
+            state.eventRound = state.round;
+            ensureLivingSpeaker();
+            state.stage = "dawn";
+            save();
+            render();
+          }
+          return;
+        }
         const subject = player(villageStatePlayerSelect.value);
         const action = villageStateActionSelect.value;
         if (!subject) return;
@@ -858,9 +945,13 @@
 
       function renderRoles() {
         setHeading(L.preparation, L.secret_distribution);
+        const shepherdSetup = state.players.some(item => item.role === "shepherds")
+          ? `<section class="shepherd-start-setup"><div><span>${L.shepherd_stock_title}</span><strong>${L.shepherd_stock_help}</strong></div><label><span>${L.shepherd_stock_label}</span><select id="shepherd-starting-stock">${Array.from({length: 10}, (_, index) => index + 1).map(count => `<option value="${count}" ${count === state.sheepInitialCount ? "selected" : ""}>${count}</option>`).join("")}</select></label></section>`
+          : "";
         scene.innerHTML = `<div class="scene-kicker">${L.distributed}</div><h1>${L.roles_assigned}</h1>
           <p class="scene-lead">${L.roles_help}</p>
           <div class="reveal-grid">${state.players.map(item => `<div class="reveal-card ${roleMeta[item.role].faction === "wolf" ? "wolf" : ""}"><span>#${String(item.id).padStart(2, "0")} · ${roleMeta[item.role].short}</span><strong>${escapeHtml(item.name)}</strong><small>${setup.role_labels[item.role]}</small></div>`).join("")}</div>
+          ${shepherdSetup}
           <div class="scene-actions">${actionButton(L.begin_night, "begin-night")}</div>`;
       }
 
@@ -1685,6 +1776,14 @@
           state.revealVisible = false;
           state.stage = state.players.length === setup.player_count ? "roles" : "roster";
         } else if (action === "begin-night") {
+          const shepherdStockSelect = document.getElementById("shepherd-starting-stock");
+          if (shepherdStockSelect) {
+            const stock = Number(shepherdStockSelect.value);
+            if (!Number.isInteger(stock) || stock < 1 || stock > 10) return;
+            state.sheepInitialCount = stock;
+            state.sheepRemaining = stock;
+            state.shepherdStockConfigured = true;
+          }
           state.protectedId = null; state.wolfTargetId = null; state.wolfInitialTargetId = null; state.wolfTargetChanged = false; state.prostituteTargetId = null; state.blockedPlayerId = null; state.pyromaniacAction = null; state.pyromaniacDousedIds = []; state.pyromaniacIgnitedIds = []; state.infectionAttempted = false; state.infectionSucceeded = false; state.infectedPlayerId = null; state.whiteWolfTargetId = null; state.bearPlayerId = null; state.bearGrowled = null; state.bearNeighborIds = []; state.shepherdLastResults = []; state.shepherdReportedThisNight = false; state.shepherdWasBlocked = false; state.judgeFirstId = null; state.judgeSecondId = null; state.judgeSameClan = null; state.silencedPlayerId = null; state.talkativePlayerId = null; state.assignedWord = ""; state.talkativeRevealVisible = false; state.witchSave = false; state.witchKillId = null; state.seerTargetId = null; state.seerDisplayedRole = null; state.seerWasBlocked = false; state.ancientResistedPlayerId = null; state.deaths = []; state.voteDeathIds = [];
           nextNightStage(""); return;
         } else if (action === "confirm-cupid") {
@@ -2021,6 +2120,7 @@
         if (confirm(L.restart_confirm)) window.location.href = "{% url 'welcome' %}";
       });
       villageStateOpenButton.addEventListener("click", openVillageStateDialog);
+      villageStateModeButtons.forEach(button => button.addEventListener("click", () => setVillageStateMode(button.dataset.villageStateMode)));
       villageStatePlayerSelect.addEventListener("change", () => updateVillageStateForm(true));
       villageStateActionSelect.addEventListener("change", () => updateVillageStateForm(false));
       villageStateRoleSelect.addEventListener("change", () => updateVillageStateForm(false));

@@ -72,6 +72,9 @@ class RoomFlowTests(TestCase):
         self.assertContains(game, 'id="village-state-phase"')
         self.assertContains(game, "setVillageStateMode")
         self.assertContains(game, "resetStateForManualPhase")
+        self.assertContains(game, "restartDayAfterVillageModification")
+        self.assertContains(game, 'if (phaseBeforeModification === "night")')
+        self.assertContains(game, "resetStateForManualPhase(false)")
         self.assertContains(game, 'state.stage = "dawn"')
         self.assertContains(game, 'nextNightStage("")')
         self.assertContains(game, "applyVillageStateModification")
@@ -372,8 +375,8 @@ class RoomFlowTests(TestCase):
         self.narrator.post(sync_url, json.dumps(state), content_type="application/json")
 
         self.assertEqual(RoomEvent.objects.filter(room=room).count(), 2)
-        self.assertEqual(Client().get(reverse("room_history_api", args=[room.code])).status_code, 403)
-        self.assertEqual(Client().get(reverse("room_history", args=[room.code])).status_code, 403)
+        self.assertEqual(Client().get(reverse("room_history_api", args=[room.code])).status_code, 200)
+        self.assertEqual(Client().get(reverse("room_history", args=[room.code])).status_code, 200)
         history = self.narrator.get(reverse("room_history_api", args=[room.code])).json()
         self.assertEqual([event["type"] for event in history["events"]], ["night", "day"])
         night = history["events"][0]["details"]
@@ -397,7 +400,8 @@ class RoomFlowTests(TestCase):
         self.assertEqual(day["final_totals"], ["Ahmed: 1", "Sarra: 1"])
 
         public_list = Client().get(reverse("room_history_list"))
-        self.assertNotContains(public_list, room.code)
+        self.assertContains(public_list, room.code)
+        self.assertContains(public_list, "Partie en cours")
 
         state.update({"stage": "game_over", "winner": "village"})
         self.narrator.post(sync_url, json.dumps(state), content_type="application/json")
@@ -495,8 +499,14 @@ class RoomFlowTests(TestCase):
         self.narrator.post(reverse("room_start_api", args=[room.code]))
 
         visitor = Client()
-        self.assertNotContains(visitor.get(reverse("room_history_list")), room.code)
-        self.assertEqual(visitor.get(reverse("room_history", args=[room.code])).status_code, 403)
+        guest_history = visitor.get(reverse("room_history_list"))
+        self.assertContains(guest_history, room.code)
+        self.assertContains(guest_history, "Partie en cours")
+        self.assertNotContains(guest_history, 'class="history-continue-button"')
+        self.assertNotContains(guest_history, 'class="history-finish-button"')
+        self.assertNotContains(guest_history, reverse("room_history_delete", args=[room.code]))
+        self.assertEqual(visitor.get(reverse("room_history", args=[room.code])).status_code, 200)
+        self.assertEqual(visitor.get(reverse("room_history_api", args=[room.code])).status_code, 200)
 
         returning_admin = Client()
         returning_admin.post(reverse("home"), {"username": "admin", "password": "admin"})
@@ -504,6 +514,7 @@ class RoomFlowTests(TestCase):
         self.assertContains(history_list, room.code)
         self.assertContains(history_list, 'class="history-continue-button"')
         self.assertContains(history_list, 'class="history-finish-button"')
+        self.assertContains(history_list, 'class="history-delete-button"')
         self.assertContains(history_list, f'name="room_code" value="{room.code}"')
         self.assertEqual(returning_admin.get(reverse("room_history", args=[room.code])).status_code, 200)
 
@@ -528,6 +539,17 @@ class RoomFlowTests(TestCase):
         self.assertContains(archive, room.code)
         self.assertContains(archive, reverse("room_history_delete", args=[room.code]))
         self.assertNotContains(archive, finish_url)
+
+    def test_authenticated_narrator_can_delete_an_active_game_directly(self):
+        room = self.create_room()
+        self.narrator.post(reverse("room_start_api", args=[room.code]))
+        delete_url = reverse("room_history_delete", args=[room.code])
+
+        self.assertEqual(Client().post(delete_url).status_code, 403)
+        response = self.narrator.post(delete_url)
+
+        self.assertRedirects(response, reverse("room_history_list"), fetch_redirect_response=False)
+        self.assertFalse(GameRoom.objects.filter(code=room.code).exists())
 
     def test_room_join_rejects_non_numeric_code(self):
         response = Client().post(

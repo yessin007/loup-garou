@@ -514,6 +514,28 @@
         state.voteBreakdown = {normal: [], cancelled: [], secret: [], totals: []};
         state.winner = null;
       }
+      function restartDayAfterVillageModification() {
+        state.qualifiers = [];
+        state.accusationDraftIds = [];
+        state.lastVote = null;
+        state.voteDeathIds = [];
+        state.voteOutcome = null;
+        state.voteRevealedRole = null;
+        state.voteBreakdown = {normal: [], cancelled: [], secret: [], totals: []};
+        state.pendingHunterId = null;
+        state.pendingHunterSource = null;
+        state.specialReturnStage = null;
+        state.servantAccepted = null;
+        state.barberPlayerId = null;
+        state.barberTargetId = null;
+        state.barberHit = null;
+        state.alienLastGuessCorrect = null;
+        state.alienLastGuessResults = [];
+        state.winner = null;
+        ensureLivingSpeaker();
+        state.eventRound = state.round;
+        state.stage = "dawn";
+      }
       function applyVillageStateModification() {
         if (villageStateMode === "phase") {
           const desiredPhase = villageStatePhaseSelect.value;
@@ -536,6 +558,7 @@
         const subject = player(villageStatePlayerSelect.value);
         const action = villageStateActionSelect.value;
         if (!subject) return;
+        const phaseBeforeModification = currentVillagePhase();
 
         let changed = false;
         if (action === "disqualify" && subject.alive) {
@@ -553,14 +576,16 @@
         }
         if (!changed) return;
 
-        if (state.stage === "final_vote" && !state.qualifiers.some(id => player(id)?.alive)) state.stage = "accusation";
-        if (state.stage === "game_over") state.stage = "day_end";
-        state.winner = null;
-        ensureLivingSpeaker();
-        save();
-        render();
         villageStateDialog.close();
         showVillageStateToast();
+        if (phaseBeforeModification === "night") {
+          resetStateForManualPhase(false);
+          nextNightStage("");
+          return;
+        }
+        restartDayAfterVillageModification();
+        save();
+        render();
       }
       function showUndoToast() {
         undoToast.classList.add("visible");

@@ -30,6 +30,10 @@
                   {% csrf_token %}
                   <button class="history-finish-button" type="submit"><span aria-hidden="true">■</span><strong>{{ room.finish_game }}</strong></button>
                 </form>
+                <form method="post" action="{% url 'room_history_delete' game_room.code %}" onsubmit="return confirm('{{ room.delete_history_confirm|escapejs }}');">
+                  {% csrf_token %}
+                  <button class="history-delete-button" type="submit" aria-label="{{ room.delete_history }} {{ game_room.code }}"><span aria-hidden="true">×</span><strong>{{ room.delete_history }}</strong></button>
+                </form>
               </div>
             {% elif can_delete_history %}
               <form method="post" action="{% url 'room_history_delete' game_room.code %}" onsubmit="return confirm('{{ room.delete_history_confirm|escapejs }}');">

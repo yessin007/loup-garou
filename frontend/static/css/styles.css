@@ -973,8 +973,9 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .history-room-entry { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: stretch; gap: 8px; }
 .history-room-list .history-room-link { margin-top: 0; align-items: center; }
 .history-room-entry > form { display: flex; }
-.history-active-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.history-active-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
 .history-active-actions form { display: flex; }
+.history-active-actions .history-delete-button { width: 100%; min-width: 120px; }
 .history-delete-button { justify-content: center; gap: 8px; width: auto; min-width: 112px; min-height: 100%; margin: 0; border: 1px solid rgba(197,74,65,.32); color: #e49a91; background: rgba(145,45,39,.1); }
 .history-continue-button { justify-content: center; gap: 8px; width: auto; min-width: 150px; min-height: 100%; margin: 0; border: 1px solid rgba(88,170,119,.38); color: #9ed6b3; background: rgba(48,119,76,.12); }
 .history-continue-button:hover { border-color: rgba(88,170,119,.65); background: rgba(48,119,76,.2); }
@@ -1163,7 +1164,8 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
   .history-event li { min-width: 0; padding: 11px 10px; }
   .history-room-entry { grid-template-columns: minmax(0, 1fr) 48px; }
   .history-room-entry.active { grid-template-columns: 1fr; }
-  .history-room-entry.active .history-continue-button, .history-room-entry.active .history-finish-button { width: 100%; min-height: 48px; }
+  .history-room-entry.active .history-continue-button, .history-room-entry.active .history-finish-button, .history-room-entry.active .history-delete-button { width: 100%; min-width: 0; min-height: 48px; padding: 8px 6px; }
+  .history-active-actions .history-delete-button strong { position: static; width: auto; height: auto; overflow: visible; clip: auto; }
   .history-delete-button { min-width: 48px; padding: 8px; }
   .history-delete-button strong { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
   .room-shell { width: min(100% - 24px, 960px); padding-top: 34px; }

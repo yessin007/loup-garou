@@ -148,7 +148,7 @@ def room_for_narrator(request, code):
 
 
 def can_view_room_history(request, room):
-    return room.status == GameRoom.Status.FINISHED or bool(request.session.get("authenticated"))
+    return room.status in {GameRoom.Status.ACTIVE, GameRoom.Status.FINISHED} or bool(request.session.get("authenticated"))
 
 
 def player_label(state, player_id):
@@ -342,10 +342,7 @@ def room_qr(request, code):
 
 def room_history_list(request):
     rooms = GameRoom.objects.annotate(event_count=Count("events"))
-    if request.session.get("authenticated"):
-        rooms = rooms.filter(Q(status=GameRoom.Status.ACTIVE) | Q(status=GameRoom.Status.FINISHED))
-    else:
-        rooms = rooms.filter(event_count__gt=0, status=GameRoom.Status.FINISHED)
+    rooms = rooms.filter(Q(status=GameRoom.Status.ACTIVE) | Q(status=GameRoom.Status.FINISHED))
     rooms = rooms.order_by("-updated_at")
     return render(request, "pages/room_history_list.html", {
         "history_rooms": rooms,
@@ -368,7 +365,11 @@ def room_history_finish(request, code):
 def room_history_delete(request, code):
     if not request.session.get("authenticated"):
         raise PermissionDenied
-    room = get_object_or_404(GameRoom, code=code, status=GameRoom.Status.FINISHED)
+    room = get_object_or_404(
+        GameRoom,
+        Q(status=GameRoom.Status.ACTIVE) | Q(status=GameRoom.Status.FINISHED),
+        code=code,
+    )
     room.delete()
     return redirect("room_history_list")
 

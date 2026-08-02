@@ -40,8 +40,8 @@
           <input id="password" name="password" type="password" autocomplete="current-password" placeholder="{{ ui.password_placeholder }}" required />
 
           <button type="submit">{{ ui.enter }} <span aria-hidden="true">&#8594;</span></button>
+          <a class="role-guide-link room-entry-link" href="{% url 'register' %}">Créer un compte <span aria-hidden="true">&#8594;</span></a>
           <a class="role-guide-link" href="{% url 'roles_guide' %}">{{ ui.roles_guide_link }} <span aria-hidden="true">&#8594;</span></a>
-          <p class="demo-hint">Super admin : <strong>yessin / yessin</strong></p>
         </form>
       </section>
       <p class="chapter">{{ ui.chapter }} <span></span> {{ ui.village_sleeps }}</p>

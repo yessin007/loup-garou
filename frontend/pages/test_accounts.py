@@ -35,6 +35,35 @@ class AccountFlowTests(TestCase):
         })
         self.assertFalse(get_user_model().objects.get(username="rim").groups.exists())
 
+    def test_visitor_registers_as_player_and_appears_in_admin_list(self):
+        client = Client()
+        response = client.post(reverse("register"), {
+            "username": "firas",
+            "password": "secret",
+            "password_confirmation": "secret",
+        })
+        self.assertRedirects(response, reverse("room_portal"), fetch_redirect_response=False)
+        account = get_user_model().objects.get(username="firas")
+        self.assertTrue(account.is_active)
+        self.assertFalse(account.is_superuser)
+        self.assertFalse(account.groups.exists())
+        self.assertEqual(int(client.session["_auth_user_id"]), account.id)
+
+        admin = Client()
+        admin.force_login(self.super_admin)
+        users = admin.get(reverse("user_management"))
+        self.assertContains(users, "firas")
+        self.assertContains(users, "Joueur · Actif")
+
+    def test_registration_rejects_duplicate_username(self):
+        response = Client().post(reverse("register"), {
+            "username": "SARRA",
+            "password": "secret",
+            "password_confirmation": "secret",
+        })
+        self.assertContains(response, "existe déjà")
+        self.assertEqual(get_user_model().objects.filter(username__iexact="sarra").count(), 1)
+
     def test_player_only_sees_finished_games_they_played(self):
         room = GameRoom.objects.create(player_count=8, composition={}, narrator=self.narrator)
         RoomPlayer.objects.create(room=room, name="Sarra", user=self.player)

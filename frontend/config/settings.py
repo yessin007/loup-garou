@@ -8,9 +8,6 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 DEBUG = os.getenv("DJANGO_DEBUG", "1") == "1"
 SECRET_KEY = os.getenv("DJANGO_SECRET_KEY", "dev-secret-key-change-me")
 NARRATOR_CREDENTIALS = {
-    os.getenv("PUBLIC_NARRATOR_USERNAME", "admin"): os.getenv(
-        "PUBLIC_NARRATOR_PASSWORD", "admin"
-    ),
     os.getenv("PRIVATE_NARRATOR_USERNAME", "yessin"): os.getenv(
         "PRIVATE_NARRATOR_PASSWORD", "yessin"
     ),

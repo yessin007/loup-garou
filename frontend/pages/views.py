@@ -303,6 +303,33 @@ def dashboard(request):
     return redirect("welcome" if is_narrator(request.user) else "room_portal")
 
 
+def register(request):
+    if request.user.is_authenticated:
+        return redirect("dashboard")
+
+    error = None
+    username = ""
+    if request.method == "POST":
+        username = request.POST.get("username", "").strip()
+        password = request.POST.get("password", "")
+        password_confirmation = request.POST.get("password_confirmation", "")
+        user_model = get_user_model()
+        if not username:
+            error = "Le nom d’utilisateur est obligatoire."
+        elif user_model.objects.filter(username__iexact=username).exists():
+            error = "Ce nom d’utilisateur existe déjà."
+        elif len(password) < 4:
+            error = "Le mot de passe doit contenir au moins 4 caractères."
+        elif password != password_confirmation:
+            error = "Les deux mots de passe ne correspondent pas."
+        else:
+            user = user_model.objects.create_user(username=username, password=password)
+            login(request, user)
+            return redirect("room_portal")
+
+    return render(request, "pages/register.html", {"error": error, "username": username})
+
+
 def user_management(request):
     if not request.user.is_authenticated or not request.user.is_superuser:
         raise PermissionDenied

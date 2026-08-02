@@ -42,7 +42,7 @@ Render, choisir **New > Blueprint**, connecter ce depot puis confirmer avec
 
 Le Blueprint genere une cle Django aleatoire et relie automatiquement
 `DATABASE_URL` a la base PostgreSQL. L'administration est disponible sur
-`/admin/` avec `yessin / yessin` (a changer en production).
+`/admin/` avec le compte configure par les variables `ADMIN_*`.
 
 ### Configuration manuelle alternative
 
@@ -88,7 +88,7 @@ La consultation de `/historique/` demande maintenant une connexion et applique l
 
 ## Comptes et acces
 
-- `yessin / yessin` est le super-admin initial (changez ce mot de passe en production).
+- Le super-admin initial est configuré avec les variables d'environnement `ADMIN_*`.
 - Le super-admin cree les comptes `Joueur` et `Narrateur` depuis `/utilisateurs/`.
 - Un narrateur peut creer une partie, la reprendre, jouer lui-meme et consulter ses parties terminees.
 - Un joueur peut rejoindre une room et ne voit dans son historique que ses propres parties terminees.

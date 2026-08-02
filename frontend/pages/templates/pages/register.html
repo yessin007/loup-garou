@@ -1,0 +1,38 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="{{ language_code }}" dir="{{ language_dir }}">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#080d12" />
+    {% include "pages/_pwa_head.html" %}
+    <title>Créer un compte | Loup Garou</title>
+    <link rel="icon" href="{% static 'images/favicon-wolf.png' %}" type="image/png" />
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+  </head>
+  <body class="login-page">
+    <div class="floating-language">{% include "pages/_language_selector.html" %}</div>
+    <main class="login-shell">
+      <section class="login-content" aria-labelledby="register-title">
+        <p class="eyebrow">Nouveau joueur</p>
+        <h1 id="register-title"><span>Créer</span> un compte</h1>
+        <form class="login-card" method="post" novalidate>
+          {% csrf_token %}
+          <div class="form-heading">
+            <p class="form-kicker">Inscription joueur</p>
+            <h2>Rejoins le village</h2>
+          </div>
+          {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+          <label for="username">Nom d’utilisateur</label>
+          <input id="username" name="username" value="{{ username }}" maxlength="150" autocomplete="username" required autofocus />
+          <label for="password">Mot de passe</label>
+          <input id="password" name="password" type="password" minlength="4" autocomplete="new-password" required />
+          <label for="password-confirmation">Confirmer le mot de passe</label>
+          <input id="password-confirmation" name="password_confirmation" type="password" minlength="4" autocomplete="new-password" required />
+          <button type="submit">Créer mon compte <span aria-hidden="true">→</span></button>
+          <a class="role-guide-link" href="{% url 'home' %}">J’ai déjà un compte <span aria-hidden="true">→</span></a>
+        </form>
+      </section>
+    </main>
+  </body>
+</html>

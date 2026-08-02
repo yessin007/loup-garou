@@ -2,6 +2,7 @@ import json
 from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
+from django.contrib.auth.models import Group
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
@@ -18,7 +19,7 @@ from .translations import ROLES
 class RoomFlowTests(TestCase):
     def setUp(self):
         self.narrator = Client()
-        self.narrator.post(reverse("home"), {"username": "admin", "password": "admin"})
+        self.narrator.post(reverse("home"), {"username": "yessin", "password": "yessin"})
         self.composition = {role: 0 for role in ROLES["fr"]}
         self.composition.update({"simple_wolves": 2, "villagers": 6})
 
@@ -421,7 +422,7 @@ class RoomFlowTests(TestCase):
 
     def test_narrator_login_accepts_text_credentials_only(self):
         login_page = Client().get(reverse("home"))
-        self.assertContains(login_page, "yessin / yessin")
+        self.assertNotContains(login_page, "yessin / yessin")
         self.assertNotContains(login_page, 'inputmode="numeric"')
 
         old_credentials = Client()
@@ -429,11 +430,10 @@ class RoomFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertNotIn("authenticated", old_credentials.session)
 
-        text_credentials = Client()
-        response = text_credentials.post(reverse("home"), {"username": "admin", "password": "admin"})
-        self.assertRedirects(response, reverse("dashboard"), fetch_redirect_response=False)
-        self.assertTrue(text_credentials.session["authenticated"])
-        self.assertEqual(text_credentials.session["narrator_username"], "admin")
+        removed_admin = Client()
+        response = removed_admin.post(reverse("home"), {"username": "admin", "password": "admin"})
+        self.assertEqual(response.status_code, 200)
+        self.assertNotIn("authenticated", removed_admin.session)
 
         private_credentials = Client()
         response = private_credentials.post(
@@ -447,7 +447,9 @@ class RoomFlowTests(TestCase):
     def test_public_and_private_narrators_can_run_separate_rooms_at_the_same_time(self):
         public_narrator = Client()
         private_narrator = Client()
-        public_narrator.post(reverse("home"), {"username": "admin", "password": "admin"})
+        second_narrator = get_user_model().objects.create_user("narrateur-test", password="test-password")
+        second_narrator.groups.add(Group.objects.get_or_create(name="narrators")[0])
+        public_narrator.force_login(second_narrator)
         private_narrator.post(reverse("home"), {"username": "yessin", "password": "yessin"})
 
         setup = {"player_count": 8, **self.composition}
@@ -460,7 +462,7 @@ class RoomFlowTests(TestCase):
         private_code = private_narrator.session["game_setup"]["room_code"]
         self.assertNotEqual(public_code, private_code)
         self.assertEqual(GameRoom.objects.filter(code__in=[public_code, private_code]).count(), 2)
-        self.assertEqual(public_narrator.session["narrator_username"], "admin")
+        self.assertEqual(public_narrator.session.get("narrator_username"), None)
         self.assertEqual(private_narrator.session["narrator_username"], "yessin")
 
     def test_tunisian_pages_omit_removed_intro_copy(self):
@@ -787,7 +789,7 @@ class RoomFlowTests(TestCase):
         self.assertEqual(visitor.get(reverse("room_history_api", args=[room.code])).status_code, 403)
 
         returning_admin = Client()
-        returning_admin.post(reverse("home"), {"username": "admin", "password": "admin"})
+        returning_admin.post(reverse("home"), {"username": "yessin", "password": "yessin"})
         history_list = returning_admin.get(reverse("room_history_list"))
         self.assertContains(history_list, room.code)
         self.assertContains(history_list, 'class="history-continue-button"')
@@ -860,7 +862,7 @@ class RoomFlowTests(TestCase):
         )
 
         returning_narrator = Client()
-        returning_narrator.post(reverse("home"), {"username": "admin", "password": "admin"})
+        returning_narrator.post(reverse("home"), {"username": "yessin", "password": "yessin"})
         response = returning_narrator.post(
             reverse("welcome"),
             {"action": "resume", "room_code": room.code},
@@ -883,7 +885,7 @@ class RoomFlowTests(TestCase):
         )
 
         returning_narrator = Client()
-        returning_narrator.post(reverse("home"), {"username": "admin", "password": "admin"})
+        returning_narrator.post(reverse("home"), {"username": "yessin", "password": "yessin"})
         response = returning_narrator.post(
             reverse("welcome"),
             {"action": "resume", "room_code": room.code},

@@ -87,9 +87,9 @@ class AccountFlowTests(TestCase):
         room = GameRoom.objects.create(player_count=8, composition={})
         client = Client()
         client.force_login(self.player)
-        response = client.post(reverse("room_portal"), {"room_code": room.code, "player_name": "Sarra"})
+        response = client.post(reverse("room_portal"), {"room_code": room.code})
         self.assertRedirects(response, reverse("room_player", args=[room.code]), fetch_redirect_response=False)
-        self.assertTrue(RoomPlayer.objects.filter(room=room, user=self.player, name="Sarra").exists())
+        self.assertTrue(RoomPlayer.objects.filter(room=room, user=self.player, name="sarra").exists())
 
     def test_room_link_survives_login(self):
         room = GameRoom.objects.create(player_count=8, composition={})

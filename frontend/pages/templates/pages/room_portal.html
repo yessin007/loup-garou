@@ -26,7 +26,7 @@
           {% csrf_token %}<input type="hidden" name="action" value="join" />
           <span>01</span><h2>{{ room.join }}</h2>
           <label>{{ room.room_code }}<input name="room_code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" value="{{ initial_code }}" required /></label>
-          <label>{{ room.player_name }}<input name="player_name" maxlength="40" autocomplete="name" value="{{ default_player_name }}" required /></label>
+          <p class="joined-account-name">Nom dans la partie : <strong>{{ request.user.username }}</strong></p>
           <button type="submit">{{ room.join }} <span>→</span></button>
         </form>
         {% if narrator_mode %}<section class="room-card general-qr-card">

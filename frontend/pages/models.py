@@ -42,7 +42,7 @@ class GameRoom(models.Model):
 
 class RoomPlayer(models.Model):
     room = models.ForeignKey(GameRoom, related_name="room_players", on_delete=models.CASCADE)
-    name = models.CharField(max_length=40)
+    name = models.CharField(max_length=150)
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     role = models.CharField(max_length=40, blank=True)
     user = models.ForeignKey(

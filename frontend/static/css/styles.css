@@ -649,8 +649,8 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .village-info-section .seer-summary strong { font-size: 1.12rem; }
 .village-info-section .seer-summary p { font-size: .95rem; font-weight: 700; line-height: 1.55; }
 .village-info-section .judge-summary strong { line-height: 1.7; }
-.village-info-section .judge-summary mark, .village-info-section .seer-result-summary mark { padding: 3px 7px; color: #76bd90; background: rgba(74,155,105,.14); }
-.day-mode .village-info-section .judge-summary mark, .day-mode .village-info-section .seer-result-summary mark { color: #2f7449; background: rgba(63,140,92,.13); }
+.village-info-section .judge-summary mark, .village-info-section .role-bilan-summary mark, .village-info-section .final-vision mark { display: inline-block; padding: 3px 7px; color: #76bd90; background: rgba(74,155,105,.14); }
+.day-mode .village-info-section .judge-summary mark, .day-mode .village-info-section .role-bilan-summary mark, .day-mode .village-info-section .final-vision mark { color: #2f7449; background: rgba(63,140,92,.13); }
 .day-instruction-section { border-left: 4px solid var(--ember); background: rgba(199,139,69,.06); }
 .day-instruction-section > h2 { color: var(--ember-light); }
 .day-instruction-section .day-effects { max-width: none; margin: 0 0 14px; }

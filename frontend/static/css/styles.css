@@ -500,8 +500,10 @@ button.header-action { justify-self: end; width: auto; margin: 0; padding: 8px 1
 .scene-actions { display: flex; gap: 12px; margin-top: 32px; }
 button.scene-action { width: min(100%, 310px); margin: 0; }
 button.scene-action.secondary { border: 1px solid rgba(255,255,255,.12); color: #a4aeb2; background: transparent; }
+button.scene-action.danger-action { border-color: rgba(194,77,61,.48); color: #e69a8e; background: rgba(138,43,35,.12); }
 button.scene-action.test-action { width: auto; min-width: 190px; padding: 10px 13px; font-size: .68rem; }
 button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
+.wake-player-names { display: inline; color: var(--ember-light); font-size: .42em; white-space: normal; }
 
 .name-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; margin: 32px 0; }
 .name-grid label { display: grid; grid-template-columns: 35px 1fr; align-items: center; margin: 0; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.025); }
@@ -537,6 +539,18 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .shepherd-start-setup label { margin: 0; }
 .shepherd-start-setup label > span { display: block; margin-bottom: 8px; color: #8d999f; font-size: .68rem; text-transform: uppercase; }
 .scene-panel .shepherd-start-setup select { width: 100%; margin: 0; }
+.bear-seating-setup { width: min(100%, 650px); margin-top: 24px; padding: 20px; border: 1px solid rgba(104,168,204,.3); background: rgba(63,126,163,.07); }
+.bear-seating-heading > span, .bear-seating-heading > strong { display: block; }
+.bear-seating-heading > span { color: #83b8d5; font-size: .66rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; }
+.bear-seating-heading > strong { margin-top: 8px; color: #aeb8bd; font-size: .82rem; line-height: 1.55; }
+.bear-seating-setup ol { display: grid; gap: 6px; margin: 18px 0 0; padding: 0; list-style: none; }
+.bear-seating-setup li { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; min-height: 52px; border: 1px solid rgba(255,255,255,.08); background: rgba(255,255,255,.025); }
+.bear-seating-setup li > span { color: #64879a; font: 700 .7rem "Cinzel", serif; text-align: center; }
+.bear-seating-setup li > strong { min-width: 0; padding: 0 10px; font: 600 .8rem "Cinzel", serif; overflow-wrap: anywhere; }
+.bear-seating-setup li > div { display: flex; align-self: stretch; }
+.bear-seating-setup li button { width: 48px; min-height: 48px; border: 0; border-left: 1px solid rgba(255,255,255,.08); color: #acd1e4; background: rgba(70,132,166,.1); font-size: 1rem; }
+.bear-seating-setup li button:disabled { opacity: .2; }
+.bear-seating-setup > p { margin: 14px 0 0; color: #81929b; font-size: .68rem; line-height: 1.5; }
 
 .moon-orbit { position: absolute; z-index: -1; top: 40px; right: 20px; display: grid; place-items: center; width: 240px; height: 240px; border: 1px solid rgba(167,197,215,.06); border-radius: 50%; box-shadow: inset 0 0 60px rgba(123,161,184,.025), 0 0 80px rgba(123,161,184,.03); }
 .moon-orbit::before, .moon-orbit::after { position: absolute; border: 1px solid rgba(167,197,215,.04); border-radius: 50%; content: ""; }
@@ -937,7 +951,7 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .room-hero { max-width: 680px; margin-bottom: 38px; }
 .room-hero h1 { margin: 9px 0 14px; font-size: clamp(2.5rem, 7vw, 5rem); }
 .room-hero > p:last-child { color: #8e9ba1; line-height: 1.7; }
-.room-portals { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.room-portals { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
 .room-card { display: flex; flex-direction: column; padding: clamp(22px, 4vw, 36px); border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.025); }
 .room-card > span { color: var(--ember); font: 700 .7rem "Cinzel", serif; }
 .room-card h2 { margin: 9px 0 25px; font-size: 1.5rem; }
@@ -945,6 +959,18 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .room-card input { margin-top: 7px; text-transform: uppercase; }
 .room-card button { margin-top: auto; padding-top: 15px; padding-bottom: 15px; }
 .room-card > p { margin: 0 0 28px; color: #8e9ba1; line-height: 1.65; }
+.general-qr-card img { align-self: center; width: min(100%, 210px); margin-bottom: 20px; padding: 8px; background: #fff; }
+.general-qr-card > p { margin-bottom: 0; }
+.redistribution-editor { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(240px, .65fr); gap: 16px; width: min(100%, 980px); margin: 28px 0; }
+.redistribution-editor > div { padding: 18px; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.025); }
+.redistribution-editor h2 { margin: 0 0 16px; color: var(--ember-light); font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
+.redistribution-role-list, .redistribution-player-list { display: grid; gap: 7px; }
+.redistribution-role-row, .redistribution-player-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 46px; padding: 7px 10px; border: 1px solid rgba(255,255,255,.07); color: #aeb8bd; font-size: .72rem; background: rgba(255,255,255,.02); }
+.redistribution-role-row > div { display: grid; grid-template-columns: 34px 44px 34px; align-items: center; }
+.redistribution-role-row button { width: 34px; min-height: 34px; margin: 0; padding: 0; }
+.redistribution-role-row input { width: 44px; min-height: 34px; padding: 5px; text-align: center; }
+.redistribution-player-row input { width: auto; min-height: 0; }
+#redistribution-total { display: block; margin-top: 16px; color: var(--ivory); }
 .room-card-action { display: flex; align-items: center; justify-content: space-between; min-height: 48px; margin-top: auto; padding: 14px 18px; border: 1px solid rgba(199,139,69,.38); color: var(--ivory); text-decoration: none; background: rgba(199,139,69,.08); }
 .room-code-chip { display: inline-grid; place-items: center; min-height: 34px; padding: 6px 11px; border: 1px solid rgba(199,139,69,.4); color: var(--ember-light); font: 700 .75rem "Cinzel", serif; letter-spacing: .15em; background: rgba(199,139,69,.08); }
 .player-secret-card { padding: clamp(28px, 7vw, 55px); border: 1px solid rgba(255,255,255,.1); text-align: center; background: rgba(255,255,255,.025); }
@@ -1096,6 +1122,7 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 
 @media (max-width: 760px) {
   .room-portals { grid-template-columns: 1fr; }
+  .redistribution-editor { grid-template-columns: 1fr; }
   .history-event { grid-template-columns: 72px 1fr; }
   .history-event ul { grid-template-columns: 1fr; }
   .history-timeline::before { left: 35px; }
@@ -1410,6 +1437,7 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .bilan-mode .phase-bilan-stats strong { font-size: 1.9rem; }
 .bilan-mode .phase-bilan-stats span { font-size: .68rem; }
 .bilan-mode .bilan-section > h2 { font-size: 1.38rem; }
+.bilan-mode .night-death-section, .bilan-mode .village-info-section, .bilan-mode .day-instruction-section { text-transform: uppercase; }
 .bilan-mode .night-death-row strong { font-size: 1.34rem; }
 .bilan-mode .night-death-row span { font-size: 1.22rem; }
 .bilan-mode .peace-card { font-size: 1.12rem; line-height: 1.6; }

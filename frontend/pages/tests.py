@@ -97,6 +97,11 @@ class RoomFlowTests(TestCase):
         self.assertContains(game, 'class="bilan-section night-death-section"')
         self.assertContains(game, 'class="bilan-section village-info-section"')
         self.assertContains(game, 'class="bilan-section day-instruction-section"')
+        self.assertContains(game, 't("died_tonight_role", {role: escapeHtml(roleMeta[victim.role].name)})')
+        self.assertNotContains(game, '<strong>#${String(id).padStart(2, "0")} · ${escapeHtml(victim.name)}</strong>')
+        self.assertContains(game, 't("seer_saw_name", {name: escapeHtml(seerTarget.name)})')
+        self.assertContains(game, '${L.judge_saw} <mark>${judgeVerdict}</mark>')
+        self.assertContains(game, '${L.speaking_starts} ${escapeHtml(speaker.name)}')
         self.assertContains(game, 'classList.toggle("bilan-mode"')
         self.assertContains(game, 'class="bear-neighbor-card ${factionClass}"')
         self.assertContains(game, "status.leftNeighbor")
@@ -107,6 +112,11 @@ class RoomFlowTests(TestCase):
         self.assertNotContains(game, "if (!rows.length || rows.some")
         self.assertContains(game, "max > alive().length / 2")
         self.assertContains(game, '"insufficient_majority"')
+        self.assertContains(game, 'data-action="majority-eliminate"')
+        self.assertContains(game, 'selected.length !== 1')
+        self.assertContains(game, 'confirm(L.accusation_majority_confirm)')
+        self.assertContains(game, 'state.stage = "servant_choice"')
+        self.assertContains(game, 'finalizeVoteDeath()')
 
     def test_barber_kills_only_a_wolf_or_dies_with_a_non_wolf_target(self):
         self.create_room()
@@ -114,20 +124,21 @@ class RoomFlowTests(TestCase):
         self.assertContains(game, 'const signalStages = ["dawn", "accusation", "final_vote"]')
         self.assertContains(
             game,
-            'return barberPowerAvailable() && !isRoleBlocked("barbers")',
+            "return barberPowerAvailable()",
         )
         self.assertContains(
+            game,
+            "return alienPowerAvailable()",
+        )
+        self.assertNotContains(
+            game,
+            'return barberPowerAvailable() && !isRoleBlocked("barbers")',
+        )
+        self.assertNotContains(
             game,
             'return alienPowerAvailable() && !isRoleBlocked("aliens")',
         )
-        self.assertContains(
-            game,
-            '"cerberus-blocked-action"',
-        )
-        self.assertContains(
-            game,
-            "L.cerberus_day_blocked",
-        )
+        self.assertNotContains(game, "L.cerberus_day_blocked")
         self.assertContains(
             game,
             "state.qualifiers.map(player).filter(item => item?.alive)",
@@ -167,6 +178,54 @@ class RoomFlowTests(TestCase):
         guide = Client().get(reverse("roles_guide"))
         self.assertContains(guide, "Chaperon Rouge")
         self.assertContains(guide, "Protection bloquée par le Loup Cerbère")
+
+    def test_bear_uses_narrator_defined_circular_seating_order(self):
+        self.composition.update({"bears": 1, "villagers": 5})
+        self.create_room()
+        game = self.narrator.get(reverse("game"))
+        self.assertContains(game, "seatingOrderIds: []")
+        self.assertContains(game, "function normalizedSeatingOrder()")
+        self.assertContains(game, "function moveSeat(playerId, direction)")
+        self.assertContains(game, 'class="bear-seating-setup"')
+        self.assertContains(game, 'data-action="move-seat"')
+        self.assertContains(
+            game,
+            "const seated = normalizedSeatingOrder().map(player).filter(item => item?.alive)",
+        )
+        self.assertContains(
+            game,
+            "seated[(index - 1 + seated.length) % seated.length]",
+        )
+        self.assertContains(
+            game,
+            "seated[(index + 1) % seated.length]",
+        )
+        self.assertContains(game, 't("bear_seating_loop"')
+
+        guide = Client().get(reverse("roles_guide"))
+        self.assertContains(guide, "narrateur classe les joueurs")
+        self.assertContains(guide, "le dernier joueur est voisin du premier")
+
+    def test_prostitute_visit_makes_pack_attack_miss_without_harming_visited_ancient(self):
+        self.create_room()
+        game = self.narrator.get(reverse("game"))
+        self.assertContains(
+            game,
+            'if (target?.role === "prostitutes" && !isRoleBlocked("prostitutes") && state.prostituteTargetId) return null',
+        )
+        self.assertNotContains(
+            game,
+            'if (target?.role === "prostitutes" && !isRoleBlocked("prostitutes") && state.prostituteTargetId) return state.prostituteTargetId',
+        )
+        self.assertContains(game, "const actualWolfTargetId = effectiveWolfTargetId()")
+        self.assertContains(
+            game,
+            'if (wolfVictimDies && wolfVictim?.role === "ancients" && !state.ancientWolfHits[wolfVictim.id])',
+        )
+
+        guide = Client().get(reverse("roles_guide"))
+        self.assertContains(guide, "ni la Pute ni la personne visitée ne subissent")
+        self.assertContains(guide, "Ancien visité ne perd donc aucune vie")
 
     def test_narrator_chooses_shepherd_starting_stock_after_distribution(self):
         self.composition.update({"shepherds": 1, "villagers": 5})
@@ -230,6 +289,116 @@ class RoomFlowTests(TestCase):
             game,
             'if (wolfVictimDies && wolfVictim?.role === "ancients" && !state.ancientWolfHits[wolfVictim.id])',
         )
+        self.assertContains(
+            game,
+            'if (target?.role === "ancients" && !state.ancientWolfHits?.[target.id]) return null',
+        )
+        self.assertContains(game, "const victim = wolfVictimVisibleToWitch()")
+        self.assertContains(
+            game,
+            'const targets = alive().filter(item => item.id !== victim?.id && item.id !== witch?.id)',
+        )
+
+    def test_servant_infection_immunity_is_bypassed_by_cerberus_without_blocking_inheritance(self):
+        self.create_room()
+        game = self.narrator.get(reverse("game"))
+        self.assertContains(
+            game,
+            'servants: { short: "SE", name: setup.role_labels.servants, faction: "village", description: setup.role_descriptions.servants, infectionImmune: true, infectionImmunityBlockable: true }',
+        )
+        self.assertContains(
+            game,
+            "const immunityBypassed = meta.infectionImmune && meta.infectionImmunityBlockable && isRoleBlocked(target.role)",
+        )
+        self.assertContains(
+            game,
+            'state.infectionSucceeded = !blocked && infectionCanSucceed(target?.id)',
+        )
+        self.assertContains(game, "if (state.infectionSucceeded) target.infected = true")
+        self.assertContains(game, 'if (!blocked) state.infectionAvailable = false')
+        self.assertContains(
+            game,
+            "state.lastVote && livingServant()",
+        )
+        self.assertNotContains(
+            game,
+            'livingServant() && !isRoleBlocked("servants")',
+        )
+        self.assertNotContains(game, 'isRoleBlocked("servants")) return')
+
+        guide = Client().get(reverse("roles_guide"))
+        self.assertContains(guide, "Normalement, la Servante est immunisée")
+        self.assertContains(guide, "son immunité nocturne disparaît")
+        self.assertContains(guide, "garde son choix")
+
+    def test_alien_resists_pack_and_infection_but_dies_from_witch_poison(self):
+        self.create_room()
+        game = self.narrator.get(reverse("game"))
+        self.assertContains(
+            game,
+            'aliens: { short: "AL", name: setup.role_labels.aliens, faction: "alien", description: setup.role_descriptions.aliens, infectionImmune: true, infectionImmunityBlockable: false }',
+        )
+        self.assertContains(
+            game,
+            'else if (wolfVictimDies && wolfVictim?.role !== "aliens")',
+        )
+        self.assertContains(
+            game,
+            'if (state.witchKillId && !isRoleBlocked("witches") && !deathIds.includes(state.witchKillId)) deathIds.push(state.witchKillId)',
+        )
+
+    def test_alien_can_signal_without_daily_limit_and_guess_multiple_players(self):
+        self.create_room()
+        game = self.narrator.get(reverse("game"))
+        self.assertContains(
+            game,
+            "return Boolean(alien && state.alienSignalReady && contactReady)",
+        )
+        self.assertNotContains(
+            game,
+            "state.alienLastActionRound !== state.round && contactReady",
+        )
+        self.assertContains(game, 'class="alien-guess-row alien-player-guess"')
+        self.assertContains(
+            game,
+            'const guesses = [...document.querySelectorAll(".alien-player-guess")]',
+        )
+        self.assertContains(
+            game,
+            "for (const guess of guesses)",
+        )
+        self.assertContains(
+            game,
+            "if (!result.correct) break",
+        )
+        self.assertContains(
+            game,
+            "state.alienLastGuessCorrect = state.alienLastGuessResults.every",
+        )
+        self.assertContains(
+            game,
+            "const guessDeaths = killPlayersWithLovers(guessDeathIds)",
+        )
+        self.assertContains(game, 'state.pendingHunterSource = "alien"')
+        self.assertNotContains(game, 'document.getElementById("alien-target")')
+        self.assertNotContains(game, 'document.getElementById("alien-role")')
+
+        guide = Client().get(reverse("roles_guide"))
+        self.assertContains(guide, "utiliser son signal sans limite")
+        self.assertContains(guide, "autant de survivants non validés")
+        self.assertContains(guide, "à la première erreur")
+        self.assertContains(guide, "Les réponses sont vérifiées")
+        self.assertContains(guide, "réponses suivantes sont ignorées")
+
+    def test_night_wake_titles_include_the_players_names(self):
+        self.create_room()
+        game = self.narrator.get(reverse("game"))
+        self.assertContains(game, 'class="wake-player-names"')
+        self.assertContains(game, 'roleWakeTitle(L.judge_wake, "judges")')
+        self.assertContains(game, 'roleWakeTitle(L.seer_wake, "seers")')
+        self.assertContains(game, 'roleWakeTitle(L.witch_wake, "witches")')
+        self.assertContains(game, 'wakeTitle(L.wolves_wake, wolves())')
+        self.assertContains(game, 'wakeTitle(L.couple_wake, coupleMembers())')
 
     @override_settings(DEBUG=False)
     def test_production_mode_exposes_automatic_test_distribution_to_narrator(self):
@@ -339,6 +508,51 @@ class RoomFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         private_state = player.get(reverse("room_player_api", args=[room.code])).json()
         self.assertEqual(private_state["role"]["code"], "wild_children")
+
+    def test_narrator_can_reopen_lobby_and_redistribute_roles_to_phones(self):
+        room = self.create_room()
+        sarra = Client()
+        ali = Client()
+        for client, name in ((sarra, "Sarra"), (ali, "Ali")):
+            client.post(reverse("room_portal"), {"room_code": room.code, "player_name": name})
+
+        self.narrator.post(reverse("room_start_api", args=[room.code]))
+        sarra_player = room.room_players.get(name="Sarra")
+        sarra_player.role = "seers"
+        sarra_player.save(update_fields=["role"])
+        self.assertEqual(sarra.get(reverse("room_player_api", args=[room.code])).json()["role"]["code"], "seers")
+
+        new_composition = {role: 0 for role in ROLES["fr"]}
+        new_composition.update({"simple_wolves": 1, "villagers": 8})
+        ali_id = room.room_players.get(name="Ali").id
+        response = self.narrator.post(
+            reverse("room_reconfigure_api", args=[room.code]),
+            json.dumps({"composition": new_composition, "removed_player_ids": [ali_id]}),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        room.refresh_from_db()
+        self.assertEqual(room.status, GameRoom.Status.WAITING)
+        self.assertEqual(room.player_count, 9)
+        self.assertFalse(room.room_players.filter(name="Ali").exists())
+        self.assertEqual(room.room_players.get(name="Sarra").role, "")
+        waiting = sarra.get(reverse("room_player_api", args=[room.code])).json()
+        self.assertEqual(waiting["status"], GameRoom.Status.WAITING)
+        self.assertIsNone(waiting["role"])
+
+        nour = Client()
+        joined = nour.post(reverse("room_portal"), {"room_code": room.code, "player_name": "Nour"})
+        self.assertRedirects(joined, reverse("room_player", args=[room.code]), fetch_redirect_response=False)
+        redistributed = self.narrator.post(reverse("room_start_api", args=[room.code])).json()
+        self.assertEqual(len(redistributed["assignments"]), 2)
+        self.assertEqual(len(redistributed["remaining_roles"]), 7)
+        new_private_role = sarra.get(reverse("room_player_api", args=[room.code])).json()["role"]["code"]
+        self.assertIn(new_private_role, {"simple_wolves", "villagers"})
+        self.assertNotEqual(new_private_role, "seers")
+
+        game = self.narrator.get(reverse("game"))
+        self.assertContains(game, "modify_distribution")
+        self.assertContains(game, "/reconfigure/")
 
     def test_night_and_day_history_are_created_once(self):
         room = self.create_room()
@@ -559,15 +773,14 @@ class RoomFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "exactement 6 chiffres")
 
-    def test_history_link_skips_manual_room_join_form(self):
+    def test_home_opens_general_room_join_form(self):
         home = Client().get(reverse("home"))
-        self.assertContains(home, reverse("room_history_list"))
-        self.assertNotContains(home, f'href="{reverse("room_portal")}"')
-        self.assertRedirects(
-            Client().get(reverse("room_portal")),
-            reverse("room_history_list"),
-            fetch_redirect_response=False,
-        )
+        self.assertContains(home, f'href="{reverse("room_portal")}"')
+        portal = Client().get(reverse("room_portal"))
+        self.assertEqual(portal.status_code, 200)
+        self.assertContains(portal, 'name="room_code"')
+        self.assertContains(portal, 'name="player_name"')
+        self.assertContains(portal, reverse("general_room_qr"))
 
     def test_narrator_can_resume_active_room_from_another_session(self):
         room = self.create_room()
@@ -675,6 +888,14 @@ class RoomFlowTests(TestCase):
 
         portal = Client().get(reverse("room_portal"), {"code": room.code})
         self.assertContains(portal, f'value="{room.code}"')
+
+    def test_general_qr_code_opens_unprefilled_room_portal(self):
+        response = Client(HTTP_HOST="testserver").get(reverse("general_room_qr"))
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Content-Type"], "image/svg+xml")
+        self.assertIn(b"<svg", response.content)
+        self.assertIn("max-age=31536000", response["Cache-Control"])
+        self.assertEqual(Client().head(reverse("general_room_qr")).status_code, 200)
 
     @patch.dict("os.environ", {"ADMIN_USERNAME": "admin", "ADMIN_PASSWORD": "safe-test-password"})
     def test_admin_is_created_as_superuser(self):

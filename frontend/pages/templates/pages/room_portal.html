@@ -29,8 +29,13 @@
           <label>{{ room.player_name }}<input name="player_name" maxlength="40" autocomplete="name" required /></label>
           <button type="submit">{{ room.join }} <span>→</span></button>
         </form>
+        <section class="room-card general-qr-card">
+          <span>02</span><h2>{{ room.general_qr }}</h2>
+          <img src="{% url 'general_room_qr' %}" alt="{{ room.general_qr }}" />
+          <p>{{ room.general_qr_help }}</p>
+        </section>
         <section class="room-card">
-          <span>02</span><h2>{{ room.history }}</h2>
+          <span>03</span><h2>{{ room.history }}</h2>
           {% if room.history_intro %}<p>{{ room.history_intro }}</p>{% endif %}
           <a class="room-card-action" href="{% url 'room_history_list' %}">{{ room.all_histories }} <span>→</span></a>
         </section>

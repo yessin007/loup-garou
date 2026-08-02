@@ -97,7 +97,7 @@ class RoomFlowTests(TestCase):
         self.assertContains(game, 'class="bilan-section night-death-section"')
         self.assertContains(game, 'class="bilan-section village-info-section"')
         self.assertContains(game, 'class="bilan-section day-instruction-section"')
-        self.assertContains(game, 't("died_tonight_role", {role: escapeHtml(roleMeta[victim.role].name)})')
+        self.assertContains(game, 't("died_tonight_player_role", {name: escapeHtml(victim.name), role: escapeHtml(roleMeta[victim.role].name)})')
         self.assertNotContains(game, '<strong>#${String(id).padStart(2, "0")} · ${escapeHtml(victim.name)}</strong>')
         self.assertContains(game, '${L.seer_bilan_label} <mark>${escapeHtml(seerSeenRole)}</mark>')
         self.assertContains(game, '${L.bear_bilan_label} <mark>${state.bearGrowled ? L.bear_bilan_growls : L.bear_bilan_silent}</mark>')

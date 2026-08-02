@@ -1545,7 +1545,7 @@
         const report = nightOutIds.length ? nightOutIds.map(id => {
           const victim = player(id);
           if (!victim) return "";
-          return `<div class="night-death-row"><strong>${t("died_tonight_role", {role: escapeHtml(roleMeta[victim.role].name)})}</strong></div>`;
+          return `<div class="night-death-row"><strong>${t("died_tonight_player_role", {name: escapeHtml(victim.name), role: escapeHtml(roleMeta[victim.role].name)})}</strong></div>`;
         }).join("") : `<div class="peace-card">${L.no_death}</div>`;
         const deathSection = nightOutIds.length ? `<section class="bilan-section night-death-section"><h2>${L.night_death_list}</h2><div class="night-report">${report}</div></section>` : `<div class="night-report">${report}</div>`;
         const resistedAncient = player(state.ancientResistedPlayerId);

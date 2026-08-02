@@ -10,7 +10,7 @@
     {{ history_labels|json_script:"history-detail-labels" }}
     {{ role_labels|json_script:"history-role-labels" }}
     {{ room|json_script:"history-ui-text" }}
-    <header class="guide-header"><a class="brand" href="{% url 'room_portal' %}">Loup <span>Garou</span></a><div class="guide-header-actions"><span>{{ room.refreshing }}</span><strong class="room-code-chip">{{ game_room.code }}</strong></div></header>
+    <header class="guide-header"><a class="brand" href="{% url 'room_portal' %}">Loup <span>Garou</span></a><div class="guide-header-actions"><span class="account-username"><span aria-hidden="true">●</span>{{ request.user.username }}</span><span>{{ room.refreshing }}</span><strong class="room-code-chip">{{ game_room.code }}</strong></div></header>
     <main class="room-shell">
       <section class="room-hero history-hero">
         <div><p class="eyebrow">{{ room.history_kicker }}</p><h1>{{ room.history }}</h1>{% if room.history_intro %}<p>{{ room.history_intro }}</p>{% endif %}</div>

@@ -109,6 +109,8 @@ class AccountFlowTests(TestCase):
         client = Client()
         client.force_login(self.narrator)
         response = client.get(reverse("welcome"))
+        self.assertContains(response, 'class="account-username"')
+        self.assertContains(response, "nour")
         self.assertContains(response, "Commencer une nouvelle partie")
         self.assertContains(response, "Rejoindre une partie")
         self.assertContains(response, "Mes parties jouées")

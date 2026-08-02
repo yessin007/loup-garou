@@ -284,6 +284,11 @@ GAME = {
 }
 
 GAME["fr"].update({
+    "died_due_to_barber_player_role": "{name} · {role} — mort par le tir du Barbier",
+    "died_due_to_hunter_player_role": "{name} · {role} — emporté par le Chasseur",
+    "died_due_to_alien_player_role": "{name} · {role} — éliminé par l’Alien",
+    "witch_night_result": "Mort avec nous cette nuit",
+    "witch_nobody_died": "Personne",
     "village_state_button": "Modification état village",
     "village_state_kicker": "Outil du narrateur",
     "village_state_title": "Modification de l’état du village",
@@ -362,6 +367,11 @@ GAME["fr"].update({
     "majority_missing_help": "Le seul candidat n'a pas reçu plus de la moitié des voix des joueurs en vie.",
 })
 GAME["en"].update({
+    "died_due_to_barber_player_role": "{name} · {role} — killed by the Barber",
+    "died_due_to_hunter_player_role": "{name} · {role} — taken by the Hunter",
+    "died_due_to_alien_player_role": "{name} · {role} — eliminated by the Alien",
+    "witch_night_result": "Died with us tonight",
+    "witch_nobody_died": "Nobody",
     "village_state_button": "Edit village state",
     "village_state_kicker": "Narrator tool",
     "village_state_title": "Edit village state",
@@ -440,6 +450,11 @@ GAME["en"].update({
     "majority_missing_help": "The only candidate did not receive more than half the votes of all living players.",
 })
 GAME["tn"].update({
+    "died_due_to_barber_player_role": "{name} · {role} — met b tir mta3 Barbier",
+    "died_due_to_hunter_player_role": "{name} · {role} — hezzou m3ah Chasseur",
+    "died_due_to_alien_player_role": "{name} · {role} — met fi joret Alien",
+    "witch_night_result": "Met m3ana ellila",
+    "witch_nobody_died": "7atta 7ad",
     "village_state_button": "Modification état village",
     "village_state_kicker": "Outil mta3 narrateur",
     "village_state_title": "Baddel état mta3 el village",

@@ -23,6 +23,7 @@
       <a class="brand" href="{% url 'welcome' %}">Loup <span>Garou</span></a>
       <div class="phase-indicator"><span id="cycle-label">{{ ui.preparation }}</span><strong id="phase-label">{{ ui.players }}</strong></div>
       <div class="narrator-actions">
+        <span class="account-username"><span aria-hidden="true">●</span>{{ request.user.username }}</span>
         <button id="village-state-open" class="header-action village-state-trigger" type="button" disabled>
           <span aria-hidden="true">⚙</span><strong>{{ game_text.village_state_button }}</strong>
         </button>
@@ -176,12 +177,12 @@
           wolfTargetId: null, wolfResolvedTargetId: null, prostituteTargetId: null, lastProstituteTargetId: null, blockedPlayerId: null, silencedPlayerId: null, lastSilencedPlayerId: null,
           infectionAvailable: true, infectionAttempted: false, infectionSucceeded: false, infectedPlayerId: null,
           talkativePlayerId: null, assignedWord: "", talkativeRevealVisible: false, witchSave: false, witchKillId: null,
-          barberSignalReady: false, barberShotAvailable: true, barberPlayerId: null, barberTargetId: null, barberHit: null,
-          alienSignalReady: false, alienCorrectGuesses: [], alienLastGuessCorrect: null, alienLastGuessResults: [], alienRemainingCount: null, alienLastActionRound: null, alienContactRequired: false, alienContactAvailableRound: null,
+          barberSignalReady: false, barberShotAvailable: true, barberPlayerId: null, barberTargetId: null, barberHit: null, barberDeathIds: [],
+          alienSignalReady: false, alienCorrectGuesses: [], alienLastGuessCorrect: null, alienLastGuessResults: [], alienDeathIds: [], alienRemainingCount: null, alienLastActionRound: null, alienContactRequired: false, alienContactAvailableRound: null,
           pyromaniacOiledIds: [], pyromaniacAction: null, pyromaniacDousedIds: [], pyromaniacIgnitedIds: [],
           specialReturnStage: null,
           ancientWolfHits: {}, ancientResistedPlayerId: null, lostVillagePowerIds: [],
-          pendingHunterId: null, pendingHunterSource: null, hunterShotRecords: [],
+          pendingHunterId: null, pendingHunterSource: null, hunterShotRecords: [], hunterCausedDeathIds: [],
           bearPlayerId: null, bearGrowled: null, bearNeighborIds: [],
           sheepInitialCount: 3, sheepRemaining: 3, shepherdStockConfigured: false, shepherdLastResults: [], shepherdReportedThisNight: false, shepherdWasBlocked: false,
           cupidLinked: false, coupleIds: [],
@@ -207,6 +208,9 @@
       if (state.shepherdReportedThisNight === undefined) state.shepherdReportedThisNight = false;
       if (state.shepherdWasBlocked === undefined) state.shepherdWasBlocked = false;
       if (!state.coupleIds) state.coupleIds = [];
+      if (!Array.isArray(state.alienDeathIds)) state.alienDeathIds = [];
+      if (!Array.isArray(state.barberDeathIds)) state.barberDeathIds = [];
+      if (!Array.isArray(state.hunterCausedDeathIds)) state.hunterCausedDeathIds = [];
       if (state.angelChanceExpired === undefined) state.angelChanceExpired = state.round > 1;
       if (state.eventRound === undefined) state.eventRound = null;
       if (state.ankouGhost === undefined) state.ankouGhost = null;
@@ -442,6 +446,7 @@
           state.alienCorrectGuesses = [];
           state.alienLastGuessCorrect = null;
           state.alienLastGuessResults = [];
+          state.alienDeathIds = [];
           state.alienRemainingCount = null;
           state.alienLastActionRound = null;
           state.alienContactRequired = false;
@@ -470,6 +475,7 @@
           state.barberPlayerId = null;
           state.barberTargetId = null;
           state.barberHit = null;
+          state.barberDeathIds = [];
         }
         if (newRole === "aliens") {
           state.alienSignalReady = true;
@@ -511,7 +517,7 @@
         state.judgeFirstId = null; state.judgeSecondId = null; state.judgeSameClan = null;
         state.silencedPlayerId = null; state.talkativePlayerId = null; state.assignedWord = ""; state.talkativeRevealVisible = false;
         state.witchSave = false; state.witchKillId = null; state.seerTargetId = null; state.seerDisplayedRole = null; state.seerWasBlocked = false;
-        state.ancientResistedPlayerId = null; state.lostVillagePowerIds = []; state.pendingHunterId = null; state.pendingHunterSource = null; state.hunterShotRecords = [];
+        state.ancientResistedPlayerId = null; state.lostVillagePowerIds = []; state.pendingHunterId = null; state.pendingHunterSource = null; state.hunterShotRecords = []; state.alienDeathIds = []; state.barberDeathIds = []; state.hunterCausedDeathIds = [];
         state.deaths = []; state.qualifiers = []; state.accusationDraftIds = []; state.lastVote = null; state.voteDeathIds = []; state.voteOutcome = null; state.voteRevealedRole = null;
         state.servantAccepted = null; state.specialReturnStage = null;
         state.voteBreakdown = {normal: [], cancelled: [], secret: [], totals: []};
@@ -1409,7 +1415,13 @@
         const witch = alive().find(item => item.role === "witches");
         const targets = alive().filter(item => item.id !== victim?.id && item.id !== witch?.id);
         const instruction = !victim ? L.no_wolf_attack : savedByProtector ? t("protected_saved", {name: playerText(victim, false)}) : savedByRedHood ? t("red_hood_saved", {name: playerText(victim, false)}) : t("pack_chose", {name: playerText(victim, false)});
+        const nightVictim = victim && !savedByProtector && !savedByRedHood ? victim : null;
+        const witchNightResult = `<div class="witch-night-result ${nightVictim ? "danger" : "safe"}">
+          <span>${L.witch_night_result}</span>
+          <strong>${nightVictim ? escapeHtml(nightVictim.name) : L.witch_nobody_died}</strong>
+        </div>`;
         scene.innerHTML = nightFrame(L.potions, roleWakeTitle(L.witch_wake, "witches"), instruction, `
+          ${witchNightResult}
           <div class="potion-grid">
             <label class="choice-card ${lifeDisabled ? "disabled" : ""}"><input id="witch-save" type="checkbox" ${lifeDisabled ? "disabled" : ""}><span><strong>${L.life_potion}</strong><small>${state.lifePotion ? L.save_victim : L.used_potion}</small></span></label>
             <label class="choice-card ${!state.deathPotion ? "disabled" : ""}"><input id="witch-kill" type="checkbox" ${!state.deathPotion ? "disabled" : ""}><span><strong>${L.death_potion}</strong><small>${state.deathPotion ? L.kill_other : L.used_potion}</small></span></label>
@@ -1539,13 +1551,18 @@
 
       function renderDawn() {
         setHeading(t("day", {n: state.round}), L.awakening);
-        const nightOutIds = [...new Set([...state.deaths, ...hunterDeathIds("night")])];
+        const alienOutIds = new Set([...(state.alienDeathIds || []), ...hunterDeathIds("alien")]);
+        const barberOutIds = new Set(state.barberDeathIds || []);
+        const hunterOutIds = new Set([...(state.hunterCausedDeathIds || []), ...hunterDeathIds("night"), ...hunterDeathIds("alien"), ...hunterDeathIds("barber"), ...hunterDeathIds("vote")]);
+        const nightOutIds = [...new Set([...state.deaths, ...alienOutIds, ...barberOutIds, ...hunterOutIds])];
         const nightHeadline = nightOutIds.length ? t("night_bilan_losses", {count: nightOutIds.length}) : L.night_bilan_safe;
         const nightOverview = `<section class="phase-bilan night"><div class="phase-bilan-copy"><span>${L.day_rises}</span><strong>${nightHeadline}</strong><p>${L.night_report}</p></div><div class="phase-bilan-stats"><div><strong>${nightOutIds.length}</strong><span>${L.summary_deaths}</span></div><div><strong>${alive().length}</strong><span>${L.summary_alive}</span></div><div><strong>${state.round}</strong><span>${L.summary_round}</span></div></div></section>`;
         const report = nightOutIds.length ? nightOutIds.map(id => {
           const victim = player(id);
           if (!victim) return "";
-          return `<div class="night-death-row"><strong>${t("died_tonight_player_role", {name: escapeHtml(victim.name), role: escapeHtml(roleMeta[victim.role].name)})}</strong></div>`;
+          const cause = hunterOutIds.has(id) ? "hunter" : barberOutIds.has(id) ? "barber" : alienOutIds.has(id) ? "alien" : "night";
+          const deathLabel = cause === "hunter" ? "died_due_to_hunter_player_role" : cause === "barber" ? "died_due_to_barber_player_role" : cause === "alien" ? "died_due_to_alien_player_role" : "died_tonight_player_role";
+          return `<div class="night-death-row ${cause}-death"><strong>${t(deathLabel, {name: escapeHtml(victim.name), role: escapeHtml(roleMeta[victim.role].name)})}</strong></div>`;
         }).join("") : `<div class="peace-card">${L.no_death}</div>`;
         const deathSection = nightOutIds.length ? `<section class="bilan-section night-death-section"><h2>${L.night_death_list}</h2><div class="night-report">${report}</div></section>` : `<div class="night-report">${report}</div>`;
         const resistedAncient = player(state.ancientResistedPlayerId);
@@ -1926,7 +1943,7 @@
             state.sheepRemaining = stock;
             state.shepherdStockConfigured = true;
           }
-          state.protectedId = null; state.wolfTargetId = null; state.wolfInitialTargetId = null; state.wolfTargetChanged = false; state.prostituteTargetId = null; state.blockedPlayerId = null; state.pyromaniacAction = null; state.pyromaniacDousedIds = []; state.pyromaniacIgnitedIds = []; state.infectionAttempted = false; state.infectionSucceeded = false; state.infectedPlayerId = null; state.whiteWolfTargetId = null; state.bearPlayerId = null; state.bearGrowled = null; state.bearNeighborIds = []; state.shepherdLastResults = []; state.shepherdReportedThisNight = false; state.shepherdWasBlocked = false; state.judgeFirstId = null; state.judgeSecondId = null; state.judgeSameClan = null; state.silencedPlayerId = null; state.talkativePlayerId = null; state.assignedWord = ""; state.talkativeRevealVisible = false; state.witchSave = false; state.witchKillId = null; state.seerTargetId = null; state.seerDisplayedRole = null; state.seerWasBlocked = false; state.ancientResistedPlayerId = null; state.deaths = []; state.voteDeathIds = [];
+          state.protectedId = null; state.wolfTargetId = null; state.wolfInitialTargetId = null; state.wolfTargetChanged = false; state.prostituteTargetId = null; state.blockedPlayerId = null; state.pyromaniacAction = null; state.pyromaniacDousedIds = []; state.pyromaniacIgnitedIds = []; state.infectionAttempted = false; state.infectionSucceeded = false; state.infectedPlayerId = null; state.whiteWolfTargetId = null; state.bearPlayerId = null; state.bearGrowled = null; state.bearNeighborIds = []; state.shepherdLastResults = []; state.shepherdReportedThisNight = false; state.shepherdWasBlocked = false; state.judgeFirstId = null; state.judgeSecondId = null; state.judgeSameClan = null; state.silencedPlayerId = null; state.talkativePlayerId = null; state.assignedWord = ""; state.talkativeRevealVisible = false; state.witchSave = false; state.witchKillId = null; state.seerTargetId = null; state.seerDisplayedRole = null; state.seerWasBlocked = false; state.ancientResistedPlayerId = null; state.deaths = []; state.alienDeathIds = []; state.barberDeathIds = []; state.hunterCausedDeathIds = []; state.voteDeathIds = [];
           nextNightStage(""); return;
         } else if (action === "confirm-cupid") {
           const firstId = Number(document.getElementById("cupid-first").value);
@@ -2091,6 +2108,9 @@
           state.seerWasBlocked = false;
           nextNightStage("seer"); return;
         } else if (action === "begin-accusation") {
+          state.alienDeathIds = [];
+          state.barberDeathIds = [];
+          state.hunterCausedDeathIds = [];
           state.stage = "accusation";
         } else if (action === "activate-barber") {
           if (!canUseBarber()) return;
@@ -2105,6 +2125,7 @@
           state.barberShotAvailable = false;
           state.barberHit = isWolfPlayer(target);
           const barberDeaths = killPlayersWithLovers(state.barberHit ? [target.id] : [barber.id, target.id]);
+          state.barberDeathIds = [...new Set([...(state.barberDeathIds || []), ...barberDeaths.map(item => item.id)])];
           barberDeaths.forEach(item => activateAnkouGhost(item, state.round));
           ensureLivingSpeaker();
           const deadHunter = barberDeaths.find(item => item.role === "hunters");
@@ -2154,6 +2175,7 @@
           state.alienLastGuessCorrect = state.alienLastGuessResults.every(result => result.correct);
           const guessDeathIds = state.alienLastGuessCorrect ? correctIds : [alien.id, ...correctIds];
           const guessDeaths = killPlayersWithLovers(guessDeathIds);
+          state.alienDeathIds = [...new Set([...(state.alienDeathIds || []), ...guessDeaths.map(item => item.id)])];
           guessDeaths.forEach(item => activateAnkouGhost(item, state.round + 1));
           ensureLivingSpeaker();
           const deadHunter = guessDeaths.find(item => item.role === "hunters");
@@ -2249,6 +2271,7 @@
           const target = player(document.getElementById("night-select").value);
           if (!hunter || !target?.alive) return;
           const hunterDeaths = killPlayersWithLovers([target.id]);
+          state.hunterCausedDeathIds = [...new Set([...(state.hunterCausedDeathIds || []), ...hunterDeaths.map(item => item.id)])];
           hunterDeaths.forEach(item => activateAnkouGhost(item, state.pendingHunterSource === "night" ? state.round : state.round + 1));
           state.hunterShotRecords = [...(state.hunterShotRecords || []), {hunterId: hunter.id, targetId: target.id, deathIds: hunterDeaths.map(item => item.id), source: state.pendingHunterSource}];
           const chainedHunter = hunterDeaths.find(item => item.role === "hunters");

@@ -106,9 +106,19 @@ class RoomFlowTests(TestCase):
             '"protector", "prostitute", "cerberus", "pyromaniac", "wolves", "infection"',
         )
         self.assertContains(game, 'class="bilan-section night-death-section"')
+        self.assertContains(game, '...(state.alienDeathIds || []), ...hunterDeathIds("alien")')
+        self.assertContains(game, 'state.alienDeathIds = [...new Set([...(state.alienDeathIds || []), ...guessDeaths.map(item => item.id)])]')
+        self.assertContains(game, 'cause === "hunter" ? "died_due_to_hunter_player_role"')
+        self.assertContains(game, 'cause === "barber" ? "died_due_to_barber_player_role"')
+        self.assertContains(game, 'cause === "alien" ? "died_due_to_alien_player_role"')
+        self.assertContains(game, 'state.barberDeathIds = [...new Set([...(state.barberDeathIds || []), ...barberDeaths.map(item => item.id)])]')
+        self.assertContains(game, 'state.hunterCausedDeathIds = [...new Set([...(state.hunterCausedDeathIds || []), ...hunterDeaths.map(item => item.id)])]')
+        self.assertContains(game, 'class="witch-night-result ${nightVictim ? "danger" : "safe"}"')
+        self.assertContains(game, 'nightVictim ? escapeHtml(nightVictim.name) : L.witch_nobody_died')
+        self.assertContains(game, 'victim && !savedByProtector && !savedByRedHood ? victim : null')
         self.assertContains(game, 'class="bilan-section village-info-section"')
         self.assertContains(game, 'class="bilan-section day-instruction-section"')
-        self.assertContains(game, 't("died_tonight_player_role", {name: escapeHtml(victim.name), role: escapeHtml(roleMeta[victim.role].name)})')
+        self.assertContains(game, 't(deathLabel, {name: escapeHtml(victim.name), role: escapeHtml(roleMeta[victim.role].name)})')
         self.assertNotContains(game, '<strong>#${String(id).padStart(2, "0")} · ${escapeHtml(victim.name)}</strong>')
         self.assertContains(game, '${L.seer_bilan_label} <mark>${escapeHtml(seerSeenRole)}</mark>')
         self.assertContains(game, '${L.bear_bilan_label} <mark>${state.bearGrowled ? L.bear_bilan_growls : L.bear_bilan_silent}</mark>')
@@ -638,6 +648,9 @@ class RoomFlowTests(TestCase):
                 {"id": 2, "name": "Sarra", "role": "villagers", "alive": True},
             ],
             "deaths": [1], "wolfTargetId": 1,
+            "alienDeathIds": [2],
+            "barberDeathIds": [2],
+            "hunterCausedDeathIds": [1],
             "blockedPlayerId": 1, "witchSave": True, "witchKillId": 2,
             "bearGrowled": True,
             "shepherdLastResults": [
@@ -668,6 +681,9 @@ class RoomFlowTests(TestCase):
         history = self.narrator.get(reverse("room_history_api", args=[room.code])).json()
         self.assertEqual([event["type"] for event in history["events"]], ["night", "day"])
         night = history["events"][0]["details"]
+        self.assertEqual(night["deaths"], ["Ahmed", "Sarra"])
+        self.assertEqual(night["barber_deaths"], ["Sarra"])
+        self.assertEqual(night["hunter_deaths"], ["Ahmed"])
         self.assertTrue(night["bear_growled"])
         self.assertEqual(night["sheep_lost"], ["Ahmed"])
         self.assertEqual(night["sheep_returned"], ["Sarra"])

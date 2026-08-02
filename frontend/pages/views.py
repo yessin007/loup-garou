@@ -69,6 +69,9 @@ ROOM_DETAIL_LABELS = {
     "en": {"deaths": "Victims", "protected": "Protection", "wolves_target": "Wolves' target", "blocked": "Blocked power", "redirected_to": "Escort visit", "pyromaniac_action": "Arsonist action", "pyromaniac_doused": "Doused tonight", "pyromaniac_ignited": "Ignited tonight", "pyromaniac_oiled": "Still doused", "infection_attempted": "Infection attempted", "infection_succeeded": "Infection succeeded", "witch_saved": "Life potion", "witch_target": "Death potion", "bear_growled": "Bear", "sheep_returned": "Returned sheep", "sheep_lost": "Lost sheep", "sheep_remaining": "Sheep remaining", "shepherd_blocked": "Shepherd blocked", "judge_first": "Judge's first choice", "judge_second": "Judge's second choice", "judge_same_clan": "Same faction", "seer_target": "Seer's vision", "seer_role": "Role seen", "eliminated": "Voted out", "vote_deaths": "Deaths after the vote", "vote_outcome": "Result", "normal_votes": "Normal votes", "cancelled_votes": "Cancelled votes", "secret_votes": "Secret votes", "final_totals": "Final total", "hunter_targets": "Hunter's final shots", "powers_lost": "Powers removed", "barber_target": "Barber's target", "barber_hit": "Barber shot succeeded", "alien_correct": "Alien answer correct", "winner": "Winner"},
     "tn": {"deaths": "Chkoun met ellila", "protected": "Chkoun t7ama", "wolves_target": "Cible mta3 el loups", "blocked": "Joueur eli tblocka", "redirected_to": "Win r9adet el Pute", "pyromaniac_action": "Action mta3 Pyromane", "pyromaniac_doused": "Eli rachehom zit ellila", "pyromaniac_ignited": "Eli cha3alhom ellila", "pyromaniac_oiled": "Eli mazel 3lihom zit", "infection_attempted": "Saret tentative infection", "infection_succeeded": "El infection nej7et", "witch_saved": "Sorcière najjet el cible", "witch_target": "Cible mta3 potion de mort", "bear_growled": "El Ours garger", "sheep_returned": "3lelech eli raj3ou", "sheep_lost": "3lelech eli dha3ou", "sheep_remaining": "3lelech eli ba9aw", "shepherd_blocked": "Cerbère 9leb résultat el Berger", "judge_first": "Joueur louel mta3 Juge", "judge_second": "Joueur theni mta3 Juge", "judge_same_clan": "Nafs el clan", "seer_target": "Chkoun chefet el Voyante", "seer_role": "Role eli thaherelha", "eliminated": "Chkoun 5raj bel vote", "vote_deaths": "Eli metou ba3d el vote", "vote_outcome": "Kifeh wfa el vote", "normal_votes": "El votes normaux", "cancelled_votes": "El votes eli tna77aw", "secret_votes": "El voix bel sir", "final_totals": "Total final", "hunter_targets": "Chkoun dharab el Chasseur", "powers_lost": "Chkoun tna7alou el pouvoir", "barber_target": "Chkoun e5tar el Barbier", "barber_hit": "Tir el Barbier tla3 s7i7", "alien_correct": "Réponse mta3 Alien s7i7a", "winner": "Chkoun rba7"},
 }
+ROOM_DETAIL_LABELS["fr"].update({"alien_deaths": "Victimes de l’Alien", "barber_deaths": "Victimes du Barbier", "hunter_deaths": "Emportés par le Chasseur"})
+ROOM_DETAIL_LABELS["en"].update({"alien_deaths": "Alien victims", "barber_deaths": "Barber victims", "hunter_deaths": "Taken by the Hunter"})
+ROOM_DETAIL_LABELS["tn"].update({"alien_deaths": "Eli metou fi joret Alien", "barber_deaths": "Eli metou b tir Barbier", "hunter_deaths": "Eli hezhom Chasseur m3ah"})
 
 ROOM_HISTORY_TEXT = {
     "fr": {
@@ -188,7 +191,20 @@ def public_event_details(state, event_type):
         blocked_player = next((item for item in state.get("players", []) if item.get("id") == state.get("blockedPlayerId")), None)
         blocked_role = blocked_player.get("role") if blocked_player else None
         death_names = []
-        for entry in state.get("deaths", []):
+        all_death_entries = []
+        seen_deaths = set()
+        for entry in [
+            *state.get("deaths", []),
+            *state.get("alienDeathIds", []),
+            *state.get("barberDeathIds", []),
+            *state.get("hunterCausedDeathIds", []),
+        ]:
+            identity = (entry.get("id"), entry.get("name")) if isinstance(entry, dict) else entry
+            if identity in seen_deaths:
+                continue
+            seen_deaths.add(identity)
+            all_death_entries.append(entry)
+        for entry in all_death_entries:
             name = entry.get("name") if isinstance(entry, dict) else player_label(state, entry)
             if name:
                 death_names.append(name)
@@ -198,6 +214,9 @@ def public_event_details(state, event_type):
         has_shepherd = bool(shepherd_results) or any(item.get("role") == "shepherds" for item in state.get("players", []))
         return {
             "deaths": death_names,
+            "alien_deaths": [name for name in (player_label(state, item) for item in state.get("alienDeathIds", [])) if name],
+            "barber_deaths": [name for name in (player_label(state, item) for item in state.get("barberDeathIds", [])) if name],
+            "hunter_deaths": [name for name in (player_label(state, item) for item in state.get("hunterCausedDeathIds", [])) if name],
             "protected": player_label(state, state.get("protectedId")),
             "wolves_target": player_label(state, state.get("wolfResolvedTargetId") or state.get("wolfTargetId")),
             "blocked": player_label(state, state.get("blockedPlayerId")),

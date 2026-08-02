@@ -36,6 +36,25 @@ p, li, strong, small, a { overflow-wrap: anywhere; }
 .floating-language { position: fixed; z-index: 30; top: max(22px, calc(var(--safe-top) + 8px)); right: max(25px, calc(var(--safe-right) + 10px)); }
 .narrator-actions { display: flex; align-items: center; justify-self: end; gap: 10px; }
 .narrator-actions button.header-action { justify-self: auto; }
+.account-username {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  max-width: 180px;
+  padding: 8px 12px;
+  border: 1px solid rgba(199,139,69,.24);
+  border-radius: 999px;
+  color: var(--ivory);
+  background: rgba(199,139,69,.08);
+  font-size: .74rem;
+  font-weight: 800;
+  line-height: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.account-username > span { flex: 0 0 auto; color: #65bd83; font-size: .55rem; }
+.day-mode .account-username { color: #473b2e; background: rgba(184,116,43,.1); }
 
 html[dir="rtl"] body { font-family: "DM Sans", Tahoma, Arial, sans-serif; }
 html[dir="rtl"] .floating-language { right: auto; left: 25px; }
@@ -612,6 +631,39 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .choice-card strong { font: 600 .76rem "Cinzel", serif; }
 .choice-card small { margin-top: 5px; color: #78858a; font-size: .62rem; }
 .choice-card.disabled { opacity: .35; cursor: not-allowed; }
+.witch-night-result {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+  margin: 0 0 22px;
+  padding: clamp(22px, 4vw, 34px);
+  border: 2px solid;
+  border-radius: 12px;
+}
+.witch-night-result span {
+  font-size: .78rem;
+  font-weight: 800;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+}
+.witch-night-result strong {
+  font: 700 clamp(1.8rem, 5vw, 3.4rem)/1.08 "Cinzel", serif;
+  overflow-wrap: anywhere;
+}
+.witch-night-result.danger {
+  border-color: rgba(221,78,73,.78);
+  color: #ffd9d5;
+  background: linear-gradient(135deg, rgba(137,28,30,.42), rgba(83,17,21,.2));
+  box-shadow: inset 0 0 36px rgba(190,40,40,.08);
+}
+.witch-night-result.danger span { color: #ff8e87; }
+.witch-night-result.safe {
+  border-color: rgba(72,181,113,.72);
+  color: #d9ffe5;
+  background: linear-gradient(135deg, rgba(28,112,62,.38), rgba(18,70,43,.18));
+  box-shadow: inset 0 0 36px rgba(42,156,86,.08);
+}
+.witch-night-result.safe span { color: #82d9a1; }
 .seer-prompt { width: min(100%, 560px); margin-bottom: 18px; padding: 16px 18px; border-left: 2px solid #76a9c8; background: linear-gradient(90deg, rgba(84,137,169,.12), transparent); }
 .seer-prompt span { color: #a9d2e9; font: 600 .72rem "Cinzel", serif; letter-spacing: .08em; text-transform: uppercase; }
 .seer-prompt p { margin: 6px 0 0; color: #7f9099; font-size: .7rem; }
@@ -642,6 +694,18 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .night-death-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 16px 18px; border: 1px solid rgba(199,75,65,.22); background: rgba(121,34,30,.12); }
 .night-death-row strong { font: 700 1.08rem "Cinzel", serif; }
 .night-death-row span { color: #e59a92; font: 700 1rem "Cinzel", serif; }
+.night-death-row.alien-death {
+  border-color: rgba(115,91,190,.38);
+  background: linear-gradient(135deg, rgba(82,58,151,.2), rgba(121,34,30,.1));
+}
+.night-death-row.barber-death {
+  border-color: rgba(199,139,69,.48);
+  background: linear-gradient(135deg, rgba(157,91,35,.2), rgba(121,34,30,.1));
+}
+.night-death-row.hunter-death {
+  border-color: rgba(65,130,171,.45);
+  background: linear-gradient(135deg, rgba(42,104,143,.2), rgba(121,34,30,.1));
+}
 .village-info-section { border-left: 4px solid #4a9b69; background: rgba(48,119,76,.08); }
 .village-info-section > h2 { color: #76bd90; }
 .village-info-section .seer-summary, .village-info-section .final-vision { max-width: none; border-left-color: #4f9e6c; background: rgba(64,139,91,.11); }
@@ -805,6 +869,18 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .day-mode .night-death-section > h2, .day-mode .night-death-row span { color: #983d36; }
 .day-mode .night-death-row { border-color: rgba(167,68,60,.2); background: rgba(255,255,255,.42); }
 .day-mode .night-death-row strong { color: #34342f; }
+.day-mode .night-death-row.alien-death {
+  border-color: rgba(100,72,164,.32);
+  background: rgba(112,87,170,.12);
+}
+.day-mode .night-death-row.barber-death {
+  border-color: rgba(169,103,38,.36);
+  background: rgba(194,129,60,.13);
+}
+.day-mode .night-death-row.hunter-death {
+  border-color: rgba(58,116,151,.34);
+  background: rgba(67,132,169,.12);
+}
 .day-mode .village-info-section { border-left-color: #3f8c5c; background: rgba(63,140,92,.09); }
 .day-mode .village-info-section > h2, .day-mode .village-info-section .seer-summary span, .day-mode .village-info-section .final-vision > span { color: #36794f; }
 .day-mode .village-info-section .seer-summary, .day-mode .village-info-section .final-vision { border-left-color: #4a9565; background: rgba(74,149,101,.11); }
@@ -1609,7 +1685,7 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
   .night-details li strong { font-size: .94rem; line-height: 1.5; }
   .bilan-section > h2 { font-size: 1.34rem; }
   .night-death-row strong { font-size: 1.3rem; }
-  .night-death-row span { font-size: 1.14rem; }
+.night-death-row span { font-size: 1.14rem; }
 
   .phase-bilan-copy { padding: 22px 20px; }
   .phase-bilan-copy > span { font-size: .74rem; }
@@ -1687,8 +1763,30 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
   border-radius: 10px; color: var(--ivory); background: #091015; font: inherit;
 }
 .user-create-card button {
-  min-height: 56px; border: 0; border-radius: 10px; color: #111; background: var(--gold);
-  font-weight: 800; cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  min-height: 58px;
+  margin-top: 4px;
+  padding: 15px 22px;
+  border: 1px solid var(--ember-light);
+  border-radius: 10px;
+  color: #080d12;
+  background: linear-gradient(135deg, var(--ember-light), var(--ember));
+  box-shadow: 0 10px 28px rgba(199,139,69,.18);
+  font-size: .95rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+.user-create-card button:hover {
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+.user-create-card button:focus-visible {
+  outline: 3px solid rgba(227,180,115,.32);
+  outline-offset: 3px;
 }
 .form-success { padding: 13px 15px; border: 1px solid rgba(92,181,121,.35); border-radius: 8px; color: #9dddaf; background: rgba(44,120,70,.13); }
 .user-list-card h2 { margin: 0 0 20px; }

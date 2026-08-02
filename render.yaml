@@ -21,11 +21,11 @@ services:
           name: loup-garou-db
           property: connectionString
       - key: ADMIN_USERNAME
-        value: admin
+        value: yessin
       - key: ADMIN_EMAIL
         value: admin@example.com
       - key: ADMIN_PASSWORD
-        value: admin
+        value: yessin
 
 databases:
   - name: loup-garou-db

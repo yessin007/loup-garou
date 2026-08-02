@@ -31,22 +31,42 @@
         {% if ui.dashboard_help %}<p>{{ ui.dashboard_help }}</p>{% endif %}
       </section>
       <section class="admin-dashboard-actions">
-        <a class="admin-dashboard-card danger" href="{% url 'room_history_list' %}">
+        {% if request.user.is_superuser %}
+        <a class="admin-dashboard-card" href="{% url 'user_management' %}">
           <span>01</span>
-          <h2>{{ ui.manage_history }}</h2>
+          <h2>Gestion des utilisateurs</h2>
+          <p>Ajoute des comptes joueur ou narrateur et gère leur accès.</p>
+          <strong>{{ ui.choose_action }} <i>→</i></strong>
+        </a>
+        {% endif %}
+        <a class="admin-dashboard-card danger" href="{% url 'room_history_list' %}">
+          <span>02</span>
+          <h2>Parties narrées</h2>
           <p>{{ ui.manage_history_help }}</p>
           <strong>{{ ui.choose_action }} <i>→</i></strong>
         </a>
         <a class="admin-dashboard-card" href="{% url 'welcome' %}?mode=new">
-          <span>02</span>
+          <span>03</span>
           <h2>{{ ui.start_new_game }}</h2>
           <p>{{ ui.start_new_game_help }}</p>
           <strong>{{ ui.choose_action }} <i>→</i></strong>
         </a>
         <a class="admin-dashboard-card" href="{% url 'welcome' %}?mode=resume">
-          <span>03</span>
+          <span>04</span>
           <h2>{{ ui.continue_old_game }}</h2>
           <p>{{ ui.continue_old_game_help }}</p>
+          <strong>{{ ui.choose_action }} <i>→</i></strong>
+        </a>
+        <a class="admin-dashboard-card" href="{% url 'room_portal' %}">
+          <span>05</span>
+          <h2>Rejoindre une partie</h2>
+          <p>Entre un code de room et joue avec ton propre rôle secret.</p>
+          <strong>{{ ui.choose_action }} <i>→</i></strong>
+        </a>
+        <a class="admin-dashboard-card" href="{% url 'room_history_list' %}?mine=1">
+          <span>06</span>
+          <h2>Mes parties jouées</h2>
+          <p>Consulte uniquement les parties terminées auxquelles tu as participé.</p>
           <strong>{{ ui.choose_action }} <i>→</i></strong>
         </a>
       </section>

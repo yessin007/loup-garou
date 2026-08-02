@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
   </head>
   <body class="room-page">
-    <header class="guide-header"><a class="brand" href="{% url 'home' %}">Loup <span>Garou</span></a><strong class="room-code-chip">{{ game_room.code }}</strong></header>
+    <header class="guide-header"><a class="brand" href="{% url 'dashboard' %}">Loup <span>Garou</span></a><div class="guide-header-actions"><strong class="room-code-chip">{{ game_room.code }}</strong><a class="guide-back" href="{% url 'logout' %}">{{ ui.logout }}</a></div></header>
     <main class="room-shell compact-room-shell">
       <section id="player-room-card" class="player-secret-card waiting">
         <p class="eyebrow">{{ room.joined }}</p><h1>{{ joined_player.name }}</h1>

@@ -1,6 +1,7 @@
 import secrets
 import uuid
 
+from django.conf import settings
 from django.db import models
 
 
@@ -25,6 +26,13 @@ class GameRoom(models.Model):
     composition = models.JSONField(default=dict)
     status = models.CharField(max_length=12, choices=Status.choices, default=Status.WAITING)
     game_state = models.JSONField(default=dict, blank=True)
+    narrator = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="narrated_rooms",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -37,6 +45,13 @@ class RoomPlayer(models.Model):
     name = models.CharField(max_length=40)
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     role = models.CharField(max_length=40, blank=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="game_participations",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+    )
     joined_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:

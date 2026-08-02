@@ -1,6 +1,7 @@
 import json
 from unittest.mock import patch
 
+from django.contrib.auth import get_user_model
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
@@ -20,6 +21,15 @@ class RoomFlowTests(TestCase):
         self.narrator.post(reverse("home"), {"username": "admin", "password": "admin"})
         self.composition = {role: 0 for role in ROLES["fr"]}
         self.composition.update({"simple_wolves": 2, "villagers": 6})
+
+    def player_client(self, username):
+        user, created = get_user_model().objects.get_or_create(username=username)
+        if created:
+            user.set_password("test-password")
+            user.save(update_fields=["password"])
+        client = Client()
+        client.force_login(user)
+        return client
 
     def create_room(self):
         response = self.narrator.post(
@@ -52,7 +62,7 @@ class RoomFlowTests(TestCase):
 
         history = self.narrator.get(reverse("room_history_list"))
         self.assertContains(history, 'class="history-home-link"')
-        self.assertContains(history, f'href="{reverse("home")}"')
+        self.assertContains(history, f'href="{reverse("dashboard")}"')
 
     @override_settings(DEBUG=True)
     def test_development_mode_exposes_automatic_test_distribution(self):
@@ -411,8 +421,7 @@ class RoomFlowTests(TestCase):
 
     def test_narrator_login_accepts_text_credentials_only(self):
         login_page = Client().get(reverse("home"))
-        self.assertContains(login_page, "admin / admin")
-        self.assertNotContains(login_page, "yessin / yessin")
+        self.assertContains(login_page, "yessin / yessin")
         self.assertNotContains(login_page, 'inputmode="numeric"')
 
         old_credentials = Client()
@@ -422,7 +431,7 @@ class RoomFlowTests(TestCase):
 
         text_credentials = Client()
         response = text_credentials.post(reverse("home"), {"username": "admin", "password": "admin"})
-        self.assertRedirects(response, reverse("welcome"), fetch_redirect_response=False)
+        self.assertRedirects(response, reverse("dashboard"), fetch_redirect_response=False)
         self.assertTrue(text_credentials.session["authenticated"])
         self.assertEqual(text_credentials.session["narrator_username"], "admin")
 
@@ -431,7 +440,7 @@ class RoomFlowTests(TestCase):
             reverse("home"),
             {"username": "yessin", "password": "yessin"},
         )
-        self.assertRedirects(response, reverse("welcome"), fetch_redirect_response=False)
+        self.assertRedirects(response, reverse("dashboard"), fetch_redirect_response=False)
         self.assertTrue(private_credentials.session["authenticated"])
         self.assertEqual(private_credentials.session["narrator_username"], "yessin")
 
@@ -461,7 +470,7 @@ class RoomFlowTests(TestCase):
         session.save()
         self.assertNotContains(visitor.get(reverse("home")), "Od5ol lel game. Ra9eb. Chok. W ab9a 7ay.")
         self.assertNotContains(visitor.get(reverse("roles_guide")), "Pouvoirs, blocage mta3 Loup Cerbere")
-        self.assertNotContains(visitor.get(reverse("room_history_list")), "Tal9a houni bilan mta3 kol lil")
+        self.assertRedirects(visitor.get(reverse("room_history_list")), reverse("home"), fetch_redirect_response=False)
 
         session = self.narrator.session
         session["language"] = "tn"
@@ -472,7 +481,7 @@ class RoomFlowTests(TestCase):
         room = self.create_room()
         self.assertTrue(room.code.isdigit())
         self.assertEqual(len(room.code), 6)
-        player = Client()
+        player = self.player_client("sarra")
         response = player.post(
             reverse("room_portal"),
             {"action": "join", "room_code": room.code.lower(), "player_name": "Sarra"},
@@ -513,11 +522,11 @@ class RoomFlowTests(TestCase):
 
     def test_player_rejoins_started_room_with_same_name_without_duplicate_registration(self):
         room = self.create_room()
-        first_phone = Client()
+        first_phone = self.player_client("yessin-player")
         first_phone.post(reverse("room_portal"), {"room_code": room.code, "player_name": "Yessin"})
         assigned = self.narrator.post(reverse("room_start_api", args=[room.code])).json()["assignments"][0]
 
-        second_phone = Client()
+        second_phone = self.player_client("yessin-player")
         response = second_phone.post(reverse("room_portal"), {"room_code": room.code, "player_name": "yEsSiN"})
 
         self.assertRedirects(response, reverse("room_player", args=[room.code]), fetch_redirect_response=False)
@@ -539,7 +548,7 @@ class RoomFlowTests(TestCase):
             content_type="application/json",
         )
 
-        phone = Client()
+        phone = self.player_client("yessin-manual")
         response = phone.post(reverse("room_portal"), {"room_code": room.code, "player_name": "Yessin"})
 
         self.assertRedirects(response, reverse("room_player", args=[room.code]), fetch_redirect_response=False)
@@ -548,8 +557,8 @@ class RoomFlowTests(TestCase):
 
     def test_narrator_can_reopen_lobby_and_redistribute_roles_to_phones(self):
         room = self.create_room()
-        sarra = Client()
-        ali = Client()
+        sarra = self.player_client("sarra")
+        ali = self.player_client("ali")
         for client, name in ((sarra, "Sarra"), (ali, "Ali")):
             client.post(reverse("room_portal"), {"room_code": room.code, "player_name": name})
 
@@ -577,7 +586,7 @@ class RoomFlowTests(TestCase):
         self.assertEqual(waiting["status"], GameRoom.Status.WAITING)
         self.assertIsNone(waiting["role"])
 
-        nour = Client()
+        nour = self.player_client("nour-player")
         joined = nour.post(reverse("room_portal"), {"room_code": room.code, "player_name": "Nour"})
         self.assertRedirects(joined, reverse("room_player", args=[room.code]), fetch_redirect_response=False)
         redistributed = self.narrator.post(reverse("room_start_api", args=[room.code])).json()
@@ -597,7 +606,7 @@ class RoomFlowTests(TestCase):
 
     def test_redistribution_keeps_unchecked_manual_players_and_reserves_their_places(self):
         room = self.create_room()
-        sarra = Client()
+        sarra = self.player_client("sarra")
         sarra.post(reverse("room_portal"), {"room_code": room.code, "player_name": "Sarra"})
         self.narrator.post(reverse("room_start_api", args=[room.code]))
         composition = {role: 0 for role in ROLES["fr"]}
@@ -652,8 +661,8 @@ class RoomFlowTests(TestCase):
         self.narrator.post(sync_url, json.dumps(state), content_type="application/json")
 
         self.assertEqual(RoomEvent.objects.filter(room=room).count(), 2)
-        self.assertEqual(Client().get(reverse("room_history_api", args=[room.code])).status_code, 200)
-        self.assertEqual(Client().get(reverse("room_history", args=[room.code])).status_code, 200)
+        self.assertEqual(Client().get(reverse("room_history_api", args=[room.code])).status_code, 403)
+        self.assertEqual(Client().get(reverse("room_history", args=[room.code])).status_code, 403)
         history = self.narrator.get(reverse("room_history_api", args=[room.code])).json()
         self.assertEqual([event["type"] for event in history["events"]], ["night", "day"])
         night = history["events"][0]["details"]
@@ -676,16 +685,12 @@ class RoomFlowTests(TestCase):
         self.assertEqual(day["secret_votes"], ["Ahmed → Sarra"])
         self.assertEqual(day["final_totals"], ["Ahmed: 1", "Sarra: 1"])
 
-        public_list = Client().get(reverse("room_history_list"))
-        self.assertContains(public_list, room.code)
-        self.assertContains(public_list, "Partie en cours")
+        self.assertRedirects(Client().get(reverse("room_history_list")), reverse("home"), fetch_redirect_response=False)
 
         state.update({"stage": "game_over", "winner": "village"})
         self.narrator.post(sync_url, json.dumps(state), content_type="application/json")
-        self.assertEqual(Client().get(reverse("room_history_api", args=[room.code])).status_code, 200)
-        self.assertEqual(Client().get(reverse("room_history", args=[room.code])).status_code, 200)
-        public_list = Client().get(reverse("room_history_list"))
-        self.assertContains(public_list, room.code)
+        self.assertEqual(Client().get(reverse("room_history_api", args=[room.code])).status_code, 403)
+        self.assertEqual(Client().get(reverse("room_history", args=[room.code])).status_code, 403)
 
     def test_setup_rejects_duplicate_special_roles_and_all_wolves(self):
         duplicate_seer = {**self.composition, "seers": 2, "villagers": 4}
@@ -777,13 +782,9 @@ class RoomFlowTests(TestCase):
 
         visitor = Client()
         guest_history = visitor.get(reverse("room_history_list"))
-        self.assertContains(guest_history, room.code)
-        self.assertContains(guest_history, "Partie en cours")
-        self.assertNotContains(guest_history, 'class="history-continue-button"')
-        self.assertNotContains(guest_history, 'class="history-finish-button"')
-        self.assertNotContains(guest_history, reverse("room_history_delete", args=[room.code]))
-        self.assertEqual(visitor.get(reverse("room_history", args=[room.code])).status_code, 200)
-        self.assertEqual(visitor.get(reverse("room_history_api", args=[room.code])).status_code, 200)
+        self.assertRedirects(guest_history, reverse("home"), fetch_redirect_response=False)
+        self.assertEqual(visitor.get(reverse("room_history", args=[room.code])).status_code, 403)
+        self.assertEqual(visitor.get(reverse("room_history_api", args=[room.code])).status_code, 403)
 
         returning_admin = Client()
         returning_admin.post(reverse("home"), {"username": "admin", "password": "admin"})
@@ -829,7 +830,7 @@ class RoomFlowTests(TestCase):
         self.assertFalse(GameRoom.objects.filter(code=room.code).exists())
 
     def test_room_join_rejects_non_numeric_code(self):
-        response = Client().post(
+        response = self.player_client("sarra-invalid").post(
             reverse("room_portal"),
             {"action": "join", "room_code": "ABC123", "player_name": "Sarra"},
         )
@@ -838,8 +839,8 @@ class RoomFlowTests(TestCase):
 
     def test_home_opens_general_room_join_form(self):
         home = Client().get(reverse("home"))
-        self.assertContains(home, f'href="{reverse("room_portal")}"')
-        portal = Client().get(reverse("room_portal"))
+        self.assertNotContains(home, f'href="{reverse("room_portal")}"')
+        portal = self.narrator.get(reverse("room_portal"))
         self.assertEqual(portal.status_code, 200)
         self.assertContains(portal, 'name="room_code"')
         self.assertContains(portal, 'name="player_name"')
@@ -931,7 +932,7 @@ class RoomFlowTests(TestCase):
         delete_url = reverse("room_history_delete", args=[room.code])
 
         visitor = Client()
-        self.assertNotContains(visitor.get(reverse("room_history_list")), delete_url)
+        self.assertRedirects(visitor.get(reverse("room_history_list")), reverse("home"), fetch_redirect_response=False)
         self.assertEqual(visitor.post(delete_url).status_code, 403)
         self.assertTrue(GameRoom.objects.filter(code=room.code).exists())
 
@@ -949,7 +950,7 @@ class RoomFlowTests(TestCase):
         self.assertIn(b"<svg", response.content)
         self.assertEqual(Client().head(reverse("room_qr", args=[room.code])).status_code, 200)
 
-        portal = Client().get(reverse("room_portal"), {"code": room.code})
+        portal = self.player_client("qr-player").get(reverse("room_portal"), {"code": room.code})
         self.assertContains(portal, f'value="{room.code}"')
 
     def test_general_qr_code_opens_unprefilled_room_portal(self):

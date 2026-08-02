@@ -12,7 +12,7 @@ class SuperuserDeleteOnlyMixin:
 
 @admin.register(GameRoom)
 class GameRoomAdmin(SuperuserDeleteOnlyMixin, admin.ModelAdmin):
-    list_display = ("code", "status", "player_count", "created_at", "updated_at")
+    list_display = ("code", "narrator", "status", "player_count", "created_at", "updated_at")
     list_filter = ("status", "created_at")
     search_fields = ("code",)
     readonly_fields = ("code", "created_at", "updated_at")
@@ -29,7 +29,7 @@ class RoomEventAdmin(SuperuserDeleteOnlyMixin, admin.ModelAdmin):
 
 @admin.register(RoomPlayer)
 class RoomPlayerAdmin(SuperuserDeleteOnlyMixin, admin.ModelAdmin):
-    list_display = ("name", "room", "role", "joined_at")
+    list_display = ("name", "user", "room", "role", "joined_at")
     search_fields = ("name", "room__code")
     list_select_related = ("room",)
     readonly_fields = ("room", "name", "token", "role", "joined_at")

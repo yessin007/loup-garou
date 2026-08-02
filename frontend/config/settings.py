@@ -104,5 +104,6 @@ STORAGES = {
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
-# Cookie-backed sessions keep this first prototype independent from a database.
+# Cookie-backed sessions keep session state lightweight; accounts and game
+# participation are persisted in the database.
 SESSION_ENGINE = "django.contrib.sessions.backends.signed_cookies"

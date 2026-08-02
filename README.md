@@ -42,7 +42,7 @@ Render, choisir **New > Blueprint**, connecter ce depot puis confirmer avec
 
 Le Blueprint genere une cle Django aleatoire et relie automatiquement
 `DATABASE_URL` a la base PostgreSQL. L'administration est disponible sur
-`/admin/` avec `admin / admin`.
+`/admin/` avec `yessin / yessin` (a changer en production).
 
 ### Configuration manuelle alternative
 
@@ -61,7 +61,7 @@ Dans le panneau Render:
    - `DJANGO_ALLOWED_HOSTS=.onrender.com`
    - `DJANGO_SECRET_KEY=<une longue valeur aleatoire et privee>`
    - `DATABASE_URL=<Internal Database URL de Render Postgres>`
-   - `ADMIN_USERNAME=admin`
+   - `ADMIN_USERNAME=yessin`
    - `ADMIN_EMAIL=<adresse email admin>`
    - `ADMIN_PASSWORD=<mot de passe admin fort et prive>`
 
@@ -84,7 +84,14 @@ Creer une base Render Postgres dans la meme region que le service web et utilise
 son URL interne pour `DATABASE_URL`. Les rooms et leurs historiques restent
 alors disponibles apres les redeploiements. Le compte configure par les
 variables `ADMIN_*` peut gerer et supprimer les historiques depuis `/admin/`.
-La consultation publique reste en lecture seule sur `/historique/`.
+La consultation de `/historique/` demande maintenant une connexion et applique les droits du compte.
+
+## Comptes et acces
+
+- `yessin / yessin` est le super-admin initial (changez ce mot de passe en production).
+- Le super-admin cree les comptes `Joueur` et `Narrateur` depuis `/utilisateurs/`.
+- Un narrateur peut creer une partie, la reprendre, jouer lui-meme et consulter ses parties terminees.
+- Un joueur peut rejoindre une room et ne voit dans son historique que ses propres parties terminees.
 
 En local, Docker Compose demarre automatiquement PostgreSQL, applique les
 migrations et conserve les donnees dans le volume `loup_garou_postgres`.

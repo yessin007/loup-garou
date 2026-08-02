@@ -7,9 +7,9 @@
     <title>{{ room.all_histories }} | Loup Garou</title><link rel="stylesheet" href="{% static 'css/styles.css' %}" />
   </head>
   <body class="room-page">
-    <header class="guide-header"><a class="brand" href="{% url 'home' %}">Loup <span>Garou</span></a><div class="guide-header-actions">{% include "pages/_language_selector.html" %}<a class="guide-back" href="{% url 'home' %}">{{ room.back }}</a></div></header>
+    <header class="guide-header"><a class="brand" href="{% url 'dashboard' %}">Loup <span>Garou</span></a><div class="guide-header-actions">{% include "pages/_language_selector.html" %}<a class="guide-back" href="{% url 'dashboard' %}">{{ room.back }}</a></div></header>
     <main class="room-shell">
-      <section class="room-hero history-hero"><div><p class="eyebrow">{{ room.archive }}</p><h1>{{ room.all_histories }}</h1>{% if room.history_intro %}<p>{{ room.history_intro }}</p>{% endif %}</div></section>
+      <section class="room-hero history-hero"><div><p class="eyebrow">{{ room.archive }}</p><h1>{% if player_history %}Mes parties terminées{% else %}{{ room.all_histories }}{% endif %}</h1>{% if room.history_intro %}<p>{{ room.history_intro }}</p>{% endif %}</div></section>
       <div class="history-room-list">
         {% for game_room in history_rooms %}
           <article class="history-room-entry{% if game_room.status == 'active' %} active{% endif %}">
@@ -46,7 +46,7 @@
           <p class="history-empty">{{ room.history_empty }}</p>
         {% endfor %}
       </div>
-      <a class="history-home-link" href="{% url 'home' %}"><span>←</span>{{ room.back_home }}</a>
+      <a class="history-home-link" href="{% url 'dashboard' %}"><span>←</span>Retour au tableau de bord</a>
     </main>
   </body>
 </html>

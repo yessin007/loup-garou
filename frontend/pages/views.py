@@ -1,9 +1,12 @@
 import json
 import secrets
 from io import BytesIO
+from urllib.parse import urlencode
 
 import qrcode
 from qrcode.image.svg import SvgPathImage
+from django.contrib.auth import authenticate, get_user_model, login, logout
+from django.contrib.auth.models import Group
 from django.db import transaction
 from django.db.models import Count, Q
 from django.conf import settings
@@ -32,6 +35,19 @@ WOLF_ROLE_KEYS = (
 SINGLETON_ROLE_KEYS = tuple(
     role for role in ROLE_KEYS if role not in {"simple_wolves", "villagers"}
 )
+
+NARRATOR_GROUP = "narrators"
+
+
+def is_narrator(user):
+    return bool(
+        user.is_authenticated
+        and (user.is_superuser or user.groups.filter(name=NARRATOR_GROUP).exists())
+    )
+
+
+def narrator_can_manage(user, room):
+    return is_narrator(user) and (user.is_superuser or room.narrator_id in {None, user.id})
 
 ROOM_TEXT = {
     "fr": {
@@ -139,16 +155,23 @@ def room_text(request):
 
 
 def room_for_narrator(request, code):
-    if not request.session.get("authenticated"):
+    if not is_narrator(request.user):
         return None
     setup = request.session.get("game_setup", {})
     if setup.get("room_code") != code:
         return None
-    return GameRoom.objects.filter(code=code).first()
+    room = GameRoom.objects.filter(code=code).first()
+    return room if room and narrator_can_manage(request.user, room) else None
 
 
 def can_view_room_history(request, room):
-    return room.status in {GameRoom.Status.ACTIVE, GameRoom.Status.FINISHED} or bool(request.session.get("authenticated"))
+    if narrator_can_manage(request.user, room):
+        return True
+    return bool(
+        request.user.is_authenticated
+        and room.status == GameRoom.Status.FINISHED
+        and room.room_players.filter(user=request.user).exists()
+    )
 
 
 def player_label(state, player_id):
@@ -235,23 +258,95 @@ def set_language(request):
 
 
 def home(request):
-    if request.session.get("authenticated"):
-        return redirect("welcome")
+    if request.user.is_authenticated:
+        return redirect("dashboard")
 
     error = None
+    requested_next = request.POST.get("next") or request.GET.get("next", "")
+    if not url_has_allowed_host_and_scheme(requested_next, allowed_hosts={request.get_host()}):
+        requested_next = ""
     if request.method == "POST":
         username = request.POST.get("username", "").strip()
         password = request.POST.get("password", "")
-        expected_password = settings.NARRATOR_CREDENTIALS.get(username)
+        user = authenticate(request, username=username, password=password)
 
-        if expected_password is not None and secrets.compare_digest(password, expected_password):
+        # Keep environment-configured narrator accounts compatible with older
+        # installations, while persisting them as real Django users.
+        if user is None:
+            expected_password = settings.NARRATOR_CREDENTIALS.get(username)
+            if expected_password is not None and secrets.compare_digest(password, expected_password):
+                user_model = get_user_model()
+                if not user_model.objects.filter(username=username).exists():
+                    user = user_model.objects.create_user(username=username, password=password)
+                    if username == "yessin":
+                        user.is_staff = True
+                        user.is_superuser = True
+                        user.save(update_fields=["is_staff", "is_superuser"])
+                    else:
+                        user.groups.add(Group.objects.get_or_create(name=NARRATOR_GROUP)[0])
+
+        if user is not None and user.is_active:
+            login(request, user)
+            # Retained for old signed-cookie sessions during the migration.
             request.session["authenticated"] = True
-            request.session["narrator_username"] = username
-            return redirect("welcome")
+            request.session["narrator_username"] = user.username
+            return redirect(requested_next or reverse("dashboard"))
 
         error = UI[current_language(request)]["auth_error"]
 
-    return render(request, "pages/home.html", {"error": error})
+    return render(request, "pages/home.html", {"error": error, "next_url": requested_next})
+
+
+def dashboard(request):
+    if not request.user.is_authenticated:
+        return redirect("home")
+    return redirect("welcome" if is_narrator(request.user) else "room_portal")
+
+
+def user_management(request):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        raise PermissionDenied
+
+    user_model = get_user_model()
+    error = None
+    success = None
+    if request.method == "POST":
+        action = request.POST.get("action", "create")
+        if action == "toggle":
+            target = get_object_or_404(user_model, pk=request.POST.get("user_id"))
+            if target.pk == request.user.pk or target.is_superuser:
+                error = "Le compte super-admin ne peut pas être désactivé."
+            else:
+                target.is_active = not target.is_active
+                target.save(update_fields=["is_active"])
+        elif action == "create":
+            username = request.POST.get("username", "").strip()
+            password = request.POST.get("password", "")
+            role = request.POST.get("role", "player")
+            if not username or not password:
+                error = "Le nom d’utilisateur et le mot de passe sont obligatoires."
+            elif role not in {"player", "narrator"}:
+                error = "Type de compte invalide."
+            elif user_model.objects.filter(username__iexact=username).exists():
+                error = "Ce nom d’utilisateur existe déjà."
+            else:
+                new_user = user_model.objects.create_user(username=username, password=password)
+                if role == "narrator":
+                    new_user.groups.add(Group.objects.get_or_create(name=NARRATOR_GROUP)[0])
+                success = f"Le compte {username} a été créé."
+
+    users = list(user_model.objects.prefetch_related("groups").order_by("username"))
+    for account in users:
+        account.account_role = (
+            "Super admin" if account.is_superuser
+            else "Narrateur" if any(group.name == NARRATOR_GROUP for group in account.groups.all())
+            else "Joueur"
+        )
+    return render(request, "pages/user_management.html", {
+        "managed_users": users,
+        "error": error,
+        "success": success,
+    })
 
 
 def roles_guide(request):
@@ -271,6 +366,8 @@ def roles_guide(request):
 
 
 def room_portal(request):
+    if not request.user.is_authenticated:
+        return redirect(f"{reverse('home')}?{urlencode({'next': request.get_full_path()})}")
     text = room_text(request)
     error = None
     initial_code = request.GET.get("code", "").strip()
@@ -288,7 +385,8 @@ def room_portal(request):
         elif not name:
             error = text["player_name"]
         else:
-            joined = room.room_players.filter(name__iexact=name).first()
+            joined = room.room_players.filter(user=request.user).first()
+            name_owner = room.room_players.filter(name__iexact=name).first()
             game_state = room.game_state or {}
             pending_manual = game_state.get("pendingManualPlayerNames", [])
             pending_name = next((item for item in pending_manual if item.casefold() == name.casefold()), None)
@@ -296,13 +394,15 @@ def room_portal(request):
 
             if joined:
                 pass
+            elif name_owner:
+                error = text["name_used"]
             elif room.status == GameRoom.Status.WAITING and pending_name:
-                joined = RoomPlayer.objects.create(room=room, name=pending_name)
+                joined = RoomPlayer.objects.create(room=room, name=pending_name, user=request.user)
                 game_state["pendingManualPlayerNames"] = [item for item in pending_manual if item.casefold() != name.casefold()]
                 room.game_state = game_state
                 room.save(update_fields=["game_state", "updated_at"])
             elif room.status != GameRoom.Status.WAITING and manual_state_player and manual_state_player.get("role") in ROLE_KEYS:
-                joined = RoomPlayer.objects.create(room=room, name=manual_state_player["name"], role=manual_state_player["role"])
+                joined = RoomPlayer.objects.create(room=room, name=manual_state_player["name"], role=manual_state_player["role"], user=request.user)
                 manual_state_player["roomPlayerId"] = joined.id
                 room.game_state = game_state
                 room.save(update_fields=["game_state", "updated_at"])
@@ -311,14 +411,20 @@ def room_portal(request):
             elif room.room_players.count() + len(pending_manual) >= room.player_count:
                 error = text["room_full"]
             else:
-                joined = RoomPlayer.objects.create(room=room, name=name)
+                joined = RoomPlayer.objects.create(room=room, name=name, user=request.user)
 
             if joined and not error:
                 tokens = request.session.get("room_player_tokens", {})
                 tokens[room.code] = str(joined.token)
                 request.session["room_player_tokens"] = tokens
                 return redirect("room_player", code=room.code)
-    return render(request, "pages/room_portal.html", {"room": text, "error": error, "initial_code": initial_code})
+    return render(request, "pages/room_portal.html", {
+        "room": text,
+        "error": error,
+        "initial_code": initial_code,
+        "default_player_name": request.user.first_name or request.user.username,
+        "narrator_mode": is_narrator(request.user),
+    })
 
 
 def room_player(request, code):
@@ -368,21 +474,30 @@ def room_qr(request, code):
 
 
 def room_history_list(request):
-    rooms = GameRoom.objects.annotate(event_count=Count("events"))
-    rooms = rooms.filter(Q(status=GameRoom.Status.ACTIVE) | Q(status=GameRoom.Status.FINISHED))
+    if not request.user.is_authenticated:
+        return redirect("home")
+    rooms = GameRoom.objects.annotate(event_count=Count("events", distinct=True))
+    player_history = not is_narrator(request.user) or request.GET.get("mine") == "1"
+    if player_history:
+        rooms = rooms.filter(status=GameRoom.Status.FINISHED, room_players__user=request.user)
+    else:
+        rooms = rooms.filter(Q(status=GameRoom.Status.ACTIVE) | Q(status=GameRoom.Status.FINISHED))
+        if not request.user.is_superuser:
+            rooms = rooms.filter(Q(narrator=request.user) | Q(narrator__isnull=True))
     rooms = rooms.order_by("-updated_at")
     return render(request, "pages/room_history_list.html", {
         "history_rooms": rooms,
         "room": room_text(request),
-        "can_delete_history": bool(request.session.get("authenticated")),
+        "can_delete_history": is_narrator(request.user) and not player_history,
+        "player_history": player_history,
     })
 
 
 @require_POST
 def room_history_finish(request, code):
-    if not request.session.get("authenticated"):
-        raise PermissionDenied
     room = get_object_or_404(GameRoom, code=code, status=GameRoom.Status.ACTIVE)
+    if not narrator_can_manage(request.user, room):
+        raise PermissionDenied
     room.status = GameRoom.Status.FINISHED
     room.save(update_fields=["status", "updated_at"])
     return redirect("room_history_list")
@@ -390,20 +505,22 @@ def room_history_finish(request, code):
 
 @require_POST
 def room_history_delete(request, code):
-    if not request.session.get("authenticated"):
-        raise PermissionDenied
     room = get_object_or_404(
         GameRoom,
         Q(status=GameRoom.Status.ACTIVE) | Q(status=GameRoom.Status.FINISHED),
         code=code,
     )
+    if not narrator_can_manage(request.user, room):
+        raise PermissionDenied
     room.delete()
     return redirect("room_history_list")
 
 
 def welcome(request):
-    if not request.session.get("authenticated"):
+    if not request.user.is_authenticated:
         return redirect("home")
+    if not is_narrator(request.user):
+        return redirect("room_portal")
 
     error = None
     resume_error = None
@@ -421,6 +538,8 @@ def welcome(request):
                 room = GameRoom.objects.filter(code=resume_code).first()
                 if not room:
                     resume_error = UI[current_language(request)]["resume_not_found"]
+                elif not narrator_can_manage(request.user, room):
+                    raise PermissionDenied
                 else:
                     request.session["game_setup"] = {
                         "player_count": room.player_count,
@@ -459,7 +578,7 @@ def welcome(request):
             elif any(composition[role] > 1 for role in SINGLETON_ROLE_KEYS):
                 error = UI[current_language(request)]["singleton_roles"]
             else:
-                room = GameRoom.objects.create(player_count=player_count, composition=composition)
+                room = GameRoom.objects.create(player_count=player_count, composition=composition, narrator=request.user)
                 request.session["game_setup"] = {
                     "player_count": player_count,
                     "composition": composition,
@@ -476,15 +595,17 @@ def welcome(request):
 
 
 def game(request):
-    if not request.session.get("authenticated"):
+    if not request.user.is_authenticated:
         return redirect("home")
+    if not is_narrator(request.user):
+        return redirect("room_portal")
 
     setup = request.session.get("game_setup")
     if not setup:
         return redirect("welcome")
     if not setup.get("room_code"):
         room = GameRoom.objects.create(
-            player_count=setup["player_count"], composition=setup["composition"]
+            player_count=setup["player_count"], composition=setup["composition"], narrator=request.user
         )
         setup["room_code"] = room.code
         request.session["game_setup"] = setup
@@ -691,6 +812,6 @@ def room_history_api(request, code):
 
 def logout_view(request):
     language = current_language(request)
-    request.session.flush()
+    logout(request)
     request.session["language"] = language
     return redirect("home")

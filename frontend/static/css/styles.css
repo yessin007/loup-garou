@@ -1662,6 +1662,50 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
   .village-state-actions button { min-height: 58px; font-size: .86rem; }
 }
 
+.user-management-shell {
+  width: min(1120px, calc(100% - 40px));
+  margin: 0 auto;
+  padding: 72px 0 90px;
+}
+.user-create-card,
+.user-list-card {
+  margin-top: 28px;
+  padding: clamp(24px, 4vw, 42px);
+  border: 1px solid rgba(199,139,69,.25);
+  border-radius: 18px;
+  background: rgba(12,20,25,.92);
+}
+.user-create-card { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; }
+.user-create-card h2,
+.user-create-card .form-error,
+.user-create-card .form-success,
+.user-create-card button { grid-column: 1 / -1; }
+.user-create-card label { display: grid; gap: 9px; color: #b9c0c3; font-size: .82rem; font-weight: 700; }
+.user-create-card input,
+.user-create-card select {
+  width: 100%; min-height: 54px; padding: 0 15px; border: 1px solid rgba(255,255,255,.14);
+  border-radius: 10px; color: var(--ivory); background: #091015; font: inherit;
+}
+.user-create-card button {
+  min-height: 56px; border: 0; border-radius: 10px; color: #111; background: var(--gold);
+  font-weight: 800; cursor: pointer;
+}
+.form-success { padding: 13px 15px; border: 1px solid rgba(92,181,121,.35); border-radius: 8px; color: #9dddaf; background: rgba(44,120,70,.13); }
+.user-list-card h2 { margin: 0 0 20px; }
+.managed-user-list { display: grid; gap: 10px; }
+.managed-user-list article {
+  display: flex; align-items: center; justify-content: space-between; gap: 16px;
+  padding: 17px 18px; border: 1px solid rgba(255,255,255,.08); border-radius: 11px; background: rgba(255,255,255,.025);
+}
+.managed-user-list article div { display: grid; gap: 5px; }
+.managed-user-list article small { color: #8d989d; }
+.managed-user-list button { padding: 10px 14px; border: 1px solid rgba(199,139,69,.32); border-radius: 8px; color: #e2b77e; background: transparent; cursor: pointer; }
+@media (max-width: 760px) {
+  .user-management-shell { width: min(100% - 24px, 1120px); padding-top: 40px; }
+  .user-create-card { grid-template-columns: 1fr; }
+  .managed-user-list article { align-items: flex-start; flex-direction: column; }
+}
+
 /* Extra-large typography for every individual night step on phones. */
 @media (max-width: 600px) {
   .night-mode .scene-panel { padding-top: 38px; }

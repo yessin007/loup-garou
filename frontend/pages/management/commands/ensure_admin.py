@@ -8,9 +8,9 @@ class Command(BaseCommand):
     help = "Create the environment-configured Django administrator if needed."
 
     def handle(self, *args, **options):
-        username = os.getenv("ADMIN_USERNAME", "").strip()
+        username = os.getenv("ADMIN_USERNAME", "yessin").strip()
         email = os.getenv("ADMIN_EMAIL", "").strip()
-        password = os.getenv("ADMIN_PASSWORD", "")
+        password = os.getenv("ADMIN_PASSWORD", "yessin")
         if not username or not password:
             self.stdout.write("Admin creation skipped: ADMIN_USERNAME or ADMIN_PASSWORD is missing.")
             return

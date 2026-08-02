@@ -23,6 +23,7 @@
 
         <form class="login-card" method="post" novalidate>
           {% csrf_token %}
+          {% if next_url %}<input type="hidden" name="next" value="{{ next_url }}" />{% endif %}
           <div class="form-heading">
             <p class="form-kicker">{{ ui.player_area }}</p>
             <h2>{{ ui.login }}</h2>
@@ -39,9 +40,8 @@
           <input id="password" name="password" type="password" autocomplete="current-password" placeholder="{{ ui.password_placeholder }}" required />
 
           <button type="submit">{{ ui.enter }} <span aria-hidden="true">&#8594;</span></button>
-          <a class="role-guide-link room-entry-link" href="{% url 'room_portal' %}">{{ ui.room_access }} <span aria-hidden="true">&#8594;</span></a>
           <a class="role-guide-link" href="{% url 'roles_guide' %}">{{ ui.roles_guide_link }} <span aria-hidden="true">&#8594;</span></a>
-          <p class="demo-hint">{{ ui.temporary_access }} : <strong>admin / admin</strong></p>
+          <p class="demo-hint">Super admin : <strong>yessin / yessin</strong></p>
         </form>
       </section>
       <p class="chapter">{{ ui.chapter }} <span></span> {{ ui.village_sleeps }}</p>

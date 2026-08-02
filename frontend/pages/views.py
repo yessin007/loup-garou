@@ -278,24 +278,42 @@ def room_portal(request):
         initial_code = ""
     if request.method == "POST":
         code = request.POST.get("room_code", "").strip()
+        name = request.POST.get("player_name", "").strip()[:40]
         initial_code = code
         room = GameRoom.objects.filter(code=code).first() if code.isdigit() and len(code) == 6 else None
         if not code.isdigit() or len(code) != 6:
             error = text["invalid_code"]
         elif not room:
             error = text["invalid_room"]
-        elif room.status != GameRoom.Status.WAITING:
-            error = text["room_started"]
-        elif room.room_players.count() >= room.player_count:
-            error = text["room_full"]
+        elif not name:
+            error = text["player_name"]
         else:
-            name = request.POST.get("player_name", "").strip()[:40]
-            if not name:
-                error = text["player_name"]
-            elif room.room_players.filter(name__iexact=name).exists():
-                error = text["name_used"]
+            joined = room.room_players.filter(name__iexact=name).first()
+            game_state = room.game_state or {}
+            pending_manual = game_state.get("pendingManualPlayerNames", [])
+            pending_name = next((item for item in pending_manual if item.casefold() == name.casefold()), None)
+            manual_state_player = next((item for item in game_state.get("players", []) if not item.get("roomPlayerId") and str(item.get("name", "")).casefold() == name.casefold()), None)
+
+            if joined:
+                pass
+            elif room.status == GameRoom.Status.WAITING and pending_name:
+                joined = RoomPlayer.objects.create(room=room, name=pending_name)
+                game_state["pendingManualPlayerNames"] = [item for item in pending_manual if item.casefold() != name.casefold()]
+                room.game_state = game_state
+                room.save(update_fields=["game_state", "updated_at"])
+            elif room.status != GameRoom.Status.WAITING and manual_state_player and manual_state_player.get("role") in ROLE_KEYS:
+                joined = RoomPlayer.objects.create(room=room, name=manual_state_player["name"], role=manual_state_player["role"])
+                manual_state_player["roomPlayerId"] = joined.id
+                room.game_state = game_state
+                room.save(update_fields=["game_state", "updated_at"])
+            elif room.status != GameRoom.Status.WAITING:
+                error = text["room_started"]
+            elif room.room_players.count() + len(pending_manual) >= room.player_count:
+                error = text["room_full"]
             else:
                 joined = RoomPlayer.objects.create(room=room, name=name)
+
+            if joined and not error:
                 tokens = request.session.get("room_player_tokens", {})
                 tokens[room.code] = str(joined.token)
                 request.session["room_player_tokens"] = tokens
@@ -511,7 +529,7 @@ def room_lobby_api(request, code):
     room = room_for_narrator(request, code.upper())
     if not room:
         return JsonResponse({"error": "forbidden"}, status=403)
-    return JsonResponse({"code": room.code, "status": room.status, "player_count": room.player_count, "players": [{"id": item.id, "name": item.name} for item in room.room_players.all()]})
+    return JsonResponse({"code": room.code, "status": room.status, "player_count": room.player_count, "players": [{"id": item.id, "name": item.name} for item in room.room_players.all()], "manual_players": (room.game_state or {}).get("pendingManualPlayerNames", [])})
 
 
 @require_POST
@@ -524,8 +542,9 @@ def room_start_api(request, code):
     if room.status != GameRoom.Status.WAITING:
         return JsonResponse({"error": "already_started"}, status=409)
     joined = list(room.room_players.select_for_update().all())
+    manual_players = (room.game_state or {}).get("pendingManualPlayerNames", [])
     roles = [role for role, count in room.composition.items() for _ in range(count)]
-    if len(joined) > len(roles):
+    if len(joined) + len(manual_players) > len(roles):
         return JsonResponse({"error": "too_many_players"}, status=409)
     secrets.SystemRandom().shuffle(roles)
     assignments = []
@@ -535,7 +554,7 @@ def room_start_api(request, code):
         assignments.append({"room_player_id": joined_player.id, "name": joined_player.name, "role": joined_player.role})
     room.status = GameRoom.Status.ACTIVE
     room.save(update_fields=["status", "updated_at"])
-    return JsonResponse({"assignments": assignments, "remaining_roles": roles[len(joined):]})
+    return JsonResponse({"assignments": assignments, "remaining_roles": roles[len(joined):], "manual_players": manual_players})
 
 
 @require_POST
@@ -551,6 +570,7 @@ def room_reconfigure_api(request, code):
         payload = json.loads(request.body)
         composition = {role: int(payload.get("composition", {}).get(role, 0)) for role in ROLE_KEYS}
         removed_ids = {int(item) for item in payload.get("removed_player_ids", [])}
+        manual_players = [str(item).strip()[:40] for item in payload.get("manual_players", []) if str(item).strip()]
     except (TypeError, ValueError, json.JSONDecodeError):
         return JsonResponse({"error": "invalid_setup"}, status=400)
 
@@ -568,7 +588,12 @@ def room_reconfigure_api(request, code):
         return JsonResponse({"error": "singleton_roles"}, status=400)
 
     players = room.room_players.select_for_update()
-    remaining_count = players.exclude(id__in=removed_ids).count()
+    if len({name.casefold() for name in manual_players}) != len(manual_players):
+        return JsonResponse({"error": "duplicate_players"}, status=400)
+    connected_names = {name.casefold() for name in players.exclude(id__in=removed_ids).values_list("name", flat=True)}
+    if connected_names.intersection(name.casefold() for name in manual_players):
+        return JsonResponse({"error": "duplicate_players"}, status=400)
+    remaining_count = players.exclude(id__in=removed_ids).count() + len(manual_players)
     if remaining_count > player_count:
         return JsonResponse({"error": "too_many_players"}, status=400)
 
@@ -577,7 +602,7 @@ def room_reconfigure_api(request, code):
     room.player_count = player_count
     room.composition = composition
     room.status = GameRoom.Status.WAITING
-    room.game_state = {}
+    room.game_state = {"pendingManualPlayerNames": manual_players}
     room.save(update_fields=["player_count", "composition", "status", "game_state", "updated_at"])
     request.session["game_setup"] = {
         "player_count": player_count,
@@ -588,6 +613,7 @@ def room_reconfigure_api(request, code):
         "status": room.status,
         "player_count": player_count,
         "composition": composition,
+        "manual_players": manual_players,
         "players": [{"id": item.id, "name": item.name} for item in room.room_players.all()],
     })
 

@@ -192,7 +192,7 @@
           whiteWolfTargetId: null,
           lifePotion: true, deathPotion: true, seerTargetId: null, seerDisplayedRole: null, seerWasBlocked: false,
           deaths: [], speakerId: null, qualifiers: [], accusationDraftIds: [], lastVote: null, voteDeathIds: [], voteBreakdown: {normal: [], cancelled: [], secret: [], totals: []},
-          roleDeck: [], revealVisible: false, voteOutcome: null, voteRevealedRole: null, servantAccepted: null, winner: null,
+          roleDeck: [], revealVisible: false, pendingManualPlayerNames: [], voteOutcome: null, voteRevealedRole: null, servantAccepted: null, winner: null,
         };
       }
 
@@ -231,6 +231,7 @@
       if (!Array.isArray(state.pyromaniacIgnitedIds)) state.pyromaniacIgnitedIds = [];
       if (!state.voteBreakdown) state.voteBreakdown = {normal: [], cancelled: [], secret: [], totals: []};
       if (!Array.isArray(state.accusationDraftIds)) state.accusationDraftIds = [];
+      if (!Array.isArray(state.pendingManualPlayerNames)) state.pendingManualPlayerNames = [];
       if (resumeRequested) {
         localStorage.setItem(storageKey, JSON.stringify(state));
         localStorage.removeItem(undoStorageKey);
@@ -932,9 +933,10 @@
           refreshLobby();
           return;
         }
+        const pendingManualName = state.pendingManualPlayerNames[0] || "";
         scene.innerHTML = `<div class="pass-player-number">${String(number).padStart(2, "0")}</div><div class="scene-kicker">${t("phone_player", {n: number})}</div><h1>${L.first_name_q}</h1>
           <p class="scene-lead">${L.name_help} · ${state.players.length} joueur(s) ont reçu leur rôle en ligne.</p>
-          <label class="single-name"><span>${t("player_name", {n: String(number).padStart(2, "0")})}</span><input id="current-player-name" type="text" placeholder="${L.your_name}" autocomplete="off" autofocus></label>
+          <label class="single-name"><span>${t("player_name", {n: String(number).padStart(2, "0")})}</span><input id="current-player-name" type="text" placeholder="${L.your_name}" value="${escapeHtml(pendingManualName)}" autocomplete="off" ${pendingManualName ? "readonly" : "autofocus"}></label>
           <div class="scene-actions">${actionButton(L.discover_role, "register-player")}${testMode ? actionButton(L.auto_distribution_test, "auto-distribute-test", false, true, true) : ""}</div>`;
       }
 
@@ -946,7 +948,9 @@
           if (!response.ok) return;
           const data = await response.json();
           const list = document.getElementById("online-player-list");
-          if (list) list.innerHTML = data.players.length ? data.players.map(item => `<span>#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)}</span>`).join("") : `<p>Aucun joueur connecté. Tu peux quand même lancer puis saisir tous les joueurs manuellement.</p>`;
+          const connectedRows = data.players.map(item => `<span>#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)} · QR</span>`);
+          const manualRows = (data.manual_players || state.pendingManualPlayerNames).map(name => `<span>${escapeHtml(name)} · Manuel</span>`);
+          if (list) list.innerHTML = connectedRows.length || manualRows.length ? [...connectedRows, ...manualRows].join("") : `<p>Aucun joueur connecté. Tu peux quand même lancer puis saisir tous les joueurs manuellement.</p>`;
         } finally {
           clearTimeout(lobbyRefreshTimer);
           if (state.stage === "roster" && !state.roomStarted) lobbyRefreshTimer = setTimeout(refreshLobby, 2000);
@@ -958,6 +962,7 @@
         const response = await fetch(`/api/rooms/${roomCode}/start/`, {method: "POST", headers: {"X-CSRFToken": csrfToken}});
         if (!response.ok) { button.disabled = false; return; }
         const data = await response.json();
+        state.pendingManualPlayerNames = data.manual_players || state.pendingManualPlayerNames || [];
         state.players = data.assignments.map((item, index) => ({id: index + 1, roomPlayerId: item.room_player_id, name: item.name, role: item.role, alive: true}));
         state.seatingOrderIds = state.players.map(item => item.id);
         state.roleDeck = [...data.assignments.map(item => item.role), ...data.remaining_roles];
@@ -970,10 +975,11 @@
         if (!testMode || !state.roomStarted) return;
         while (state.players.length < setup.player_count) {
           const id = state.players.length + 1;
-          let name = `Test ${String(id).padStart(2, "0")}`;
+          let name = state.pendingManualPlayerNames[0] || `Test ${String(id).padStart(2, "0")}`;
           let suffix = 2;
           while (state.players.some(item => item.name.toLowerCase() === name.toLowerCase())) name = `Test ${String(id).padStart(2, "0")}-${suffix++}`;
           state.players.push({id, name, role: state.roleDeck[id - 1], alive: true});
+          if (state.pendingManualPlayerNames[0] === name) state.pendingManualPlayerNames.shift();
           state.seatingOrderIds = normalizedSeatingOrder();
         }
         state.revealVisible = false;
@@ -998,10 +1004,14 @@
         if (distributionEditing) {
           const roleRows = Object.keys(roleMeta).map(role => {
             const count = Number(setup.composition[role] || 0);
-            const maximum = ["simple_wolves", "villagers"].includes(role) ? 30 : 1;
-            return `<label class="redistribution-role-row"><span>${escapeHtml(setup.role_labels[role])}</span><div><button type="button" data-action="distribution-role-step" data-role="${role}" data-step="-1" aria-label="-">−</button><input type="number" min="0" max="${maximum}" value="${count}" data-distribution-role="${role}"><button type="button" data-action="distribution-role-step" data-role="${role}" data-step="1" aria-label="+">+</button></div></label>`;
+            const repeatable = ["simple_wolves", "villagers"].includes(role);
+            const factionClass = roleMeta[role].faction === "wolf" ? "wolf-role" : role === "villagers" ? "villager-role" : "";
+            const control = repeatable
+              ? `<div class="counter"><button type="button" data-action="distribution-role-step" data-role="${role}" data-step="-1" aria-label="-">−</button><input type="number" min="0" max="30" value="${count}" data-distribution-role="${role}" readonly><button type="button" data-action="distribution-role-step" data-role="${role}" data-step="1" aria-label="+">+</button></div>`
+              : `<div class="role-toggle-control"><label class="role-selection-toggle"><input class="role-selection-checkbox redistribution-role-toggle" type="checkbox" data-distribution-role="${role}" ${count ? "checked" : ""} aria-label="${escapeHtml(setup.role_labels[role])}"><span aria-hidden="true">✓</span></label></div>`;
+            return `<article class="role-row redistribution-role-card ${factionClass} ${repeatable ? "" : `toggle-role ${count ? "selected" : ""}`}" ${repeatable ? "" : `data-distribution-toggle-role="${role}"`}><div class="role-mark">${escapeHtml(roleMeta[role].short)}</div><div class="role-copy"><strong>${escapeHtml(setup.role_labels[role])}</strong><span>${escapeHtml(roleMeta[role].description)}</span></div>${control}</article>`;
           }).join("");
-          const playerRows = state.players.map(item => `<label class="redistribution-player-row"><span>#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)}</span><span><input type="checkbox" data-remove-player="${item.roomPlayerId || ""}" ${item.roomPlayerId ? "" : "disabled"}> ${item.roomPlayerId ? L.redistribution_remove : "Manuel"}</span></label>`).join("");
+          const playerRows = state.players.map(item => `<label class="redistribution-player-row"><span>#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)} <small>· ${item.roomPlayerId ? "QR" : "Manuel"}</small></span><span><input type="checkbox" data-remove-player="${item.roomPlayerId || ""}" data-remove-local-player="${item.roomPlayerId ? "" : item.id}"> ${L.redistribution_remove}</span></label>`).join("");
           scene.innerHTML = `<div class="scene-kicker">${L.modify_distribution}</div><h1>${L.redistribution_title}</h1><p class="scene-lead">${L.redistribution_help}</p><section class="redistribution-editor"><div><h2>${L.redistribution_roles}</h2><div class="redistribution-role-list">${roleRows}</div><strong id="redistribution-total"></strong></div><div><h2>${L.redistribution_players}</h2><div class="redistribution-player-list">${playerRows}</div></div></section><div class="scene-actions">${actionButton(L.redistribution_apply, "apply-redistribution")}${actionButton(L.redistribution_cancel, "cancel-redistribution", false, true)}</div>`;
           updateRedistributionTotal();
           return;
@@ -1021,12 +1031,15 @@
       }
 
       function redistributionComposition() {
-        return Object.fromEntries([...document.querySelectorAll("[data-distribution-role]")].map(input => [input.dataset.distributionRole, Number(input.value || 0)]));
+        return Object.fromEntries([...document.querySelectorAll("[data-distribution-role]")].map(input => [input.dataset.distributionRole, input.type === "checkbox" ? Number(input.checked) : Number(input.value || 0)]));
       }
 
       function updateRedistributionTotal() {
         const output = document.getElementById("redistribution-total");
         if (!output) return;
+        document.querySelectorAll("[data-distribution-toggle-role]").forEach(row => {
+          row.classList.toggle("selected", Boolean(row.querySelector(".redistribution-role-toggle")?.checked));
+        });
         const total = Object.values(redistributionComposition()).reduce((sum, count) => sum + count, 0);
         output.textContent = t("redistribution_total", {count: total});
       }
@@ -1034,11 +1047,14 @@
       async function applyRedistribution(button) {
         button.disabled = true;
         const composition = redistributionComposition();
-        const removedPlayerIds = [...document.querySelectorAll("[data-remove-player]:checked")].map(input => Number(input.dataset.removePlayer)).filter(Boolean);
+        const removedInputs = [...document.querySelectorAll("[data-remove-player]:checked")];
+        const removedPlayerIds = removedInputs.map(input => Number(input.dataset.removePlayer)).filter(Boolean);
+        const removedLocalPlayerIds = new Set(removedInputs.map(input => Number(input.dataset.removeLocalPlayer)).filter(Boolean));
+        const manualPlayers = state.players.filter(item => !item.roomPlayerId && !removedLocalPlayerIds.has(item.id)).map(item => item.name);
         const response = await fetch(`/api/rooms/${roomCode}/reconfigure/`, {
           method: "POST",
           headers: {"Content-Type": "application/json", "X-CSRFToken": csrfToken},
-          body: JSON.stringify({composition, removed_player_ids: removedPlayerIds}),
+          body: JSON.stringify({composition, removed_player_ids: removedPlayerIds, manual_players: manualPlayers}),
         });
         if (!response.ok) {
           button.disabled = false;
@@ -1049,6 +1065,7 @@
         setup.player_count = data.player_count;
         setup.composition = data.composition;
         state = freshState();
+        state.pendingManualPlayerNames = data.manual_players || manualPlayers;
         state.redistributionMode = true;
         distributionEditing = false;
         undoStack = [];
@@ -1545,11 +1562,12 @@
           : "";
         const speaker = player(state.speakerId);
         const seerTarget = player(state.seerTargetId);
+        const seerSeenRole = roleMeta[state.seerDisplayedRole]?.name || "—";
         const deadSeers = state.deaths.map(player).filter(item => item?.role === "seers");
-        const finalVision = deadSeers.length && (seerTarget || state.seerWasBlocked) ? `<div class="final-vision"><strong>${state.seerWasBlocked ? L.seer_saw_cerberus : t("seer_saw_name", {name: escapeHtml(seerTarget.name)})}</strong></div>` : "";
+        const finalVision = deadSeers.length && (seerTarget || state.seerWasBlocked) ? `<div class="final-vision"><strong>${state.seerWasBlocked ? L.seer_saw_cerberus : t("seer_saw_role", {role: escapeHtml(seerSeenRole)})}</strong></div>` : "";
         const seerReport = !deadSeers.length && state.seerWasBlocked
           ? `<div class="seer-summary"><strong>${L.seer_saw_cerberus}</strong></div>`
-          : seerTarget && !deadSeers.length ? `<div class="seer-summary seer-result-summary"><strong>${t("seer_saw_name", {name: escapeHtml(seerTarget.name)})}</strong></div>` : "";
+          : seerTarget && !deadSeers.length ? `<div class="seer-summary seer-result-summary"><strong>${t("seer_saw_role", {role: escapeHtml(seerSeenRole)})}</strong></div>` : "";
         const villageInfo = `${ancientReport}${bearReport}${shepherdReport}${judgeReport}${finalVision}${seerReport}`;
         const villageSection = villageInfo ? `<section class="bilan-section village-info-section"><h2>${L.village_night_info}</h2>${villageInfo}</section>` : "";
         const instructions = `${dayConstraints()}${!state.winner && speaker ? `<div class="speaker-card"><strong>${L.speaking_starts} ${escapeHtml(speaker.name)}</strong></div>` : ""}`;
@@ -1830,6 +1848,7 @@
           updateAccusationButton();
         }
         if (event.target.classList.contains("pyro-douse-target")) updatePyromaniacButton(event.target);
+        if (event.target.classList.contains("redistribution-role-toggle")) updateRedistributionTotal();
       });
       document.addEventListener("input", event => {
         if (event.target.id === "assigned-word") updateTalkativeButton();
@@ -1837,6 +1856,13 @@
       });
 
       document.addEventListener("click", event => {
+        const redistributionRoleCard = event.target.closest("[data-distribution-toggle-role]");
+        if (redistributionRoleCard && !event.target.closest(".role-selection-toggle")) {
+          const checkbox = redistributionRoleCard.querySelector(".redistribution-role-toggle");
+          checkbox.checked = !checkbox.checked;
+          updateRedistributionTotal();
+          return;
+        }
         const voteButton = event.target.closest("[data-vote-step]");
         if (voteButton) {
           const output = voteButton.parentElement.querySelector("output");
@@ -1881,6 +1907,7 @@
           }
           const id = state.players.length + 1;
           state.players.push({ id, name, role: state.roleDeck[id - 1], alive: true });
+          if (state.pendingManualPlayerNames[0] === name) state.pendingManualPlayerNames.shift();
           state.seatingOrderIds = normalizedSeatingOrder();
           state.revealVisible = false;
           state.stage = "player_reveal";

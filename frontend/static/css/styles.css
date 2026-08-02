@@ -965,11 +965,18 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .redistribution-editor > div { padding: 18px; border: 1px solid rgba(255,255,255,.1); background: rgba(255,255,255,.025); }
 .redistribution-editor h2 { margin: 0 0 16px; color: var(--ember-light); font-size: .78rem; letter-spacing: .08em; text-transform: uppercase; }
 .redistribution-role-list, .redistribution-player-list { display: grid; gap: 7px; }
+.redistribution-role-list .redistribution-role-card { min-height: 68px; padding: 10px; border: 1px solid rgba(255,255,255,.08); }
+.redistribution-role-list .redistribution-role-card.toggle-role:not(.selected) { opacity: .52; filter: saturate(.55); }
+.redistribution-role-list .redistribution-role-card.toggle-role.selected { border-color: rgba(199,139,69,.42); opacity: 1; filter: none; }
+.redistribution-role-list .redistribution-role-card.wolf-role.toggle-role.selected { border-color: rgba(197,91,71,.42); background: rgba(122,44,33,.1); }
+.redistribution-role-list .redistribution-role-card .counter button { margin: 0; padding: 0; }
+.redistribution-role-list .redistribution-role-card .counter input { min-height: 34px; }
 .redistribution-role-row, .redistribution-player-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 46px; padding: 7px 10px; border: 1px solid rgba(255,255,255,.07); color: #aeb8bd; font-size: .72rem; background: rgba(255,255,255,.02); }
 .redistribution-role-row > div { display: grid; grid-template-columns: 34px 44px 34px; align-items: center; }
 .redistribution-role-row button { width: 34px; min-height: 34px; margin: 0; padding: 0; }
 .redistribution-role-row input { width: 44px; min-height: 34px; padding: 5px; text-align: center; }
 .redistribution-player-row input { width: auto; min-height: 0; }
+.redistribution-player-row small { color: #77848a; font-size: .61rem; text-transform: uppercase; }
 #redistribution-total { display: block; margin-top: 16px; color: var(--ivory); }
 .room-card-action { display: flex; align-items: center; justify-content: space-between; min-height: 48px; margin-top: auto; padding: 14px 18px; border: 1px solid rgba(199,139,69,.38); color: var(--ivory); text-decoration: none; background: rgba(199,139,69,.08); }
 .room-code-chip { display: inline-grid; place-items: center; min-height: 34px; padding: 6px 11px; border: 1px solid rgba(199,139,69,.4); color: var(--ember-light); font: 700 .75rem "Cinzel", serif; letter-spacing: .15em; background: rgba(199,139,69,.08); }

@@ -99,7 +99,7 @@ class RoomFlowTests(TestCase):
         self.assertContains(game, 'class="bilan-section day-instruction-section"')
         self.assertContains(game, 't("died_tonight_role", {role: escapeHtml(roleMeta[victim.role].name)})')
         self.assertNotContains(game, '<strong>#${String(id).padStart(2, "0")} · ${escapeHtml(victim.name)}</strong>')
-        self.assertContains(game, 't("seer_saw_name", {name: escapeHtml(seerTarget.name)})')
+        self.assertContains(game, 't("seer_saw_role", {role: escapeHtml(seerSeenRole)})')
         self.assertContains(game, '${L.judge_saw} <mark>${judgeVerdict}</mark>')
         self.assertContains(game, '${L.speaking_starts} ${escapeHtml(speaker.name)}')
         self.assertContains(game, 'classList.toggle("bilan-mode"')
@@ -509,6 +509,41 @@ class RoomFlowTests(TestCase):
         private_state = player.get(reverse("room_player_api", args=[room.code])).json()
         self.assertEqual(private_state["role"]["code"], "wild_children")
 
+    def test_player_rejoins_started_room_with_same_name_without_duplicate_registration(self):
+        room = self.create_room()
+        first_phone = Client()
+        first_phone.post(reverse("room_portal"), {"room_code": room.code, "player_name": "Yessin"})
+        assigned = self.narrator.post(reverse("room_start_api", args=[room.code])).json()["assignments"][0]
+
+        second_phone = Client()
+        response = second_phone.post(reverse("room_portal"), {"room_code": room.code, "player_name": "yEsSiN"})
+
+        self.assertRedirects(response, reverse("room_player", args=[room.code]), fetch_redirect_response=False)
+        private_state = second_phone.get(reverse("room_player_api", args=[room.code])).json()
+        self.assertEqual(private_state["role"]["code"], assigned["role"])
+        self.assertEqual(room.room_players.filter(name__iexact="Yessin").count(), 1)
+
+    def test_manually_registered_player_can_connect_by_name_after_game_starts(self):
+        room = self.create_room()
+        self.narrator.post(reverse("room_start_api", args=[room.code]))
+        state = {
+            "stage": "roles",
+            "round": 1,
+            "players": [{"id": 1, "name": "Yessin", "role": "villagers", "alive": True}],
+        }
+        self.narrator.post(
+            reverse("room_sync_api", args=[room.code]),
+            json.dumps(state),
+            content_type="application/json",
+        )
+
+        phone = Client()
+        response = phone.post(reverse("room_portal"), {"room_code": room.code, "player_name": "Yessin"})
+
+        self.assertRedirects(response, reverse("room_player", args=[room.code]), fetch_redirect_response=False)
+        self.assertEqual(phone.get(reverse("room_player_api", args=[room.code])).json()["role"]["code"], "villagers")
+        self.assertEqual(room.room_players.filter(name="Yessin").count(), 1)
+
     def test_narrator_can_reopen_lobby_and_redistribute_roles_to_phones(self):
         room = self.create_room()
         sarra = Client()
@@ -553,6 +588,32 @@ class RoomFlowTests(TestCase):
         game = self.narrator.get(reverse("game"))
         self.assertContains(game, "modify_distribution")
         self.assertContains(game, "/reconfigure/")
+        self.assertContains(game, "redistribution-role-toggle")
+        self.assertContains(game, "data-distribution-toggle-role")
+        self.assertContains(game, 'input.type === "checkbox" ? Number(input.checked)')
+        self.assertContains(game, "data-remove-local-player")
+
+    def test_redistribution_keeps_unchecked_manual_players_and_reserves_their_places(self):
+        room = self.create_room()
+        sarra = Client()
+        sarra.post(reverse("room_portal"), {"room_code": room.code, "player_name": "Sarra"})
+        self.narrator.post(reverse("room_start_api", args=[room.code]))
+        composition = {role: 0 for role in ROLES["fr"]}
+        composition.update({"simple_wolves": 1, "villagers": 7})
+
+        response = self.narrator.post(
+            reverse("room_reconfigure_api", args=[room.code]),
+            json.dumps({"composition": composition, "removed_player_ids": [], "manual_players": ["Yessin"]}),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json()["manual_players"], ["Yessin"])
+        lobby = self.narrator.get(reverse("room_lobby_api", args=[room.code])).json()
+        self.assertEqual(lobby["manual_players"], ["Yessin"])
+        redistributed = self.narrator.post(reverse("room_start_api", args=[room.code])).json()
+        self.assertEqual(redistributed["manual_players"], ["Yessin"])
+        self.assertEqual(len(redistributed["remaining_roles"]), 7)
 
     def test_night_and_day_history_are_created_once(self):
         room = self.create_room()

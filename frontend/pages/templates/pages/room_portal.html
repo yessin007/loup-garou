@@ -21,13 +21,18 @@
         <p>{{ room.room_intro }}</p>
       </section>
       {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+      {% if retry_after %}<aside class="join-queue-banner" role="status">
+        <span class="join-queue-spinner" aria-hidden="true"></span>
+        <div><strong>{{ room.join_queue_wait }}</strong><p>{{ room.join_retrying }} <b id="join-retry-countdown">{{ retry_after }}</b> s.</p></div>
+      </aside>{% endif %}
       <div class="room-portals">
-        <form class="room-card" method="post">
+        <form id="join-room-form" class="room-card" method="post" data-retry-after="{{ retry_after|default:0 }}">
           {% csrf_token %}<input type="hidden" name="action" value="join" />
           <span>01</span><h2>{{ room.join }}</h2>
           <label>{{ room.room_code }}<input name="room_code" type="text" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" autocomplete="one-time-code" value="{{ initial_code }}" required /></label>
           <p class="joined-account-name">Nom dans la partie : <strong>{{ request.user.username }}</strong></p>
-          <button type="submit">{{ room.join }} <span>→</span></button>
+          <p id="join-loading-message" class="join-loading-message" {% if not retry_after %}hidden{% endif %}><span class="join-queue-spinner" aria-hidden="true"></span>{{ room.joining_room }}</p>
+          <button id="join-room-button" type="submit">{% if retry_after %}{{ room.join_retry_now }}{% else %}{{ room.join }}{% endif %} <span>→</span></button>
         </form>
         {% if narrator_mode %}<section class="room-card general-qr-card">
           <span>02</span><h2>{{ room.general_qr }}</h2>
@@ -41,5 +46,31 @@
         </section>
       </div>
     </main>
+    <script>
+      const joinForm = document.getElementById("join-room-form");
+      const joinButton = document.getElementById("join-room-button");
+      const joinLoading = document.getElementById("join-loading-message");
+      let retrySeconds = Number(joinForm?.dataset.retryAfter || 0);
+
+      function showJoinLoading() {
+        joinButton.disabled = true;
+        joinLoading.hidden = false;
+        joinForm.classList.add("is-joining");
+      }
+
+      joinForm?.addEventListener("submit", showJoinLoading);
+      if (retrySeconds > 0) {
+        const countdown = document.getElementById("join-retry-countdown");
+        const retryTimer = setInterval(() => {
+          retrySeconds -= 1;
+          if (countdown) countdown.textContent = Math.max(0, retrySeconds);
+          if (retrySeconds <= 0) {
+            clearInterval(retryTimer);
+            joinButton.disabled = false;
+            joinForm.requestSubmit();
+          }
+        }, 1000);
+      }
+    </script>
   </body>
 </html>

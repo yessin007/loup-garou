@@ -979,7 +979,7 @@
         setHeading(L.distribution, t("player", {n: String(number).padStart(2, "0")}));
         if (!state.roomStarted) {
           const startLabel = state.redistributionMode ? L.redistribute_roles : "Lancer la distribution";
-          scene.innerHTML = `<div class="scene-kicker">Room · ${roomCode}</div><h1>Lobby joueurs</h1><p class="scene-lead">{{ room.qr_help|escapejs }}</p><div class="lobby-share"><img src="${websiteQrUrl}" alt="QR code du site" width="220" height="220"><div><span>{{ room.scan_qr|escapejs }}</span><strong>${roomCode}</strong><small>{{ room.room_code|escapejs }}</small></div></div><div id="online-player-list" class="online-player-list"><p>Chargement…</p></div><div class="scene-actions">${actionButton(startLabel, "start-room")}${testMode ? actionButton(L.auto_distribution_test, "auto-distribute-test", false, true, true) : ""}</div>`;
+          scene.innerHTML = `<div class="scene-kicker">Room · ${roomCode}</div><h1>Lobby joueurs</h1><p class="scene-lead">{{ room.qr_help|escapejs }}</p><div class="lobby-share"><img src="${websiteQrUrl}" alt="QR code du site" width="220" height="220"><div><span>{{ room.scan_qr|escapejs }}</span><strong>${roomCode}</strong><small>{{ room.room_code|escapejs }}</small></div></div><section class="lobby-roster"><header><span>{{ room.lobby_players|escapejs }}</span><strong id="lobby-player-count">0 / ${setup.player_count}</strong></header><div id="online-player-list" class="online-player-list"><p>Chargement…</p></div></section><div class="scene-actions">${actionButton(startLabel, "start-room")}${testMode ? actionButton(L.auto_distribution_test, "auto-distribute-test", false, true, true) : ""}</div>`;
           refreshLobby();
           return;
         }
@@ -998,13 +998,31 @@
           if (!response.ok) return;
           const data = await response.json();
           const list = document.getElementById("online-player-list");
-          const connectedRows = data.players.map(item => `<span>#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)} · Compte</span>`);
-          const manualRows = (data.manual_players || state.pendingManualPlayerNames).map(name => `<span>${escapeHtml(name)} · Manuel</span>`);
-          if (list) list.innerHTML = connectedRows.length || manualRows.length ? [...connectedRows, ...manualRows].join("") : `<p>Aucun joueur connecté. Tu peux quand même lancer puis saisir tous les joueurs manuellement.</p>`;
+          const manualPlayers = data.manual_players || [];
+          state.pendingManualPlayerNames = manualPlayers;
+          const connectedRows = data.players.map((item, index) => `<article><span><b>${String(index + 1).padStart(2, "0")}</b><strong>${escapeHtml(item.name)}</strong><small>{{ room.account_player|escapejs }}</small></span><button type="button" data-action="remove-lobby-player" data-room-player-id="${item.id}" title="{{ room.remove_player|escapejs }}" aria-label="{{ room.remove_player|escapejs }}">−</button></article>`);
+          const manualRows = manualPlayers.map((name, index) => `<article><span><b>${String(data.players.length + index + 1).padStart(2, "0")}</b><strong>${escapeHtml(name)}</strong><small>{{ room.manual_player|escapejs }}</small></span><button type="button" data-action="remove-lobby-player" data-manual-name="${encodeURIComponent(name)}" title="{{ room.remove_player|escapejs }}" aria-label="{{ room.remove_player|escapejs }}">−</button></article>`);
+          const registeredCount = Number(data.registered_count ?? connectedRows.length + manualRows.length);
+          document.getElementById("lobby-player-count")?.replaceChildren(`${registeredCount} / ${data.player_count}`);
+          if (list) list.innerHTML = connectedRows.length || manualRows.length ? [...connectedRows, ...manualRows].join("") : `<p>{{ room.empty_lobby|escapejs }}</p>`;
         } finally {
           clearTimeout(lobbyRefreshTimer);
           if (state.stage === "roster" && !state.roomStarted) lobbyRefreshTimer = setTimeout(refreshLobby, 2000);
         }
+      }
+
+      async function removeLobbyPlayer(button) {
+        button.disabled = true;
+        const payload = button.dataset.roomPlayerId
+          ? {room_player_id: Number(button.dataset.roomPlayerId)}
+          : {manual_name: decodeURIComponent(button.dataset.manualName)};
+        const response = await fetch(`/api/rooms/${roomCode}/lobby/remove/`, {
+          method: "POST",
+          headers: {"Content-Type": "application/json", "X-CSRFToken": csrfToken},
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) { button.disabled = false; return; }
+        await refreshLobby();
       }
 
       async function startRoomDistribution(button) {
@@ -1949,6 +1967,8 @@
         const action = button.dataset.action;
         if (action === "start-room") {
           startRoomDistribution(button); return;
+        } else if (action === "remove-lobby-player") {
+          removeLobbyPlayer(button); return;
         } else if (action === "edit-distribution") {
           distributionEditing = true; render(); return;
         } else if (action === "cancel-redistribution") {

@@ -3,6 +3,7 @@ from unittest.mock import Mock, patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.db.utils import OperationalError
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
@@ -581,7 +582,9 @@ class RoomFlowTests(TestCase):
 
         player_page = player.get(reverse("room_player", args=[room.code]))
         self.assertContains(player_page, 'id="alive-role-list"')
-        self.assertContains(player_page, "renderAliveRoles")
+        self.assertContains(player_page, "renderRoleRoster")
+        self.assertContains(player_page, 'id="dead-role-count"')
+        self.assertContains(player_page, 'role.alive ? "alive" : "dead"')
         self.assertContains(player_page, 'if (data.status !== "finished") scheduleRoom()')
 
         game_page = self.narrator.get(reverse("game"))
@@ -633,6 +636,66 @@ class RoomFlowTests(TestCase):
             {item["code"]: item["count"] for item in private_state["alive_roles"]},
             {"simple_wolves": 1, "wild_children": 1},
         )
+        self.assertEqual(private_state["dead_count"], 1)
+        self.assertEqual(
+            [(item["code"], item["alive"]) for item in private_state["role_roster"]],
+            [("simple_wolves", True), ("wild_children", True), ("villagers", False)],
+        )
+
+    def test_narrator_lobby_shows_capacity_and_can_remove_players(self):
+        room = self.create_room()
+        sarra = self.player_client("Sarra")
+        ali = self.player_client("Ali")
+        sarra.post(reverse("room_portal"), {"room_code": room.code})
+        ali.post(reverse("room_portal"), {"room_code": room.code})
+        room.game_state = {"pendingManualPlayerNames": ["Joueur manuel"]}
+        room.save(update_fields=["game_state"])
+
+        lobby = self.narrator.get(reverse("room_lobby_api", args=[room.code])).json()
+        self.assertEqual(lobby["registered_count"], 3)
+        self.assertEqual(lobby["player_count"], 8)
+
+        sarra_id = room.room_players.get(name="Sarra").id
+        forbidden = ali.post(
+            reverse("room_lobby_remove_api", args=[room.code]),
+            json.dumps({"room_player_id": sarra_id}),
+            content_type="application/json",
+        )
+        self.assertEqual(forbidden.status_code, 403)
+
+        removed = self.narrator.post(
+            reverse("room_lobby_remove_api", args=[room.code]),
+            json.dumps({"room_player_id": sarra_id}),
+            content_type="application/json",
+        )
+        self.assertEqual(removed.status_code, 200)
+        self.assertEqual(removed.json()["registered_count"], 2)
+        self.assertFalse(room.room_players.filter(name="Sarra").exists())
+
+        removed_manual = self.narrator.post(
+            reverse("room_lobby_remove_api", args=[room.code]),
+            json.dumps({"manual_name": "Joueur manuel"}),
+            content_type="application/json",
+        )
+        self.assertEqual(removed_manual.status_code, 200)
+        self.assertEqual(removed_manual.json()["registered_count"], 1)
+        room.refresh_from_db()
+        self.assertEqual(room.game_state["pendingManualPlayerNames"], [])
+
+        ali_id = room.room_players.get(name="Ali").id
+        self.narrator.post(reverse("room_start_api", args=[room.code]))
+        too_late = self.narrator.post(
+            reverse("room_lobby_remove_api", args=[room.code]),
+            json.dumps({"room_player_id": ali_id}),
+            content_type="application/json",
+        )
+        self.assertEqual(too_late.status_code, 409)
+        self.assertTrue(room.room_players.filter(name="Ali").exists())
+
+        game = self.narrator.get(reverse("game"))
+        self.assertContains(game, 'id="lobby-player-count"')
+        self.assertContains(game, 'data-action="remove-lobby-player"')
+        self.assertContains(game, "/lobby/remove/")
 
     def test_roster_sync_does_not_close_room_before_distribution(self):
         room = self.create_room()
@@ -1089,6 +1152,23 @@ class RoomFlowTests(TestCase):
         )
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "exactement 6 chiffres")
+
+    def test_busy_room_join_shows_queue_and_retries_after_fifteen_seconds(self):
+        room = self.create_room()
+        player = self.player_client("queued-player")
+
+        with patch(
+            "pages.views.GameRoom.objects.select_for_update",
+            side_effect=OperationalError("room is locked"),
+        ):
+            response = player.post(reverse("room_portal"), {"room_code": room.code})
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.headers["Retry-After"], "15")
+        self.assertContains(response, 'data-retry-after="15"', status_code=503)
+        self.assertContains(response, 'id="join-retry-countdown"', status_code=503)
+        self.assertContains(response, "joinForm.requestSubmit()", status_code=503)
+        self.assertFalse(room.room_players.filter(name="queued-player").exists())
 
     def test_home_opens_general_room_join_form(self):
         home = Client().get(reverse("home"))

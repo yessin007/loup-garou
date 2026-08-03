@@ -2,7 +2,7 @@ from django.urls import path
 
 from .views import (
     game, general_room_qr, health, home, logout_view, room_history, room_history_api, room_history_delete, room_history_finish, room_history_list,
-    room_lobby_api, room_player, room_player_api, room_portal, room_reconfigure_api, room_start_api,
+    room_lobby_api, room_lobby_remove_api, room_player, room_player_api, room_portal, room_reconfigure_api, room_start_api,
     room_sync_api, roles_guide, service_worker, set_language, pwa_manifest, welcome, dashboard, register, user_detail, user_management,
 )
 
@@ -24,6 +24,7 @@ urlpatterns = [
     path("room/<str:code>/", room_player, name="room_player"),
     path("room/<str:code>/historique/", room_history, name="room_history"),
     path("api/rooms/<str:code>/lobby/", room_lobby_api, name="room_lobby_api"),
+    path("api/rooms/<str:code>/lobby/remove/", room_lobby_remove_api, name="room_lobby_remove_api"),
     path("api/rooms/<str:code>/reconfigure/", room_reconfigure_api, name="room_reconfigure_api"),
     path("api/rooms/<str:code>/start/", room_start_api, name="room_start_api"),
     path("api/rooms/<str:code>/sync/", room_sync_api, name="room_sync_api"),

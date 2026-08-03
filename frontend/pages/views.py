@@ -8,6 +8,7 @@ from qrcode.image.svg import SvgPathImage
 from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.models import Group
 from django.db import transaction
+from django.db.utils import IntegrityError, OperationalError
 from django.db.models import Count, Q
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
@@ -106,6 +107,36 @@ ROOM_TEXT = {
         "room_title": "Od5ol lel game", "room_intro": "Da5el code el room. Esmek fel game houwa username mte3ek.", "room_code": "Code mta3 el room", "player_name": "Esmek", "join": "Od5ol", "general_qr": "QR mta3 el site", "general_qr_help": "Fama QR wa7ed bark y7el el site bech tconnecti wala tasna3 compte. Ba3d da5el code el room.", "history": "Bilan w historique", "all_histories": "Archive mta3 les games", "history_intro": "", "open_history": "7ell el bilan direct", "scan_qr": "Scanni bch t7el el site", "qr_help": "Scanni el QR general, connecti w da5el code el room hedha.", "waiting": "Nestannew fel narrateur", "waiting_help": "Role mte3ek yodhher houni ki narrateur yabda el distribution.", "your_role": "Role mte3ek bel sir", "keep_secret": "Ma twarrich el ecran l 7ad.", "roles_alive": "Les roles eli mazelou 3aychin", "roles_alive_count": "joueur(s) mazelou 3aychin", "roles_alive_empty": "Ma fama 7atta role mezel 3ayech.", "joined": "D5alt lel room", "players_joined": "joueur(s) connectes", "events": "bilan(s)", "yes": "Ey", "no": "Le", "invalid_room": "El room mawjoudach.", "invalid_code": "El code lezem ykoun 6 ar9am bark.", "room_started": "El game hedhi bdet deja.", "name_used": "El username hedha mesta3mel fel room.", "room_full": "El room kemlet.", "history_empty": "Mezel ma fama 7atta bilan: kammel awel lil wala awel nhar.", "night": "Lil", "day": "Nhar", "back": "Erja3", "back_home": "Arja3 page d’accueil", "continue_game": "Kammel el game", "refreshing": "El bilan yetjadded wa7dou", "room_access": "Od5ol room / chouf el bilan",
     },
 }
+ROOM_TEXT["fr"].update({
+    "roles_alive": "Rôles des joueurs", "roles_alive_count": "vivant(s)",
+    "roles_dead_count": "mort(s)", "role_alive_status": "Vivant",
+    "role_dead_status": "Mort", "roles_alive_empty": "Aucun rôle distribué.",
+    "lobby_players": "Joueurs inscrits", "account_player": "Compte",
+    "manual_player": "Manuel", "remove_player": "Retirer ce joueur",
+    "empty_lobby": "Aucun joueur inscrit pour le moment.",
+    "joining_room": "Inscription en cours…", "join_queue_wait": "Beaucoup de joueurs rejoignent la room en même temps.",
+    "join_retrying": "Nouvelle tentative automatique dans", "join_retry_now": "Réessayer maintenant",
+})
+ROOM_TEXT["en"].update({
+    "roles_alive": "Player roles", "roles_alive_count": "alive",
+    "roles_dead_count": "dead", "role_alive_status": "Alive",
+    "role_dead_status": "Dead", "roles_alive_empty": "No roles distributed.",
+    "lobby_players": "Registered players", "account_player": "Account",
+    "manual_player": "Manual", "remove_player": "Remove this player",
+    "empty_lobby": "No registered players yet.",
+    "joining_room": "Joining the room…", "join_queue_wait": "Many players are joining the room at the same time.",
+    "join_retrying": "Retrying automatically in", "join_retry_now": "Retry now",
+})
+ROOM_TEXT["tn"].update({
+    "roles_alive": "Roles mta3 les joueurs", "roles_alive_count": "3aychin",
+    "roles_dead_count": "maytin", "role_alive_status": "3ayech",
+    "role_dead_status": "meyet", "roles_alive_empty": "Ma fama 7atta role distribué.",
+    "lobby_players": "Les joueurs eli da5lou", "account_player": "Compte",
+    "manual_player": "Manuel", "remove_player": "Na7i el joueur",
+    "empty_lobby": "Mezel ma d5al 7atta joueur.",
+    "joining_room": "Da5la lel room…", "join_queue_wait": "Fama barcha joueurs ye7ebbou yod5lou fard wa9t.",
+    "join_retrying": "Bech n3awdou automatiquement ba3d", "join_retry_now": "3awed taw",
+})
 
 ROOM_DETAIL_LABELS = {
     "fr": {"deaths": "Victimes", "protected": "Protection", "wolves_target": "Cible des loups", "blocked": "Pouvoir bloqué", "redirected_to": "Visite de la Pute", "pyromaniac_action": "Action du Pyromane", "pyromaniac_doused": "Aspergés cette nuit", "pyromaniac_ignited": "Incendiés cette nuit", "pyromaniac_oiled": "Encore aspergés", "infection_attempted": "Infection tentée", "infection_succeeded": "Infection réussie", "witch_saved": "Potion de vie", "witch_target": "Potion de mort", "bear_growled": "Ours", "sheep_returned": "Moutons revenus", "sheep_lost": "Moutons perdus", "sheep_remaining": "Moutons restants", "shepherd_blocked": "Berger bloqué", "judge_first": "Premier choix du Juge", "judge_second": "Deuxième choix du Juge", "judge_same_clan": "Même clan", "seer_target": "Vision de la Voyante", "seer_role": "Rôle aperçu", "eliminated": "Éliminé par vote", "vote_deaths": "Morts après le vote", "vote_outcome": "Résultat", "normal_votes": "Votes normaux", "cancelled_votes": "Votes annulés", "secret_votes": "Voix secrètes", "final_totals": "Total final", "hunter_targets": "Derniers tirs du Chasseur", "powers_lost": "Pouvoirs retirés", "barber_target": "Cible du Barbier", "barber_hit": "Tir du Barbier réussi", "alien_correct": "Réponse de l'Alien correcte", "winner": "Vainqueur"},
@@ -573,6 +604,7 @@ def room_portal(request):
         return redirect(f"{reverse('home')}?{urlencode({'next': request.get_full_path()})}")
     text = room_text(request)
     error = None
+    retry_after = 0
     initial_code = request.GET.get("code", "").strip()
     if not (initial_code.isdigit() and len(initial_code) == 6):
         initial_code = ""
@@ -580,53 +612,64 @@ def room_portal(request):
         code = request.POST.get("room_code", "").strip()
         name = request.user.username
         initial_code = code
-        room = GameRoom.objects.filter(code=code).first() if code.isdigit() and len(code) == 6 else None
         if not code.isdigit() or len(code) != 6:
             error = text["invalid_code"]
-        elif not room:
-            error = text["invalid_room"]
         else:
-            joined = room.room_players.filter(user=request.user).first()
-            name_owner = room.room_players.filter(name__iexact=name).first()
-            game_state = room.game_state or {}
-            pending_manual = game_state.get("pendingManualPlayerNames", [])
-            pending_name = next((item for item in pending_manual if item.casefold() == name.casefold()), None)
-            manual_state_player = next((item for item in game_state.get("players", []) if not item.get("roomPlayerId") and str(item.get("name", "")).casefold() == name.casefold()), None)
+            joined = None
+            room = None
+            try:
+                with transaction.atomic():
+                    room = GameRoom.objects.select_for_update(nowait=True).filter(code=code).first()
+                    if room:
+                        joined = room.room_players.filter(user=request.user).first()
+                        name_owner = room.room_players.filter(name__iexact=name).first()
+                        game_state = room.game_state or {}
+                        pending_manual = game_state.get("pendingManualPlayerNames", [])
+                        pending_name = next((item for item in pending_manual if item.casefold() == name.casefold()), None)
+                        manual_state_player = next((item for item in game_state.get("players", []) if not item.get("roomPlayerId") and str(item.get("name", "")).casefold() == name.casefold()), None)
+                        distribution_started = room_distribution_started(room, game_state)
 
-            distribution_started = room_distribution_started(room, game_state)
+                        if joined:
+                            pass
+                        elif name_owner:
+                            error = text["name_used"]
+                        elif not distribution_started and pending_name:
+                            joined = RoomPlayer.objects.create(room=room, name=pending_name, user=request.user)
+                            game_state["pendingManualPlayerNames"] = [item for item in pending_manual if item.casefold() != name.casefold()]
+                            room.game_state = game_state
+                            room.save(update_fields=["game_state", "updated_at"])
+                        elif distribution_started and manual_state_player and manual_state_player.get("role") in ROLE_KEYS:
+                            joined = RoomPlayer.objects.create(room=room, name=manual_state_player["name"], role=manual_state_player["role"], user=request.user)
+                            manual_state_player["roomPlayerId"] = joined.id
+                            room.game_state = game_state
+                            room.save(update_fields=["game_state", "updated_at"])
+                        elif distribution_started:
+                            error = text["room_started"]
+                        elif room.room_players.count() + len(pending_manual) >= room.player_count:
+                            error = text["room_full"]
+                        else:
+                            joined = RoomPlayer.objects.create(room=room, name=name, user=request.user)
+            except (IntegrityError, OperationalError):
+                retry_after = 15
 
-            if joined:
-                pass
-            elif name_owner:
-                error = text["name_used"]
-            elif not distribution_started and pending_name:
-                joined = RoomPlayer.objects.create(room=room, name=pending_name, user=request.user)
-                game_state["pendingManualPlayerNames"] = [item for item in pending_manual if item.casefold() != name.casefold()]
-                room.game_state = game_state
-                room.save(update_fields=["game_state", "updated_at"])
-            elif distribution_started and manual_state_player and manual_state_player.get("role") in ROLE_KEYS:
-                joined = RoomPlayer.objects.create(room=room, name=manual_state_player["name"], role=manual_state_player["role"], user=request.user)
-                manual_state_player["roomPlayerId"] = joined.id
-                room.game_state = game_state
-                room.save(update_fields=["game_state", "updated_at"])
-            elif distribution_started:
-                error = text["room_started"]
-            elif room.room_players.count() + len(pending_manual) >= room.player_count:
-                error = text["room_full"]
-            else:
-                joined = RoomPlayer.objects.create(room=room, name=name, user=request.user)
-
-            if joined and not error:
+            if not room and not retry_after:
+                error = text["invalid_room"]
+            elif joined and not error and not retry_after:
                 tokens = request.session.get("room_player_tokens", {})
                 tokens[room.code] = str(joined.token)
                 request.session["room_player_tokens"] = tokens
                 return redirect("room_player", code=room.code)
-    return render(request, "pages/room_portal.html", {
+    response = render(request, "pages/room_portal.html", {
         "room": text,
         "error": error,
         "initial_code": initial_code,
         "narrator_mode": is_narrator(request.user),
+        "retry_after": retry_after,
     })
+    if retry_after:
+        response.status_code = 503
+        response["Retry-After"] = str(retry_after)
+    return response
 
 
 def room_player(request, code):
@@ -845,7 +888,62 @@ def room_lobby_api(request, code):
     if not room:
         return JsonResponse({"error": "forbidden"}, status=403)
     effective_status = room.status if room_distribution_started(room) else GameRoom.Status.WAITING
-    return JsonResponse({"code": room.code, "status": effective_status, "player_count": room.player_count, "players": [{"id": item.id, "name": item.name} for item in room.room_players.all()], "manual_players": (room.game_state or {}).get("pendingManualPlayerNames", [])})
+    manual_players = (room.game_state or {}).get("pendingManualPlayerNames", [])
+    players = [{"id": item.id, "name": item.name} for item in room.room_players.all()]
+    return JsonResponse({
+        "code": room.code,
+        "status": effective_status,
+        "player_count": room.player_count,
+        "registered_count": len(players) + len(manual_players),
+        "players": players,
+        "manual_players": manual_players,
+    })
+
+
+@require_POST
+@transaction.atomic
+def room_lobby_remove_api(request, code):
+    room = room_for_narrator(request, code.upper())
+    if not room:
+        return JsonResponse({"error": "forbidden"}, status=403)
+    room = GameRoom.objects.select_for_update().get(code=room.code)
+    if room_distribution_started(room):
+        return JsonResponse({"error": "distribution_started"}, status=409)
+    try:
+        payload = json.loads(request.body)
+        room_player_id = int(payload.get("room_player_id", 0) or 0)
+        manual_name = str(payload.get("manual_name", "")).strip()
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return JsonResponse({"error": "invalid_player"}, status=400)
+
+    if room_player_id:
+        deleted, _ = room.room_players.filter(id=room_player_id).delete()
+        if not deleted:
+            return JsonResponse({"error": "player_not_found"}, status=404)
+    elif manual_name:
+        game_state = room.game_state or {}
+        manual_players = game_state.get("pendingManualPlayerNames", [])
+        matching_name = next(
+            (name for name in manual_players if str(name).casefold() == manual_name.casefold()),
+            None,
+        )
+        if matching_name is None:
+            return JsonResponse({"error": "player_not_found"}, status=404)
+        game_state["pendingManualPlayerNames"] = [
+            name for name in manual_players if name != matching_name
+        ]
+        room.game_state = game_state
+        room.save(update_fields=["game_state", "updated_at"])
+    else:
+        return JsonResponse({"error": "invalid_player"}, status=400)
+
+    manual_players = (room.game_state or {}).get("pendingManualPlayerNames", [])
+    return JsonResponse({
+        "status": "removed",
+        "registered_count": room.room_players.count() + len(manual_players),
+        "player_count": room.player_count,
+        "manual_players": manual_players,
+    })
 
 
 @require_POST
@@ -1058,6 +1156,34 @@ def room_player_api(request, code):
         for item_role in ROLE_KEYS
         if role_counts.get(item_role, 0) > 0
     ]
+    if (
+        distribution_started
+        and isinstance(state_players, list)
+        and game_state.get("stage") not in {"roster", "player_reveal"}
+    ):
+        total_role_counts = {}
+        for item in state_players:
+            item_role = item.get("role") if isinstance(item, dict) else None
+            if item_role in ROLE_KEYS:
+                total_role_counts[item_role] = total_role_counts.get(item_role, 0) + 1
+    else:
+        total_role_counts = {
+            item_role: int(room.composition.get(item_role, 0))
+            for item_role in ROLE_KEYS
+            if int(room.composition.get(item_role, 0)) > 0
+        }
+    role_roster = []
+    for item_role in ROLE_KEYS:
+        total = total_role_counts.get(item_role, 0)
+        alive = min(role_counts.get(item_role, 0), total)
+        role_roster.extend(
+            {"code": item_role, "name": ROLES[language][item_role][0], "alive": True}
+            for _ in range(alive)
+        )
+        role_roster.extend(
+            {"code": item_role, "name": ROLES[language][item_role][0], "alive": False}
+            for _ in range(total - alive)
+        )
     return JsonResponse({
         "status": effective_status,
         "joined_count": room.room_players.count(),
@@ -1065,6 +1191,8 @@ def room_player_api(request, code):
         "role": {"code": role, "name": ROLES[language][role][0], "description": ROLES[language][role][1]} if role else None,
         "alive_roles": alive_roles,
         "alive_count": sum(item["count"] for item in alive_roles),
+        "role_roster": role_roster,
+        "dead_count": sum(not item["alive"] for item in role_roster),
     })
 
 

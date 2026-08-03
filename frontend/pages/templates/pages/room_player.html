@@ -25,18 +25,20 @@
       function revealRole(role) {
         if (!card.classList.contains("revealed")) {
           card.className = "player-secret-card revealed";
-          card.innerHTML = `<p class="eyebrow">{{ room.your_role|escapejs }}</p><h1 id="player-role-name"></h1><p id="player-role-description"></p><strong class="secret-warning">{{ room.keep_secret|escapejs }}</strong><section class="alive-role-roster"><div class="alive-role-heading"><span>{{ room.roles_alive|escapejs }}</span><strong><b id="alive-role-count">0</b> {{ room.roles_alive_count|escapejs }}</strong></div><div id="alive-role-list" class="alive-role-list"></div></section>`;
+          card.innerHTML = `<div class="personal-role-panel"><p class="eyebrow">{{ room.your_role|escapejs }}</p><h1 id="player-role-name"></h1><p id="player-role-description"></p><strong class="secret-warning">{{ room.keep_secret|escapejs }}</strong></div><section class="alive-role-roster"><div class="alive-role-heading"><span>{{ room.roles_alive|escapejs }}</span><strong><b id="alive-role-count">0</b> {{ room.roles_alive_count|escapejs }} · <b id="dead-role-count">0</b> {{ room.roles_dead_count|escapejs }}</strong></div><div id="alive-role-list" class="alive-role-list"></div></section>`;
         }
         document.getElementById("player-role-name").textContent = role.name;
         document.getElementById("player-role-description").textContent = role.description;
       }
-      function renderAliveRoles(roles, aliveCount) {
+      function renderRoleRoster(roles, aliveCount, deadCount) {
         const count = document.getElementById("alive-role-count");
+        const dead = document.getElementById("dead-role-count");
         const list = document.getElementById("alive-role-list");
-        if (!count || !list) return;
+        if (!count || !dead || !list) return;
         count.textContent = aliveCount;
+        dead.textContent = deadCount;
         list.innerHTML = roles.length
-          ? roles.map(role => `<article><strong>${safe(role.name)}</strong><span>× ${role.count}</span></article>`).join("")
+          ? roles.map(role => `<article class="${role.alive ? "alive" : "dead"}"><strong>${safe(role.name)}</strong><span>${role.alive ? "{{ room.role_alive_status|escapejs }}" : "{{ room.role_dead_status|escapejs }}"}</span></article>`).join("")
           : `<p>{{ room.roles_alive_empty|escapejs }}</p>`;
       }
       async function refreshRoom() {
@@ -49,7 +51,7 @@
           document.getElementById("room-count")?.replaceChildren(`${data.joined_count} / ${data.player_count} {{ room.players_joined|escapejs }}`);
           if (data.role) {
             revealRole(data.role);
-            renderAliveRoles(data.alive_roles || [], data.alive_count || 0);
+            renderRoleRoster(data.role_roster || [], data.alive_count || 0, data.dead_count || 0);
             if (data.status !== "finished") scheduleRoom();
             return;
           }

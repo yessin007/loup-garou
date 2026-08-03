@@ -802,6 +802,7 @@ class RoomFlowTests(TestCase):
         self.assertEqual([event["type"] for event in history["events"]], ["night", "day"])
         night = history["events"][0]["details"]
         self.assertEqual(night["deaths"], ["Ahmed"])
+        self.assertEqual(night["player_roles"], {"Ahmed": "witches", "Sarra": "villagers"})
         self.assertEqual(night["couple_members"], ["Ahmed", "Sarra"])
         self.assertEqual(night["wild_idol"], "Sarra")
         self.assertEqual(night["redirected_to"], "Sarra")
@@ -844,6 +845,8 @@ class RoomFlowTests(TestCase):
         self.assertContains(history_page, "H.story_prostitute")
         self.assertContains(history_page, "H.story_barber_hit")
         self.assertContains(history_page, "H.story_accused")
+        self.assertContains(history_page, 'actor: actor("protectors")')
+        self.assertContains(history_page, "`${roleLabels[role] || role} (${name})`")
 
         self.assertRedirects(Client().get(reverse("room_history_list")), reverse("home"), fetch_redirect_response=False)
 

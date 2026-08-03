@@ -36,6 +36,7 @@
       let historyTimer = null;
       const meaningfulFalse = new Set(["bear_growled", "judge_same_clan", "barber_hit", "alien_correct"]);
       function shouldShow(key, value) {
+        if (key === "player_roles") return false;
         if (value === null || value === undefined || value === "") return false;
         if (Array.isArray(value)) return value.length > 0;
         if (value === false) return meaningfulFalse.has(key);
@@ -55,48 +56,61 @@
         const d = event.details || {};
         const lines = [];
         const add = (key, template, values = {}) => { if (template) lines.push({key, text: fill(template, values)}); };
-        const names = value => (value || []).join(", ");
+        const playerRoles = d.player_roles || {};
+        const person = name => {
+          if (!name) return name;
+          const role = playerRoles[name];
+          return role ? `${roleLabels[role] || role} (${name})` : name;
+        };
+        const names = value => (value || []).map(person).join(", ");
+        const actor = (...roles) => Object.entries(playerRoles)
+          .filter(([, role]) => roles.includes(role))
+          .map(([name]) => person(name))
+          .join(", ") || roles.map(role => roleLabels[role] || role).join(", ");
+        const decorated = value => Object.keys(playerRoles)
+          .sort((first, second) => second.length - first.length)
+          .reduce((text, name) => text.replaceAll(name, person(name)), value || "");
         if (event.type === "night") {
-          if (d.couple_members?.length) add("couple", H.story_couple, {names: names(d.couple_members)});
-          if (d.wild_child && d.wild_idol) add("wild", H.story_wild, {name: d.wild_idol});
-          if (d.protected) add("protected", H.story_protected, {name: d.protected});
-          if (d.redirected_to) add("prostitute", H.story_prostitute, {name: d.redirected_to});
-          if (d.blocked) add("blocked", H.story_blocked, {name: d.blocked});
-          if (d.pyromaniac_action) add("pyromaniac", H.story_pyro, {action: H[`pyro_action_${d.pyromaniac_action}`] || d.pyromaniac_action});
-          if (d.wolves_target) add("wolves", H.story_wolves, {name: d.wolves_target});
-          if (d.wolves_final_target) add("redirect", H.story_redirect, {name: d.wolves_final_target});
-          if (d.infection_attempted) add("infection", d.infection_succeeded ? H.story_infection_yes : H.story_infection_no, {name: d.infection_target || d.wolves_final_target || d.wolves_target});
-          if (d.white_wolf_target) add("white-wolf", H.story_white_wolf, {name: d.white_wolf_target});
-          if (d.silenced) add("silenced", H.story_silenced, {name: d.silenced});
-          if (d.talkative_target && d.talkative_word) add("talkative", H.story_talkative, {name: d.talkative_target, word: d.talkative_word});
-          if (d.witch_saved) add("witch", H.story_witch_saved);
-          if (d.witch_target) add("witch", H.story_witch_killed, {name: d.witch_target});
-          if (d.seer_target && d.seer_role) add("seer", H.story_seer, {name: d.seer_target, role: roleLabels[d.seer_role] || d.seer_role});
-          if (d.bear_growled !== null && d.bear_growled !== undefined) add("bear", d.bear_growled ? H.story_bear_yes : H.story_bear_no);
-          if (d.sheep_returned?.length) add("shepherd", H.story_sheep_returned, {names: names(d.sheep_returned)});
-          if (d.sheep_lost?.length) add("shepherd", H.story_sheep_lost, {names: names(d.sheep_lost)});
-          if (d.sheep_remaining !== null && d.sheep_remaining !== undefined) add("shepherd", H.story_sheep_left, {count: d.sheep_remaining});
-          if (d.judge_first && d.judge_second && d.judge_same_clan !== null && d.judge_same_clan !== undefined) add("judge", d.judge_same_clan ? H.story_judge_same : H.story_judge_diff, {first: d.judge_first, second: d.judge_second});
+          if (d.couple_members?.length) add("couple", H.story_couple, {actor: actor("cupids"), names: names(d.couple_members)});
+          if (d.wild_child && d.wild_idol) add("wild", H.story_wild, {actor: person(d.wild_child), name: person(d.wild_idol)});
+          if (d.protected) add("protected", H.story_protected, {actor: actor("protectors"), name: person(d.protected)});
+          if (d.redirected_to) add("prostitute", H.story_prostitute, {actor: actor("prostitutes"), name: person(d.redirected_to)});
+          if (d.blocked) add("blocked", H.story_blocked, {actor: actor("cerberus_wolves"), name: person(d.blocked)});
+          if (d.pyromaniac_action) add("pyromaniac", H.story_pyro, {actor: actor("pyromaniacs"), action: H[`pyro_action_${d.pyromaniac_action}`] || d.pyromaniac_action});
+          if (d.wolves_target) add("wolves", H.story_wolves, {actor: actor("simple_wolves", "infecting_fathers", "cerberus_wolves", "black_wolves", "talkative_wolves", "blue_wolves", "white_wolves"), name: person(d.wolves_target)});
+          if (d.wolves_final_target) add("redirect", H.story_redirect, {name: person(d.wolves_final_target)});
+          if (d.infection_attempted) add("infection", d.infection_succeeded ? H.story_infection_yes : H.story_infection_no, {actor: actor("infecting_fathers"), name: person(d.infection_target || d.wolves_final_target || d.wolves_target)});
+          if (d.white_wolf_target) add("white-wolf", H.story_white_wolf, {actor: actor("white_wolves"), name: person(d.white_wolf_target)});
+          if (d.silenced) add("silenced", H.story_silenced, {actor: actor("black_wolves"), name: person(d.silenced)});
+          if (d.talkative_target && d.talkative_word) add("talkative", H.story_talkative, {actor: actor("talkative_wolves"), name: person(d.talkative_target), word: d.talkative_word});
+          if (d.witch_saved) add("witch", H.story_witch_saved, {actor: actor("witches")});
+          if (d.witch_target) add("witch", H.story_witch_killed, {actor: actor("witches"), name: person(d.witch_target)});
+          if (d.seer_target && d.seer_role) add("seer", H.story_seer, {actor: actor("seers"), name: person(d.seer_target), role: roleLabels[d.seer_role] || d.seer_role});
+          if (d.bear_growled !== null && d.bear_growled !== undefined) add("bear", d.bear_growled ? H.story_bear_yes : H.story_bear_no, {actor: actor("bears")});
+          if (d.sheep_returned?.length) add("shepherd", H.story_sheep_returned, {actor: actor("shepherds"), names: names(d.sheep_returned)});
+          if (d.sheep_lost?.length) add("shepherd", H.story_sheep_lost, {actor: actor("shepherds"), names: names(d.sheep_lost)});
+          if (d.sheep_remaining !== null && d.sheep_remaining !== undefined) add("shepherd", H.story_sheep_left, {actor: actor("shepherds"), count: d.sheep_remaining});
+          if (d.judge_first && d.judge_second && d.judge_same_clan !== null && d.judge_same_clan !== undefined) add("judge", d.judge_same_clan ? H.story_judge_same : H.story_judge_diff, {actor: actor("judges"), first: person(d.judge_first), second: person(d.judge_second)});
           if (d.deaths?.length) add("deaths", H.story_deaths, {names: names(d.deaths)});
-          if (d.hunter_deaths?.length) add("hunter", H.story_hunter, {names: names(d.hunter_deaths)});
+          if (d.hunter_deaths?.length) add("hunter", H.story_hunter, {actor: actor("hunters"), names: names(d.hunter_deaths)});
         } else {
-          if (d.speaker) add("speaker", H.story_speaker, {name: d.speaker});
-          if (d.barber_target) add("barber", d.barber_hit ? H.story_barber_hit : H.story_barber_miss, {name: d.barber_target});
+          if (d.speaker) add("speaker", H.story_speaker, {name: person(d.speaker)});
+          if (d.barber_target) add("barber", d.barber_hit ? H.story_barber_hit : H.story_barber_miss, {actor: actor("barbers"), name: person(d.barber_target)});
           if (d.barber_deaths?.length) add("barber-deaths", H.story_barber_deaths, {names: names(d.barber_deaths)});
-          if (d.alien_guesses?.length) d.alien_guesses.forEach(guess => add("alien", guess.correct ? H.story_alien_guess_yes : H.story_alien_guess_no, {name: guess.name, role: roleLabels[guess.role] || guess.role}));
-          else if (d.alien_correct !== null && d.alien_correct !== undefined) add("alien", d.alien_correct ? H.story_alien_yes : H.story_alien_no);
+          if (d.alien_guesses?.length) d.alien_guesses.forEach(guess => add("alien", guess.correct ? H.story_alien_guess_yes : H.story_alien_guess_no, {actor: actor("aliens"), name: person(guess.name), role: roleLabels[guess.role] || guess.role}));
+          else if (d.alien_correct !== null && d.alien_correct !== undefined) add("alien", d.alien_correct ? H.story_alien_yes : H.story_alien_no, {actor: actor("aliens")});
           if (d.alien_deaths?.length) add("alien-deaths", H.story_alien_deaths, {names: names(d.alien_deaths)});
           if (d.accused?.length) add("accused", H.story_accused, {names: names(d.accused)});
-          if (d.normal_votes?.length) add("votes", H.story_normal_votes, {values: names(d.normal_votes)});
+          if (d.normal_votes?.length) add("votes", H.story_normal_votes, {values: d.normal_votes.map(decorated).join(", ")});
           if (d.cancelled_votes?.length) add("cancelled", H.story_cancelled_votes, {names: names(d.cancelled_votes)});
-          if (d.secret_votes?.length) add("secret", H.story_secret_votes, {values: names(d.secret_votes)});
-          if (d.vote_outcome === "eliminated" && d.eliminated) add("eliminated", H.story_vote_eliminated, {name: d.eliminated});
+          if (d.secret_votes?.length) add("secret", H.story_secret_votes, {values: d.secret_votes.map(decorated).join(", ")});
+          if (d.vote_outcome === "eliminated" && d.eliminated) add("eliminated", H.story_vote_eliminated, {name: person(d.eliminated)});
           else if (d.vote_outcome === "tie") add("tie", H.story_vote_tie);
           else if (d.vote_outcome === "skipped") add("skipped", H.story_vote_skipped);
           else if (d.vote_outcome === "forced_transition") add("forced", H.story_day_forced);
           if (d.vote_deaths?.length) add("vote-deaths", H.story_vote_deaths, {names: names(d.vote_deaths)});
           const hunterVictims = d.hunter_deaths?.length ? d.hunter_deaths : d.hunter_targets;
-          if (hunterVictims?.length) add("hunter", H.story_hunter, {names: names(hunterVictims)});
+          if (hunterVictims?.length) add("hunter", H.story_hunter, {actor: actor("hunters"), names: names(hunterVictims)});
           if (d.powers_lost?.length) add("powers", H.story_powers_lost, {names: names(d.powers_lost)});
           if (d.winner) add("winner", H.story_winner, {name: H[`winner_${d.winner}`] || d.winner});
         }

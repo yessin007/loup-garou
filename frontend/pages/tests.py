@@ -106,12 +106,14 @@ class RoomFlowTests(TestCase):
             '"protector", "prostitute", "cerberus", "pyromaniac", "wolves", "infection"',
         )
         self.assertContains(game, 'class="bilan-section night-death-section"')
-        self.assertContains(game, '...(state.alienDeathIds || []), ...hunterDeathIds("alien")')
+        self.assertContains(game, 'const nightOutIds = [...new Set([...state.deaths, ...hunterOutIds])]')
         self.assertContains(game, 'state.alienDeathIds = [...new Set([...(state.alienDeathIds || []), ...guessDeaths.map(item => item.id)])]')
         self.assertContains(game, 'cause === "hunter" ? "died_due_to_hunter_player_role"')
         self.assertContains(game, 'cause === "barber" ? "died_due_to_barber_player_role"')
-        self.assertContains(game, 'cause === "alien" ? "died_due_to_alien_player_role"')
+        self.assertContains(game, ': "died_due_to_alien_player_role"')
         self.assertContains(game, 'state.barberDeathIds = [...new Set([...(state.barberDeathIds || []), ...barberDeaths.map(item => item.id)])]')
+        self.assertContains(game, 'class="bilan-section day-death-section"')
+        self.assertContains(game, 'const dayOutIds = new Set([...(state.voteDeathIds || []), ...daySpecialOutIds])')
         self.assertContains(game, 'state.hunterCausedDeathIds = [...new Set([...(state.hunterCausedDeathIds || []), ...hunterDeaths.map(item => item.id)])]')
         self.assertContains(game, 'class="witch-night-result ${nightVictim ? "danger" : "safe"}"')
         self.assertContains(game, 'nightVictim ? escapeHtml(nightVictim.name) : L.witch_nobody_died')
@@ -206,11 +208,25 @@ class RoomFlowTests(TestCase):
         self.composition.update({"bears": 1, "villagers": 5})
         self.create_room()
         game = self.narrator.get(reverse("game"))
+        self.assertContains(
+            game,
+            'if (stage === "bear") return state.round === 1 && hasAliveRole("bears");',
+        )
+        self.assertContains(
+            game,
+            'if (next === "bear" && (state.round !== 1 || !hasAliveRole("bears")))',
+        )
         self.assertContains(game, "seatingOrderIds: []")
         self.assertContains(game, "function normalizedSeatingOrder()")
         self.assertContains(game, "function moveSeat(playerId, direction)")
         self.assertContains(game, 'class="bear-seating-setup"')
         self.assertContains(game, 'data-action="move-seat"')
+        self.assertContains(game, 'id="bear-infected-growl"')
+        self.assertContains(game, 'id="bear-calculation-timing"')
+        self.assertContains(game, "state.bearGrowlsWhenInfected = bearInfectedGrowlSelect.value === \"yes\"")
+        self.assertContains(game, "const infectedBearGrowls = bear.infected && state.bearGrowlsWhenInfected")
+        self.assertContains(game, 'if (state.bearCalculationTiming === "nightfall") captureBearStatus()')
+        self.assertContains(game, 'if (state.bearCalculationTiming === "after_powers") captureBearStatus()')
         self.assertContains(
             game,
             "const seated = normalizedSeatingOrder().map(player).filter(item => item?.alive)",
@@ -229,14 +245,10 @@ class RoomFlowTests(TestCase):
         self.assertContains(guide, "narrateur classe les joueurs")
         self.assertContains(guide, "le dernier joueur est voisin du premier")
 
-    def test_prostitute_visit_makes_pack_attack_miss_without_harming_visited_ancient(self):
+    def test_prostitute_redirects_pack_attack_unless_cerberus_blocks_her(self):
         self.create_room()
         game = self.narrator.get(reverse("game"))
         self.assertContains(
-            game,
-            'if (target?.role === "prostitutes" && !isRoleBlocked("prostitutes") && state.prostituteTargetId) return null',
-        )
-        self.assertNotContains(
             game,
             'if (target?.role === "prostitutes" && !isRoleBlocked("prostitutes") && state.prostituteTargetId) return state.prostituteTargetId',
         )
@@ -247,8 +259,19 @@ class RoomFlowTests(TestCase):
         )
 
         guide = Client().get(reverse("roles_guide"))
-        self.assertContains(guide, "ni la Pute ni la personne visitée ne subissent")
-        self.assertContains(guide, "Ancien visité ne perd donc aucune vie")
+        self.assertContains(guide, "son attaque est redirigée vers la personne visitée")
+        self.assertContains(guide, "la Pute reste la cible et peut être tuée ou infectée")
+
+    def test_day_is_persisted_before_normal_or_forced_night_transition(self):
+        self.create_room()
+        game = self.narrator.get(reverse("game"))
+        self.assertContains(game, "async function persistDayBeforeNight(forced = false)")
+        self.assertContains(game, 'snapshot.stage = "day_end"')
+        self.assertContains(game, 'snapshot.voteOutcome = "forced_transition"')
+        self.assertContains(game, 'await persistDayBeforeNight(state.stage !== "day_end")')
+        self.assertContains(game, "await persistDayBeforeNight()")
+        self.assertContains(game, "if (!response.ok) throw new Error")
+        self.assertContains(game, "L.day_sync_failed")
 
     def test_narrator_chooses_shepherd_starting_stock_after_distribution(self):
         self.composition.update({"shepherds": 1, "villagers": 5})
@@ -510,18 +533,38 @@ class RoomFlowTests(TestCase):
         private_state = player.get(reverse("room_player_api", args=[room.code])).json()
         self.assertEqual(private_state["status"], GameRoom.Status.ACTIVE)
         self.assertIsNotNone(private_state["role"])
+        self.assertEqual(private_state["alive_count"], 8)
+        self.assertEqual(
+            {item["code"]: item["count"] for item in private_state["alive_roles"]},
+            {"simple_wolves": 2, "villagers": 6},
+        )
+
+        player_page = player.get(reverse("room_player", args=[room.code]))
+        self.assertContains(player_page, 'id="alive-role-list"')
+        self.assertContains(player_page, "renderAliveRoles")
+        self.assertContains(player_page, 'if (data.status !== "finished") scheduleRoom()')
+
+        game_page = self.narrator.get(reverse("game"))
+        self.assertContains(game_page, "function publishAliveRoleCounts()")
+        self.assertContains(game_page, "state.publicAliveRoleCounts = alive().reduce")
+        self.assertContains(game_page, 'if (source === "night") publishAliveRoleCounts()')
 
         assignment = started["assignments"][0]
         corrected_state = {
             "stage": "roles",
             "round": 1,
-            "players": [{
-                "id": 1,
-                "roomPlayerId": assignment["room_player_id"],
-                "name": assignment["name"],
-                "role": "wild_children",
-                "alive": True,
-            }],
+            "publicAliveRoleCounts": {"wild_children": 1, "simple_wolves": 1, "villagers": 1},
+            "players": [
+                {
+                    "id": 1,
+                    "roomPlayerId": assignment["room_player_id"],
+                    "name": assignment["name"],
+                    "role": "wild_children",
+                    "alive": True,
+                },
+                {"id": 2, "name": "Alive wolf", "role": "simple_wolves", "alive": True},
+                {"id": 3, "name": "Dead villager", "role": "villagers", "alive": False},
+            ],
         }
         response = self.narrator.post(
             reverse("room_sync_api", args=[room.code]),
@@ -531,6 +574,74 @@ class RoomFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         private_state = player.get(reverse("room_player_api", args=[room.code])).json()
         self.assertEqual(private_state["role"]["code"], "wild_children")
+        self.assertEqual(private_state["alive_count"], 3)
+        self.assertEqual(
+            {item["code"]: item["count"] for item in private_state["alive_roles"]},
+            {"simple_wolves": 1, "wild_children": 1, "villagers": 1},
+        )
+
+        corrected_state["stage"] = "dawn"
+        corrected_state["publicAliveRoleCounts"] = {"wild_children": 1, "simple_wolves": 1}
+        self.narrator.post(
+            reverse("room_sync_api", args=[room.code]),
+            json.dumps(corrected_state),
+            content_type="application/json",
+        )
+        private_state = player.get(reverse("room_player_api", args=[room.code])).json()
+        self.assertEqual(private_state["alive_count"], 2)
+        self.assertEqual(
+            {item["code"]: item["count"] for item in private_state["alive_roles"]},
+            {"simple_wolves": 1, "wild_children": 1},
+        )
+
+    def test_roster_sync_does_not_close_room_before_distribution(self):
+        room = self.create_room()
+        sarra = self.player_client("Sarra")
+        sarra.post(reverse("room_portal"), {"room_code": room.code})
+
+        response = self.narrator.post(
+            reverse("room_sync_api", args=[room.code]),
+            json.dumps({
+                "stage": "roster",
+                "round": 1,
+                "roomStarted": False,
+                "players": [{"id": 1, "name": "Sarra", "alive": True}],
+            }),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+        room.refresh_from_db()
+        self.assertEqual(room.status, GameRoom.Status.WAITING)
+
+        waiting = sarra.get(reverse("room_player_api", args=[room.code])).json()
+        self.assertEqual(waiting["status"], GameRoom.Status.WAITING)
+        self.assertIsNone(waiting["role"])
+        self.assertEqual(waiting["alive_roles"], [])
+
+        nour = self.player_client("Nour")
+        joined = nour.post(reverse("room_portal"), {"room_code": room.code})
+        self.assertRedirects(joined, reverse("room_player", args=[room.code]), fetch_redirect_response=False)
+        self.assertEqual(room.room_players.count(), 2)
+
+    def test_legacy_active_room_without_distribution_is_repaired(self):
+        room = self.create_room()
+        room.status = GameRoom.Status.ACTIVE
+        room.game_state = {"stage": "roster", "roomStarted": False}
+        room.save(update_fields=["status", "game_state"])
+
+        player = self.player_client("LegacyPlayer")
+        joined = player.post(reverse("room_portal"), {"room_code": room.code})
+        self.assertRedirects(joined, reverse("room_player", args=[room.code]), fetch_redirect_response=False)
+        waiting = player.get(reverse("room_player_api", args=[room.code])).json()
+        self.assertEqual(waiting["status"], GameRoom.Status.WAITING)
+        self.assertIsNone(waiting["role"])
+
+        started = self.narrator.post(reverse("room_start_api", args=[room.code]))
+        self.assertEqual(started.status_code, 200)
+        room.refresh_from_db()
+        self.assertEqual(room.status, GameRoom.Status.ACTIVE)
+        self.assertTrue(room.game_state["distributionStarted"])
+        self.assertIsNotNone(player.get(reverse("room_player_api", args=[room.code])).json()["role"])
 
     def test_player_rejoins_started_room_with_same_name_without_duplicate_registration(self):
         room = self.create_room()
@@ -647,10 +758,18 @@ class RoomFlowTests(TestCase):
                 {"id": 1, "name": "Ahmed", "role": "witches", "alive": False},
                 {"id": 2, "name": "Sarra", "role": "villagers", "alive": True},
             ],
-            "deaths": [1], "wolfTargetId": 1,
+            "deaths": [1], "wolfTargetId": 1, "wolfResolvedTargetId": 2,
             "alienDeathIds": [2],
             "barberDeathIds": [2],
             "hunterCausedDeathIds": [1],
+            "hunterShotRecords": [
+                {"source": "night", "targetId": 1, "deathIds": [1]},
+                {"source": "alien", "targetId": 2, "deathIds": [2]},
+            ],
+            "coupleIds": [1, 2], "wildChildId": 1, "wildIdolId": 2,
+            "prostituteTargetId": 2, "silencedPlayerId": 2,
+            "talkativePlayerId": 1, "assignedWord": "lune",
+            "alienLastGuessResults": [{"id": 2, "guessedRole": "villagers", "correct": True}],
             "blockedPlayerId": 1, "witchSave": True, "witchKillId": 2,
             "bearGrowled": True,
             "shepherdLastResults": [
@@ -666,6 +785,7 @@ class RoomFlowTests(TestCase):
         self.narrator.post(sync_url, json.dumps(state), content_type="application/json")
         state.update({
             "stage": "day_end", "lastVote": 1, "voteDeathIds": [1, 2], "voteOutcome": "eliminated",
+            "speakerId": 2, "qualifiers": [1, 2],
             "voteBreakdown": {
                 "normal": [{"targetId": 1, "votes": 3}],
                 "cancelled": [{"voterId": 1, "reason": "silenced"}],
@@ -681,9 +801,17 @@ class RoomFlowTests(TestCase):
         history = self.narrator.get(reverse("room_history_api", args=[room.code])).json()
         self.assertEqual([event["type"] for event in history["events"]], ["night", "day"])
         night = history["events"][0]["details"]
-        self.assertEqual(night["deaths"], ["Ahmed", "Sarra"])
-        self.assertEqual(night["barber_deaths"], ["Sarra"])
+        self.assertEqual(night["deaths"], ["Ahmed"])
+        self.assertEqual(night["couple_members"], ["Ahmed", "Sarra"])
+        self.assertEqual(night["wild_idol"], "Sarra")
+        self.assertEqual(night["redirected_to"], "Sarra")
+        self.assertEqual(night["silenced"], "Sarra")
+        self.assertEqual(night["talkative_word"], "lune")
+        self.assertEqual(night["wolves_target"], "Ahmed")
+        self.assertEqual(night["wolves_final_target"], "Sarra")
         self.assertEqual(night["hunter_deaths"], ["Ahmed"])
+        self.assertNotIn("alien_deaths", night)
+        self.assertNotIn("barber_deaths", night)
         self.assertTrue(night["bear_growled"])
         self.assertEqual(night["sheep_lost"], ["Ahmed"])
         self.assertEqual(night["sheep_returned"], ["Sarra"])
@@ -697,11 +825,25 @@ class RoomFlowTests(TestCase):
         self.assertEqual(night["seer_target"], "Sarra")
         self.assertEqual(night["seer_role"], "villagers")
         day = history["events"][1]["details"]
+        self.assertEqual(day["speaker"], "Sarra")
+        self.assertEqual(day["accused"], ["Ahmed", "Sarra"])
         self.assertEqual(day["vote_deaths"], ["Ahmed", "Sarra"])
+        self.assertEqual(day["alien_deaths"], ["Sarra"])
+        self.assertEqual(day["alien_guesses"], [{"name": "Sarra", "role": "villagers", "correct": True}])
+        self.assertEqual(day["barber_deaths"], ["Sarra"])
+        self.assertEqual(day["hunter_deaths"], ["Sarra"])
         self.assertEqual(day["normal_votes"], ["Ahmed: 3"])
         self.assertEqual(day["cancelled_votes"], ["Ahmed"])
         self.assertEqual(day["secret_votes"], ["Ahmed → Sarra"])
         self.assertEqual(day["final_totals"], ["Ahmed: 1", "Sarra: 1"])
+
+        history_page = self.narrator.get(reverse("room_history", args=[room.code]))
+        self.assertContains(history_page, "function eventNarrative(event)")
+        self.assertContains(history_page, 'class="history-story"')
+        self.assertContains(history_page, "H.story_seer")
+        self.assertContains(history_page, "H.story_prostitute")
+        self.assertContains(history_page, "H.story_barber_hit")
+        self.assertContains(history_page, "H.story_accused")
 
         self.assertRedirects(Client().get(reverse("room_history_list")), reverse("home"), fetch_redirect_response=False)
 
@@ -793,6 +935,56 @@ class RoomFlowTests(TestCase):
             list(RoomEvent.objects.filter(room=room).values_list("event_type", flat=True)),
             ["night", "day"],
         )
+
+    def test_round_advance_recovers_a_missing_day_summary(self):
+        room = self.create_room()
+        self.narrator.post(reverse("room_start_api", args=[room.code]))
+        sync_url = reverse("room_sync_api", args=[room.code])
+        players = [
+            {"id": 1, "name": "Ahmed", "role": "hunters", "alive": False},
+            {"id": 2, "name": "Sarra", "role": "villagers", "alive": False},
+            {"id": 3, "name": "Nour", "role": "villagers", "alive": True},
+        ]
+        self.narrator.post(sync_url, json.dumps({
+            "stage": "dawn", "round": 1, "players": players, "deaths": [],
+        }), content_type="application/json")
+        self.narrator.post(sync_url, json.dumps({
+            "stage": "accusation", "round": 1, "players": players,
+            "speakerId": 3, "alienDeathIds": [2],
+            "hunterShotRecords": [{"source": "alien", "targetId": 2, "deathIds": [2]}],
+        }), content_type="application/json")
+
+        self.assertFalse(RoomEvent.objects.filter(room=room, marker="day-1").exists())
+        self.narrator.post(sync_url, json.dumps({
+            "stage": "protector", "round": 2, "players": players,
+        }), content_type="application/json")
+
+        recovered = RoomEvent.objects.get(room=room, marker="day-1")
+        self.assertEqual(recovered.details["vote_outcome"], "forced_transition")
+        self.assertEqual(recovered.details["alien_deaths"], ["Sarra"])
+        self.assertEqual(recovered.details["hunter_deaths"], ["Sarra"])
+
+        self.narrator.post(sync_url, json.dumps({
+            "stage": "dawn", "round": 2, "eventRound": 2, "players": players, "deaths": [],
+        }), content_type="application/json")
+        self.assertEqual(
+            list(RoomEvent.objects.filter(room=room).values_list("marker", flat=True)),
+            ["night-1", "day-1", "night-2"],
+        )
+
+    def test_history_explains_a_recovered_manual_day_transition(self):
+        room = self.create_room()
+        RoomEvent.objects.create(
+            room=room,
+            marker="day-1",
+            event_type="day",
+            round_number=1,
+            details={"vote_outcome": "forced_transition"},
+        )
+        history_page = self.narrator.get(reverse("room_history", args=[room.code]))
+        self.assertContains(history_page, "H.story_day_forced")
+        self.assertContains(history_page, "H.history_day_forced")
+        self.assertEqual(history_page.context["room"]["history_day_forced"], "Journée terminée manuellement")
 
     def test_admin_history_lists_and_resumes_active_games(self):
         room = self.create_room()

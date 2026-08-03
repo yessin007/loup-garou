@@ -51,24 +51,81 @@
         if (value === false) return H.no;
         return value ?? H.not_recorded;
       }
+      function eventNarrative(event) {
+        const d = event.details || {};
+        const lines = [];
+        const add = (key, template, values = {}) => { if (template) lines.push({key, text: fill(template, values)}); };
+        const names = value => (value || []).join(", ");
+        if (event.type === "night") {
+          if (d.couple_members?.length) add("couple", H.story_couple, {names: names(d.couple_members)});
+          if (d.wild_child && d.wild_idol) add("wild", H.story_wild, {name: d.wild_idol});
+          if (d.protected) add("protected", H.story_protected, {name: d.protected});
+          if (d.redirected_to) add("prostitute", H.story_prostitute, {name: d.redirected_to});
+          if (d.blocked) add("blocked", H.story_blocked, {name: d.blocked});
+          if (d.pyromaniac_action) add("pyromaniac", H.story_pyro, {action: H[`pyro_action_${d.pyromaniac_action}`] || d.pyromaniac_action});
+          if (d.wolves_target) add("wolves", H.story_wolves, {name: d.wolves_target});
+          if (d.wolves_final_target) add("redirect", H.story_redirect, {name: d.wolves_final_target});
+          if (d.infection_attempted) add("infection", d.infection_succeeded ? H.story_infection_yes : H.story_infection_no, {name: d.infection_target || d.wolves_final_target || d.wolves_target});
+          if (d.white_wolf_target) add("white-wolf", H.story_white_wolf, {name: d.white_wolf_target});
+          if (d.silenced) add("silenced", H.story_silenced, {name: d.silenced});
+          if (d.talkative_target && d.talkative_word) add("talkative", H.story_talkative, {name: d.talkative_target, word: d.talkative_word});
+          if (d.witch_saved) add("witch", H.story_witch_saved);
+          if (d.witch_target) add("witch", H.story_witch_killed, {name: d.witch_target});
+          if (d.seer_target && d.seer_role) add("seer", H.story_seer, {name: d.seer_target, role: roleLabels[d.seer_role] || d.seer_role});
+          if (d.bear_growled !== null && d.bear_growled !== undefined) add("bear", d.bear_growled ? H.story_bear_yes : H.story_bear_no);
+          if (d.sheep_returned?.length) add("shepherd", H.story_sheep_returned, {names: names(d.sheep_returned)});
+          if (d.sheep_lost?.length) add("shepherd", H.story_sheep_lost, {names: names(d.sheep_lost)});
+          if (d.sheep_remaining !== null && d.sheep_remaining !== undefined) add("shepherd", H.story_sheep_left, {count: d.sheep_remaining});
+          if (d.judge_first && d.judge_second && d.judge_same_clan !== null && d.judge_same_clan !== undefined) add("judge", d.judge_same_clan ? H.story_judge_same : H.story_judge_diff, {first: d.judge_first, second: d.judge_second});
+          if (d.deaths?.length) add("deaths", H.story_deaths, {names: names(d.deaths)});
+          if (d.hunter_deaths?.length) add("hunter", H.story_hunter, {names: names(d.hunter_deaths)});
+        } else {
+          if (d.speaker) add("speaker", H.story_speaker, {name: d.speaker});
+          if (d.barber_target) add("barber", d.barber_hit ? H.story_barber_hit : H.story_barber_miss, {name: d.barber_target});
+          if (d.barber_deaths?.length) add("barber-deaths", H.story_barber_deaths, {names: names(d.barber_deaths)});
+          if (d.alien_guesses?.length) d.alien_guesses.forEach(guess => add("alien", guess.correct ? H.story_alien_guess_yes : H.story_alien_guess_no, {name: guess.name, role: roleLabels[guess.role] || guess.role}));
+          else if (d.alien_correct !== null && d.alien_correct !== undefined) add("alien", d.alien_correct ? H.story_alien_yes : H.story_alien_no);
+          if (d.alien_deaths?.length) add("alien-deaths", H.story_alien_deaths, {names: names(d.alien_deaths)});
+          if (d.accused?.length) add("accused", H.story_accused, {names: names(d.accused)});
+          if (d.normal_votes?.length) add("votes", H.story_normal_votes, {values: names(d.normal_votes)});
+          if (d.cancelled_votes?.length) add("cancelled", H.story_cancelled_votes, {names: names(d.cancelled_votes)});
+          if (d.secret_votes?.length) add("secret", H.story_secret_votes, {values: names(d.secret_votes)});
+          if (d.vote_outcome === "eliminated" && d.eliminated) add("eliminated", H.story_vote_eliminated, {name: d.eliminated});
+          else if (d.vote_outcome === "tie") add("tie", H.story_vote_tie);
+          else if (d.vote_outcome === "skipped") add("skipped", H.story_vote_skipped);
+          else if (d.vote_outcome === "forced_transition") add("forced", H.story_day_forced);
+          if (d.vote_deaths?.length) add("vote-deaths", H.story_vote_deaths, {names: names(d.vote_deaths)});
+          const hunterVictims = d.hunter_deaths?.length ? d.hunter_deaths : d.hunter_targets;
+          if (hunterVictims?.length) add("hunter", H.story_hunter, {names: names(hunterVictims)});
+          if (d.powers_lost?.length) add("powers", H.story_powers_lost, {names: names(d.powers_lost)});
+          if (d.winner) add("winner", H.story_winner, {name: H[`winner_${d.winner}`] || d.winner});
+        }
+        if (!lines.length) {
+          Object.entries(d).filter(([key, value]) => shouldShow(key, value)).forEach(([key, value]) => lines.push({key, text: `${detailLabels[key] || key} : ${display(key, value)}`}));
+        }
+        return lines;
+      }
       function eventSummary(event) {
         if (event.type === "night") {
           const deaths = event.details.deaths || [];
           return deaths.length ? fill(H.history_night_deaths, {count: deaths.length}) : H.history_night_quiet;
         }
+        const dayDeaths = [...new Set([...(event.details.vote_deaths || []), ...(event.details.alien_deaths || []), ...(event.details.barber_deaths || []), ...(event.details.hunter_deaths || [])])];
+        if (dayDeaths.length) return fill(H.history_day_deaths, {count: dayDeaths.length});
         if (event.details.vote_outcome === "tie") return H.history_day_tie;
         if (event.details.vote_outcome === "skipped") return H.history_day_skipped;
+        if (event.details.vote_outcome === "forced_transition") return H.history_day_forced;
         return event.details.eliminated ? fill(H.history_day_eliminated, {name: event.details.eliminated}) : H.history_day_skipped;
       }
-      function renderEvent(event) {
-        const details = Object.entries(event.details).filter(([key, value]) => shouldShow(key, value));
+      function renderEvent(event, openByDefault = false) {
+        const story = eventNarrative(event);
         const title = fill(event.type === "night" ? H.history_night_title : H.history_day_title, {round: event.round});
-        const items = details.map(([key, value]) => `<li class="history-detail history-detail-${key}"><span>${safe(detailLabels[key] || key)}</span><strong>${safe(display(key, value))}</strong></li>`).join("");
+        const items = story.map((item, index) => `<li class="history-story-step history-story-${item.key}"><span>${String(index + 1).padStart(2, "0")}</span><strong>${safe(item.text)}</strong></li>`).join("");
         return `<article class="history-event ${event.type}">
           <div class="history-event-marker"><span>${labels[event.type]}</span><strong>${event.round}</strong></div>
           <div class="history-event-content">
             <header><div><span>${safe(title)}</span><strong>${safe(eventSummary(event))}</strong></div><time>${new Date(event.created_at).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})}</time></header>
-            <details><summary>${H.history_details}<span>+</span></summary>${items ? `<ul>${items}</ul>` : `<p class="history-no-details">${H.history_no_details}</p>`}</details>
+            <details ${openByDefault ? "open" : ""}><summary>${H.history_details}<span>+</span></summary>${items ? `<ol class="history-story">${items}</ol>` : `<p class="history-no-details">${H.history_no_details}</p>`}</details>
           </div>
         </article>`;
       }
@@ -85,7 +142,7 @@
           overview.innerHTML = `<div><strong>${nightCount}</strong><span>${H.history_nights}</span></div><div><strong>${dayCount}</strong><span>${H.history_days}</span></div><p>${H.history_updated}</p>`;
           statusBadge.classList.toggle("finished", data.status === "finished");
           statusBadge.querySelector("span").textContent = data.status === "finished" ? H.history_finished : H.history_live;
-          timeline.innerHTML = data.events.length ? [...data.events].reverse().map(renderEvent).join("") : `<p class="history-empty">${H.history_empty}</p>`;
+          timeline.innerHTML = data.events.length ? [...data.events].reverse().map((event, index) => renderEvent(event, index === 0)).join("") : `<p class="history-empty">${H.history_empty}</p>`;
           if (data.status !== "finished") scheduleHistory();
         } catch (error) { scheduleHistory(); }
       }

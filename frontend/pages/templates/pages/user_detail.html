@@ -1,0 +1,73 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="{{ language_code }}" dir="{{ language_dir }}">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#080d12" />
+    {% include "pages/_pwa_head.html" %}
+    <title>{{ account.username }} | Gestion des utilisateurs</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+  </head>
+  <body class="setup-page">
+    <header class="setup-header">
+      <a class="brand" href="{% url 'welcome' %}">Loup <span>Garou</span></a>
+      <div><strong>{{ request.user.username }} · Super admin</strong><a class="text-link" href="{% url 'logout' %}">{{ ui.logout }}</a></div>
+    </header>
+    <main class="user-management-shell user-detail-shell">
+      <a class="history-home-link" href="{% url 'user_management' %}"><span>←</span>Retour aux utilisateurs</a>
+      <section class="admin-dashboard-hero">
+        <p class="eyebrow">Compte utilisateur</p>
+        <h1>{{ account.username }}</h1>
+        <p>{{ account.account_role }} · {% if account.is_active %}Compte actif{% else %}Compte désactivé{% endif %}</p>
+      </section>
+
+      {% if error %}<p class="form-error user-action-message" role="alert">{{ error }}</p>{% endif %}
+      {% if success %}<p class="form-success user-action-message" role="status">{{ success }}</p>{% endif %}
+
+      <section class="user-detail-grid">
+        <article class="user-list-card user-profile-card">
+          <h2>Informations</h2>
+          <dl>
+            <div><dt>Nom d’utilisateur</dt><dd>{{ account.username }}</dd></div>
+            <div><dt>Type de compte</dt><dd>{{ account.account_role }}</dd></div>
+            <div><dt>État</dt><dd>{% if account.is_active %}Actif{% else %}Désactivé{% endif %}</dd></div>
+            <div><dt>Date de création</dt><dd>{{ account.date_joined|date:"d/m/Y H:i" }}</dd></div>
+            <div><dt>Dernière connexion</dt><dd>{% if account.last_login %}{{ account.last_login|date:"d/m/Y H:i" }}{% else %}Jamais{% endif %}</dd></div>
+            <div><dt>Parties narrées</dt><dd>{{ narrated_room_count }}</dd></div>
+            <div><dt>Participations</dt><dd>{{ participation_count }}</dd></div>
+          </dl>
+          {% if can_manage_access %}
+          <form method="post">
+            {% csrf_token %}<input type="hidden" name="action" value="toggle" />
+            <button class="admin-secondary-button" type="submit">{% if account.is_active %}Désactiver ce compte{% else %}Réactiver ce compte{% endif %}</button>
+          </form>
+          {% else %}
+          <p class="user-security-note">Les accès d’un super-admin sont protégés sur cette page.</p>
+          {% endif %}
+        </article>
+
+        <article class="user-create-card user-password-card">
+          <h2>Mot de passe</h2>
+          <p class="user-security-note">Le mot de passe actuel ne peut pas être affiché : il est enregistré sous forme de hash sécurisé. Tu peux le remplacer ici.</p>
+          <form method="post">
+            {% csrf_token %}<input type="hidden" name="action" value="set_password" />
+            <label>Nouveau mot de passe<input name="password" type="password" minlength="4" autocomplete="new-password" required /></label>
+            <label>Confirmer le mot de passe<input name="password_confirmation" type="password" minlength="4" autocomplete="new-password" required /></label>
+            <button type="submit">Modifier le mot de passe <span>→</span></button>
+          </form>
+        </article>
+      </section>
+
+      {% if can_delete %}
+      <section class="user-danger-card">
+        <div><h2>Supprimer le compte</h2><p>Les parties restent dans l’historique, mais elles ne seront plus liées à cet utilisateur.</p></div>
+        <form method="post" onsubmit="return confirm('Supprimer définitivement le compte {{ account.username|escapejs }} ?');">
+          {% csrf_token %}<input type="hidden" name="action" value="delete" />
+          <button type="submit">Supprimer définitivement</button>
+        </form>
+      </section>
+      {% endif %}
+    </main>
+  </body>
+</html>

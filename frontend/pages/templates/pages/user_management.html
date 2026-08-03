@@ -42,7 +42,11 @@
         <div class="managed-user-list">
           {% for account in managed_users %}
           <article>
-            <div><strong>{{ account.username }}</strong><small>{{ account.account_role }} · {% if account.is_active %}Actif{% else %}Désactivé{% endif %}</small></div>
+            <a class="managed-user-identity" href="{% url 'user_detail' account.id %}">
+              <strong>{{ account.username }}</strong>
+              <small>{{ account.account_role }} · {% if account.is_active %}Actif{% else %}Désactivé{% endif %}</small>
+              <span>Afficher et gérer →</span>
+            </a>
             {% if not account.is_superuser %}
             <form method="post">{% csrf_token %}<input type="hidden" name="action" value="toggle" /><input type="hidden" name="user_id" value="{{ account.id }}" /><button type="submit">{% if account.is_active %}Désactiver{% else %}Réactiver{% endif %}</button></form>
             {% endif %}

@@ -37,6 +37,10 @@ SINGLETON_ROLE_KEYS = tuple(
 )
 
 NARRATOR_GROUP = "narrators"
+DAY_STAGES = {
+    "dawn", "accusation", "barber_shot", "barber_result", "alien_guess",
+    "alien_result", "final_vote", "servant_choice", "hunter_shot", "day_end",
+}
 
 
 def is_narrator(user):
@@ -49,18 +53,29 @@ def is_narrator(user):
 def narrator_can_manage(user, room):
     return is_narrator(user) and (user.is_superuser or room.narrator_id in {None, user.id})
 
+
+def room_distribution_started(room, state=None):
+    state = (room.game_state or {}) if state is None else state
+    if room.status == GameRoom.Status.FINISHED:
+        return True
+    return bool(
+        state.get("distributionStarted")
+        or state.get("roomStarted")
+        or room.room_players.exclude(role="").exists()
+    )
+
 ROOM_TEXT = {
     "fr": {
         "delete_history": "Supprimer", "delete_history_confirm": "Supprimer définitivement cette partie et tout son historique ?", "finish_game": "Terminer la partie", "finish_game_confirm": "Confirmer que cette partie est terminée ? Elle pourra ensuite être supprimée.",
-        "room_title": "Rejoindre une partie", "room_intro": "Entre le code affiché sur le téléphone du narrateur. Ton nom de joueur sera ton nom d’utilisateur.", "room_code": "Code de la room", "player_name": "Ton prénom", "join": "Rejoindre", "general_qr": "QR du site", "general_qr_help": "Ce QR unique ouvre le site pour se connecter ou créer un compte. Ensuite, le joueur saisit le code de la room.", "history": "Historique", "all_histories": "Tous les historiques", "history_intro": "Consulte les parties précédentes sans saisir de code.", "open_history": "Voir l'historique", "scan_qr": "Scanner pour ouvrir le site", "qr_help": "Scanne le QR général, connecte-toi puis saisis ce code de room.", "waiting": "En attente du narrateur", "waiting_help": "Ton rôle apparaîtra ici quand le narrateur lancera la distribution.", "your_role": "Ton rôle secret", "keep_secret": "Garde cet écran secret.", "joined": "Tu as rejoint la room", "players_joined": "joueur(s) connecté(s)", "events": "événement(s)", "yes": "Oui", "no": "Non", "invalid_room": "Room introuvable.", "invalid_code": "Le code doit contenir exactement 6 chiffres.", "room_started": "Cette partie a déjà commencé.", "name_used": "Ce nom d’utilisateur est déjà utilisé dans cette room.", "room_full": "La room est complète.", "history_empty": "Aucun jour ou aucune nuit terminé pour le moment.", "night": "Nuit", "day": "Jour", "back": "Retour", "back_home": "Retour à la page d’accueil", "continue_game": "Continuer la partie", "refreshing": "Mise à jour automatique", "room_access": "Rejoindre une room / historique",
+        "room_title": "Rejoindre une partie", "room_intro": "Entre le code affiché sur le téléphone du narrateur. Ton nom de joueur sera ton nom d’utilisateur.", "room_code": "Code de la room", "player_name": "Ton prénom", "join": "Rejoindre", "general_qr": "QR du site", "general_qr_help": "Ce QR unique ouvre le site pour se connecter ou créer un compte. Ensuite, le joueur saisit le code de la room.", "history": "Historique", "all_histories": "Tous les historiques", "history_intro": "Consulte les parties précédentes sans saisir de code.", "open_history": "Voir l'historique", "scan_qr": "Scanner pour ouvrir le site", "qr_help": "Scanne le QR général, connecte-toi puis saisis ce code de room.", "waiting": "En attente du narrateur", "waiting_help": "Ton rôle apparaîtra ici quand le narrateur lancera la distribution.", "your_role": "Ton rôle secret", "keep_secret": "Garde cet écran secret.", "roles_alive": "Rôles encore en vie", "roles_alive_count": "joueur(s) en vie", "roles_alive_empty": "Aucun rôle encore en vie.", "joined": "Tu as rejoint la room", "players_joined": "joueur(s) connecté(s)", "events": "événement(s)", "yes": "Oui", "no": "Non", "invalid_room": "Room introuvable.", "invalid_code": "Le code doit contenir exactement 6 chiffres.", "room_started": "Cette partie a déjà commencé.", "name_used": "Ce nom d’utilisateur est déjà utilisé dans cette room.", "room_full": "La room est complète.", "history_empty": "Aucun jour ou aucune nuit terminé pour le moment.", "night": "Nuit", "day": "Jour", "back": "Retour", "back_home": "Retour à la page d’accueil", "continue_game": "Continuer la partie", "refreshing": "Mise à jour automatique", "room_access": "Rejoindre une room / historique",
     },
     "en": {
         "delete_history": "Delete", "delete_history_confirm": "Permanently delete this game and its entire history?", "finish_game": "Finish the game", "finish_game_confirm": "Confirm that this game is finished? It can then be deleted.",
-        "room_title": "Join a game", "room_intro": "Enter the code displayed by the narrator. Your player name will be your username.", "room_code": "Room code", "player_name": "Your name", "join": "Join", "general_qr": "Website QR code", "general_qr_help": "This single QR code opens the website to sign in or create an account. Then enter the room code.", "history": "History", "all_histories": "All histories", "history_intro": "View previous games without entering a code.", "open_history": "View history", "scan_qr": "Scan to open the website", "qr_help": "Scan the general QR code, sign in, then enter this room code.", "waiting": "Waiting for the narrator", "waiting_help": "Your role will appear here when the narrator starts distribution.", "your_role": "Your secret role", "keep_secret": "Keep this screen private.", "joined": "You joined the room", "players_joined": "connected player(s)", "events": "event(s)", "yes": "Yes", "no": "No", "invalid_room": "Room not found.", "invalid_code": "The code must contain exactly 6 digits.", "room_started": "This game has already started.", "name_used": "This username is already used in this room.", "room_full": "The room is full.", "history_empty": "No completed day or night yet.", "night": "Night", "day": "Day", "back": "Back", "back_home": "Back to home page", "continue_game": "Continue game", "refreshing": "Updates automatically", "room_access": "Join a room / history",
+        "room_title": "Join a game", "room_intro": "Enter the code displayed by the narrator. Your player name will be your username.", "room_code": "Room code", "player_name": "Your name", "join": "Join", "general_qr": "Website QR code", "general_qr_help": "This single QR code opens the website to sign in or create an account. Then enter the room code.", "history": "History", "all_histories": "All histories", "history_intro": "View previous games without entering a code.", "open_history": "View history", "scan_qr": "Scan to open the website", "qr_help": "Scan the general QR code, sign in, then enter this room code.", "waiting": "Waiting for the narrator", "waiting_help": "Your role will appear here when the narrator starts distribution.", "your_role": "Your secret role", "keep_secret": "Keep this screen private.", "roles_alive": "Roles still alive", "roles_alive_count": "player(s) alive", "roles_alive_empty": "No roles are still alive.", "joined": "You joined the room", "players_joined": "connected player(s)", "events": "event(s)", "yes": "Yes", "no": "No", "invalid_room": "Room not found.", "invalid_code": "The code must contain exactly 6 digits.", "room_started": "This game has already started.", "name_used": "This username is already used in this room.", "room_full": "The room is full.", "history_empty": "No completed day or night yet.", "night": "Night", "day": "Day", "back": "Back", "back_home": "Back to home page", "continue_game": "Continue game", "refreshing": "Updates automatically", "room_access": "Join a room / history",
     },
     "tn": {
         "delete_history": "Fasa5", "delete_history_confirm": "Met2aked t7eb tfasa5 el game hedhi w historique mte3ha lkol définitivement ?", "finish_game": "Finish the game", "finish_game_confirm": "Met2aked elli el game hedhi kemlet? Ba3d tnajem tfasa5ha.",
-        "room_title": "Od5ol lel game", "room_intro": "Da5el code el room. Esmek fel game houwa username mte3ek.", "room_code": "Code mta3 el room", "player_name": "Esmek", "join": "Od5ol", "general_qr": "QR mta3 el site", "general_qr_help": "Fama QR wa7ed bark y7el el site bech tconnecti wala tasna3 compte. Ba3d da5el code el room.", "history": "Bilan w historique", "all_histories": "Archive mta3 les games", "history_intro": "", "open_history": "7ell el bilan direct", "scan_qr": "Scanni bch t7el el site", "qr_help": "Scanni el QR general, connecti w da5el code el room hedha.", "waiting": "Nestannew fel narrateur", "waiting_help": "Role mte3ek yodhher houni ki narrateur yabda el distribution.", "your_role": "Role mte3ek bel sir", "keep_secret": "Ma twarrich el ecran l 7ad.", "joined": "D5alt lel room", "players_joined": "joueur(s) connectes", "events": "bilan(s)", "yes": "Ey", "no": "Le", "invalid_room": "El room mawjoudach.", "invalid_code": "El code lezem ykoun 6 ar9am bark.", "room_started": "El game hedhi bdet deja.", "name_used": "El username hedha mesta3mel fel room.", "room_full": "El room kemlet.", "history_empty": "Mezel ma fama 7atta bilan: kammel awel lil wala awel nhar.", "night": "Lil", "day": "Nhar", "back": "Erja3", "back_home": "Arja3 page d’accueil", "continue_game": "Kammel el game", "refreshing": "El bilan yetjadded wa7dou", "room_access": "Od5ol room / chouf el bilan",
+        "room_title": "Od5ol lel game", "room_intro": "Da5el code el room. Esmek fel game houwa username mte3ek.", "room_code": "Code mta3 el room", "player_name": "Esmek", "join": "Od5ol", "general_qr": "QR mta3 el site", "general_qr_help": "Fama QR wa7ed bark y7el el site bech tconnecti wala tasna3 compte. Ba3d da5el code el room.", "history": "Bilan w historique", "all_histories": "Archive mta3 les games", "history_intro": "", "open_history": "7ell el bilan direct", "scan_qr": "Scanni bch t7el el site", "qr_help": "Scanni el QR general, connecti w da5el code el room hedha.", "waiting": "Nestannew fel narrateur", "waiting_help": "Role mte3ek yodhher houni ki narrateur yabda el distribution.", "your_role": "Role mte3ek bel sir", "keep_secret": "Ma twarrich el ecran l 7ad.", "roles_alive": "Les roles eli mazelou 3aychin", "roles_alive_count": "joueur(s) mazelou 3aychin", "roles_alive_empty": "Ma fama 7atta role mezel 3ayech.", "joined": "D5alt lel room", "players_joined": "joueur(s) connectes", "events": "bilan(s)", "yes": "Ey", "no": "Le", "invalid_room": "El room mawjoudach.", "invalid_code": "El code lezem ykoun 6 ar9am bark.", "room_started": "El game hedhi bdet deja.", "name_used": "El username hedha mesta3mel fel room.", "room_full": "El room kemlet.", "history_empty": "Mezel ma fama 7atta bilan: kammel awel lil wala awel nhar.", "night": "Lil", "day": "Nhar", "back": "Erja3", "back_home": "Arja3 page d’accueil", "continue_game": "Kammel el game", "refreshing": "El bilan yetjadded wa7dou", "room_access": "Od5ol room / chouf el bilan",
     },
 }
 
@@ -69,34 +84,49 @@ ROOM_DETAIL_LABELS = {
     "en": {"deaths": "Victims", "protected": "Protection", "wolves_target": "Wolves' target", "blocked": "Blocked power", "redirected_to": "Escort visit", "pyromaniac_action": "Arsonist action", "pyromaniac_doused": "Doused tonight", "pyromaniac_ignited": "Ignited tonight", "pyromaniac_oiled": "Still doused", "infection_attempted": "Infection attempted", "infection_succeeded": "Infection succeeded", "witch_saved": "Life potion", "witch_target": "Death potion", "bear_growled": "Bear", "sheep_returned": "Returned sheep", "sheep_lost": "Lost sheep", "sheep_remaining": "Sheep remaining", "shepherd_blocked": "Shepherd blocked", "judge_first": "Judge's first choice", "judge_second": "Judge's second choice", "judge_same_clan": "Same faction", "seer_target": "Seer's vision", "seer_role": "Role seen", "eliminated": "Voted out", "vote_deaths": "Deaths after the vote", "vote_outcome": "Result", "normal_votes": "Normal votes", "cancelled_votes": "Cancelled votes", "secret_votes": "Secret votes", "final_totals": "Final total", "hunter_targets": "Hunter's final shots", "powers_lost": "Powers removed", "barber_target": "Barber's target", "barber_hit": "Barber shot succeeded", "alien_correct": "Alien answer correct", "winner": "Winner"},
     "tn": {"deaths": "Chkoun met ellila", "protected": "Chkoun t7ama", "wolves_target": "Cible mta3 el loups", "blocked": "Joueur eli tblocka", "redirected_to": "Win r9adet el Pute", "pyromaniac_action": "Action mta3 Pyromane", "pyromaniac_doused": "Eli rachehom zit ellila", "pyromaniac_ignited": "Eli cha3alhom ellila", "pyromaniac_oiled": "Eli mazel 3lihom zit", "infection_attempted": "Saret tentative infection", "infection_succeeded": "El infection nej7et", "witch_saved": "Sorcière najjet el cible", "witch_target": "Cible mta3 potion de mort", "bear_growled": "El Ours garger", "sheep_returned": "3lelech eli raj3ou", "sheep_lost": "3lelech eli dha3ou", "sheep_remaining": "3lelech eli ba9aw", "shepherd_blocked": "Cerbère 9leb résultat el Berger", "judge_first": "Joueur louel mta3 Juge", "judge_second": "Joueur theni mta3 Juge", "judge_same_clan": "Nafs el clan", "seer_target": "Chkoun chefet el Voyante", "seer_role": "Role eli thaherelha", "eliminated": "Chkoun 5raj bel vote", "vote_deaths": "Eli metou ba3d el vote", "vote_outcome": "Kifeh wfa el vote", "normal_votes": "El votes normaux", "cancelled_votes": "El votes eli tna77aw", "secret_votes": "El voix bel sir", "final_totals": "Total final", "hunter_targets": "Chkoun dharab el Chasseur", "powers_lost": "Chkoun tna7alou el pouvoir", "barber_target": "Chkoun e5tar el Barbier", "barber_hit": "Tir el Barbier tla3 s7i7", "alien_correct": "Réponse mta3 Alien s7i7a", "winner": "Chkoun rba7"},
 }
-ROOM_DETAIL_LABELS["fr"].update({"alien_deaths": "Victimes de l’Alien", "barber_deaths": "Victimes du Barbier", "hunter_deaths": "Emportés par le Chasseur"})
-ROOM_DETAIL_LABELS["en"].update({"alien_deaths": "Alien victims", "barber_deaths": "Barber victims", "hunter_deaths": "Taken by the Hunter"})
-ROOM_DETAIL_LABELS["tn"].update({"alien_deaths": "Eli metou fi joret Alien", "barber_deaths": "Eli metou b tir Barbier", "hunter_deaths": "Eli hezhom Chasseur m3ah"})
+ROOM_DETAIL_LABELS["fr"].update({"alien_deaths": "Victimes de l’Alien", "barber_deaths": "Victimes du Barbier", "hunter_deaths": "Emportés par le Chasseur", "wolves_final_target": "Cible finale après redirection"})
+ROOM_DETAIL_LABELS["en"].update({"alien_deaths": "Alien victims", "barber_deaths": "Barber victims", "hunter_deaths": "Taken by the Hunter", "wolves_final_target": "Final target after redirection"})
+ROOM_DETAIL_LABELS["tn"].update({"alien_deaths": "Eli metou fi joret Alien", "barber_deaths": "Eli metou b tir Barbier", "hunter_deaths": "Eli hezhom Chasseur m3ah", "wolves_final_target": "Cible finale ba3d redirection"})
 
 ROOM_HISTORY_TEXT = {
     "fr": {
         "history_kicker": "Journal de la partie", "history_live": "Partie en cours", "history_finished": "Partie terminée",
         "history_updated": "Actualisé à l'instant", "history_night_title": "Bilan de la nuit {round}", "history_day_title": "Bilan du jour {round}",
         "history_night_quiet": "Le village se réveille au complet", "history_night_deaths": "{count} victime(s) pendant la nuit",
-        "history_day_eliminated": "{name} a été éliminé", "history_day_tie": "Égalité : personne n'est éliminé", "history_day_skipped": "Le vote a été passé",
-        "history_details": "Voir tous les détails", "history_no_details": "Aucun autre événement à signaler", "history_nights": "nuits", "history_days": "jours",
-        "outcome_eliminated": "Élimination", "outcome_tie": "Égalité", "outcome_skipped": "Vote passé", "pyro_action_douse": "Asperger", "pyro_action_ignite": "Incendier", "pyro_action_blocked": "Bloqué par le Cerbère", "winner_wolves": "Loups-Garous", "winner_village": "Village", "winner_white_wolf": "Loup Blanc", "winner_angel": "Ange", "winner_alien": "Alien", "winner_pyromaniac": "Pyromane", "winner_couple": "Couple", "winner_draw": "Égalité — aucun vainqueur", "not_recorded": "Non renseigné", "archive": "Archives des parties", "room_label": "Partie",
+        "history_day_eliminated": "{name} a été éliminé", "history_day_tie": "Égalité : personne n'est éliminé", "history_day_skipped": "Le vote a été passé", "history_day_forced": "Journée terminée manuellement", "history_day_deaths": "{count} mort(s) pendant la journée",
+        "history_details": "Voir le déroulement", "history_no_details": "Aucun autre événement à signaler", "history_nights": "nuits", "history_days": "jours",
+        "story_couple": "Cupidon a lié {names}.", "story_wild": "L’Enfant Sauvage a choisi {name} comme modèle.", "story_protected": "Le Protecteur protège {name}.", "story_prostitute": "La Pute a dormi chez {name}.", "story_blocked": "Le Cerbère a bloqué {name}.",
+        "story_pyro": "Le Pyromane a choisi : {action}.", "story_wolves": "Les Loups ont ciblé {name}.", "story_redirect": "L’attaque a été redirigée vers {name}.", "story_infection_yes": "Le Loup-Père a infecté {name}.", "story_infection_no": "La tentative d’infection sur {name} a échoué.",
+        "story_white_wolf": "Le Loup Blanc a ciblé {name}.", "story_silenced": "Le Loup Noir a réduit {name} au silence.", "story_talkative": "Le Loup Bavard a donné le mot « {word} » à {name}.", "story_witch_saved": "La Sorcière a utilisé sa potion de vie.", "story_witch_killed": "La Sorcière a empoisonné {name}.",
+        "story_seer": "La Voyante a vu {name} : {role}.", "story_bear_yes": "L’Ours a grogné.", "story_bear_no": "L’Ours n’a pas grogné.", "story_sheep_returned": "Les moutons sont revenus de chez : {names}.", "story_sheep_lost": "Les moutons ont été perdus chez : {names}.", "story_sheep_left": "Il reste {count} mouton(s).", "story_judge_same": "Le Juge a comparé {first} et {second} : même clan.", "story_judge_diff": "Le Juge a comparé {first} et {second} : clans différents.", "story_deaths": "Morts de la nuit : {names}.", "story_hunter": "Le Chasseur a emporté : {names}.",
+        "story_speaker": "La parole commence avec {name}.", "story_barber_hit": "Le Barbier a tiré sur {name} : c’était un Loup.", "story_barber_miss": "Le Barbier a tiré sur {name} : tir manqué.", "story_alien_yes": "La tentative de l’Alien était correcte.", "story_alien_no": "La tentative de l’Alien a échoué.", "story_alien_guess_yes": "L’Alien a proposé {role} pour {name} : correct.", "story_alien_guess_no": "L’Alien a proposé {role} pour {name} : incorrect.", "story_alien_deaths": "Victimes de l’Alien : {names}.", "story_barber_deaths": "Victimes du Barbier : {names}.", "story_accused": "Joueurs accusés : {names}.", "story_normal_votes": "Votes annoncés : {values}.", "story_cancelled_votes": "Votes annulés : {names}.", "story_secret_votes": "Votes secrets : {values}.", "story_vote_eliminated": "Le vote a éliminé {name}.", "story_vote_tie": "Le vote s’est terminé par une égalité.", "story_vote_skipped": "Le vote a été passé.", "story_day_forced": "Le narrateur a terminé manuellement la journée.", "story_vote_deaths": "Morts après le vote : {names}.", "story_powers_lost": "Pouvoirs retirés à : {names}.", "story_winner": "Vainqueur : {name}.",
+        "outcome_eliminated": "Élimination", "outcome_tie": "Égalité", "outcome_skipped": "Vote passé", "outcome_forced_transition": "Fin manuelle", "pyro_action_douse": "Asperger", "pyro_action_ignite": "Incendier", "pyro_action_blocked": "Bloqué par le Cerbère", "winner_wolves": "Loups-Garous", "winner_village": "Village", "winner_white_wolf": "Loup Blanc", "winner_angel": "Ange", "winner_alien": "Alien", "winner_pyromaniac": "Pyromane", "winner_couple": "Couple", "winner_draw": "Égalité — aucun vainqueur", "not_recorded": "Non renseigné", "archive": "Archives des parties", "room_label": "Partie",
     },
     "en": {
         "history_kicker": "Game journal", "history_live": "Game in progress", "history_finished": "Game finished",
         "history_updated": "Updated just now", "history_night_title": "Night {round} summary", "history_day_title": "Day {round} summary",
         "history_night_quiet": "The whole village wakes up", "history_night_deaths": "{count} night victim(s)",
-        "history_day_eliminated": "{name} was eliminated", "history_day_tie": "Tie: nobody was eliminated", "history_day_skipped": "The vote was skipped",
-        "history_details": "View all details", "history_no_details": "No other event to report", "history_nights": "nights", "history_days": "days",
-        "outcome_eliminated": "Elimination", "outcome_tie": "Tie", "outcome_skipped": "Vote skipped", "pyro_action_douse": "Douse", "pyro_action_ignite": "Ignite", "pyro_action_blocked": "Blocked by Cerberus", "winner_wolves": "Werewolves", "winner_village": "Village", "winner_white_wolf": "White Wolf", "winner_angel": "Angel", "winner_alien": "Alien", "winner_pyromaniac": "Arsonist", "winner_couple": "Couple", "winner_draw": "Draw — no winner", "not_recorded": "Not recorded", "archive": "Game archive", "room_label": "Game",
+        "history_day_eliminated": "{name} was eliminated", "history_day_tie": "Tie: nobody was eliminated", "history_day_skipped": "The vote was skipped", "history_day_forced": "Day ended manually", "history_day_deaths": "{count} death(s) during the day",
+        "history_details": "View the sequence", "history_no_details": "No other event to report", "history_nights": "nights", "history_days": "days",
+        "story_couple": "Cupid linked {names}.", "story_wild": "The Wild Child chose {name} as a role model.", "story_protected": "The Protector protects {name}.", "story_prostitute": "The Escort stayed with {name}.", "story_blocked": "Cerberus blocked {name}.",
+        "story_pyro": "The Arsonist chose: {action}.", "story_wolves": "The Wolves targeted {name}.", "story_redirect": "The attack was redirected to {name}.", "story_infection_yes": "The Alpha Wolf infected {name}.", "story_infection_no": "The infection attempt on {name} failed.",
+        "story_white_wolf": "The White Wolf targeted {name}.", "story_silenced": "The Black Wolf silenced {name}.", "story_talkative": "The Talkative Wolf gave “{word}” to {name}.", "story_witch_saved": "The Witch used the life potion.", "story_witch_killed": "The Witch poisoned {name}.",
+        "story_seer": "The Seer saw {name}: {role}.", "story_bear_yes": "The Bear growled.", "story_bear_no": "The Bear stayed silent.", "story_sheep_returned": "Sheep returned from: {names}.", "story_sheep_lost": "Sheep were lost at: {names}.", "story_sheep_left": "{count} sheep remain.", "story_judge_same": "The Judge compared {first} and {second}: same faction.", "story_judge_diff": "The Judge compared {first} and {second}: different factions.", "story_deaths": "Night deaths: {names}.", "story_hunter": "The Hunter took: {names}.",
+        "story_speaker": "Discussion starts with {name}.", "story_barber_hit": "The Barber shot {name}: the target was a Wolf.", "story_barber_miss": "The Barber shot {name}: the shot missed.", "story_alien_yes": "Alien’s attempt was correct.", "story_alien_no": "Alien’s attempt failed.", "story_alien_guess_yes": "Alien guessed {role} for {name}: correct.", "story_alien_guess_no": "Alien guessed {role} for {name}: incorrect.", "story_alien_deaths": "Alien victims: {names}.", "story_barber_deaths": "Barber victims: {names}.", "story_accused": "Accused players: {names}.", "story_normal_votes": "Announced votes: {values}.", "story_cancelled_votes": "Cancelled votes: {names}.", "story_secret_votes": "Secret votes: {values}.", "story_vote_eliminated": "The vote eliminated {name}.", "story_vote_tie": "The vote ended in a tie.", "story_vote_skipped": "The vote was skipped.", "story_day_forced": "The narrator ended the day manually.", "story_vote_deaths": "Deaths after the vote: {names}.", "story_powers_lost": "Powers removed from: {names}.", "story_winner": "Winner: {name}.",
+        "outcome_eliminated": "Elimination", "outcome_tie": "Tie", "outcome_skipped": "Vote skipped", "outcome_forced_transition": "Manual ending", "pyro_action_douse": "Douse", "pyro_action_ignite": "Ignite", "pyro_action_blocked": "Blocked by Cerberus", "winner_wolves": "Werewolves", "winner_village": "Village", "winner_white_wolf": "White Wolf", "winner_angel": "Angel", "winner_alien": "Alien", "winner_pyromaniac": "Arsonist", "winner_couple": "Couple", "winner_draw": "Draw — no winner", "not_recorded": "Not recorded", "archive": "Game archive", "room_label": "Game",
     },
     "tn": {
         "history_kicker": "Journal mta3 el game", "history_live": "El game mazelt temchi", "history_finished": "El game wfet",
         "history_updated": "Tjadded taw", "history_night_title": "Bilan mta3 lil {round}", "history_day_title": "Bilan mta3 nhar {round}",
         "history_night_quiet": "El village fe9 kemel, 7ad ma met", "history_night_deaths": "{count} joueur(s) metou ellila",
-        "history_day_eliminated": "{name} 5raj bel vote", "history_day_tie": "El vote égalité: 7ad ma 5raj", "history_day_skipped": "El village 3adda el vote",
-        "history_details": "Chouf les détails lkol", "history_no_details": "Ma fama 7atta 7aja o5ra tet9al", "history_nights": "lilet", "history_days": "nharat",
-        "outcome_eliminated": "Joueur 5raj", "outcome_tie": "Égalité", "outcome_skipped": "Vote t3adda", "pyro_action_douse": "Rach zit", "pyro_action_ignite": "Cha3el", "pyro_action_blocked": "Cerbere blockeh", "winner_wolves": "El loups", "winner_village": "El Village", "winner_white_wolf": "Loup Blanc", "winner_angel": "Ange", "winner_alien": "Alien", "winner_pyromaniac": "Pyromane", "winner_couple": "El Couple", "winner_draw": "Égalité — 7ad ma rba7", "not_recorded": "Ma t7attetch", "archive": "Archive mta3 les games", "room_label": "Game",
+        "history_day_eliminated": "{name} 5raj bel vote", "history_day_tie": "El vote égalité: 7ad ma 5raj", "history_day_skipped": "El village 3adda el vote", "history_day_forced": "El narrateur sakkar el nhar manuellement", "history_day_deaths": "{count} joueur(s) metou fel nhar",
+        "history_details": "Chouf kifeh saret", "history_no_details": "Ma fama 7atta 7aja o5ra tet9al", "history_nights": "lilet", "history_days": "nharat",
+        "story_couple": "Cupidon rabat {names}.", "story_wild": "Enfant Sauvage e5tar {name} modèle mte3ou.", "story_protected": "Protecteur 7ma {name}.", "story_prostitute": "Pute r9adet 3and {name}.", "story_blocked": "Cerbere blocka {name}.",
+        "story_pyro": "Pyromane e5tar: {action}.", "story_wolves": "Loups e5tarou {name}.", "story_redirect": "Attaque t7awlet l {name}.", "story_infection_yes": "Loup-Pere infecta {name}.", "story_infection_no": "Tentative infection 3la {name} fachelet.",
+        "story_white_wolf": "Loup Blanc e5tar {name}.", "story_silenced": "Loup Noir sakket {name}.", "story_talkative": "Loup Bavard 3ta kelmet « {word} » l {name}.", "story_witch_saved": "Sorciere sta3mlet potion de vie.", "story_witch_killed": "Sorciere sammet {name}.",
+        "story_seer": "Voyante chefet {name}: {role}.", "story_bear_yes": "Ours garger.", "story_bear_no": "Ours ma gargerch.", "story_sheep_returned": "3lelech raj3ou men 3and: {names}.", "story_sheep_lost": "3lelech dha3ou 3and: {names}.", "story_sheep_left": "Ba9aw {count} 3lelech.", "story_judge_same": "Juge 9aren {first} w {second}: nafs el clan.", "story_judge_diff": "Juge 9aren {first} w {second}: clans mo5talfin.", "story_deaths": "Eli metou ellila: {names}.", "story_hunter": "Chasseur hezz m3ah: {names}.",
+        "story_speaker": "El klem yabda m3a {name}.", "story_barber_hit": "Barbier dharab {name}: tla3 Loup.", "story_barber_miss": "Barbier dharab {name}: tir 8alet.", "story_alien_yes": "Tentative Alien tla3et s7i7a.", "story_alien_no": "Tentative Alien fachelet.", "story_alien_guess_yes": "Alien 9al {name} role mte3ou {role}: s7i7.", "story_alien_guess_no": "Alien 9al {name} role mte3ou {role}: 8alet.", "story_alien_deaths": "Eli metou fi joret Alien: {names}.", "story_barber_deaths": "Eli metou b Barbier: {names}.", "story_accused": "Eli tetwejhetelhom accusation: {names}.", "story_normal_votes": "El votes: {values}.", "story_cancelled_votes": "Votes eli tna77aw: {names}.", "story_secret_votes": "Votes bel sir: {values}.", "story_vote_eliminated": "El vote 5arrej {name}.", "story_vote_tie": "El vote wfa egalite.", "story_vote_skipped": "El vote t3adda.", "story_day_forced": "El narrateur sakkar el nhar manuellement.", "story_vote_deaths": "Eli metou ba3d el vote: {names}.", "story_powers_lost": "Pouvoirs tna77aw l: {names}.", "story_winner": "Eli rba7: {name}.",
+        "outcome_eliminated": "Joueur 5raj", "outcome_tie": "Égalité", "outcome_skipped": "Vote t3adda", "outcome_forced_transition": "Nhar tsakker manuellement", "pyro_action_douse": "Rach zit", "pyro_action_ignite": "Cha3el", "pyro_action_blocked": "Cerbere blockeh", "winner_wolves": "El loups", "winner_village": "El Village", "winner_white_wolf": "Loup Blanc", "winner_angel": "Ange", "winner_alien": "Alien", "winner_pyromaniac": "Pyromane", "winner_couple": "El Couple", "winner_draw": "Égalité — 7ad ma rba7", "not_recorded": "Ma t7attetch", "archive": "Archive mta3 les games", "room_label": "Game",
     },
 }
 
@@ -187,6 +217,21 @@ def player_label(state, player_id):
 
 
 def public_event_details(state, event_type):
+    hunter_records = state.get("hunterShotRecords", [])
+    night_hunter_ids = [
+        death_id
+        for record in hunter_records
+        if record.get("source") == "night"
+        for death_id in (record.get("deathIds") or [record.get("targetId")])
+        if death_id is not None
+    ]
+    day_hunter_ids = [
+        death_id
+        for record in hunter_records
+        if record.get("source") != "night"
+        for death_id in (record.get("deathIds") or [record.get("targetId")])
+        if death_id is not None
+    ]
     if event_type == "night":
         blocked_player = next((item for item in state.get("players", []) if item.get("id") == state.get("blockedPlayerId")), None)
         blocked_role = blocked_player.get("role") if blocked_player else None
@@ -195,9 +240,7 @@ def public_event_details(state, event_type):
         seen_deaths = set()
         for entry in [
             *state.get("deaths", []),
-            *state.get("alienDeathIds", []),
-            *state.get("barberDeathIds", []),
-            *state.get("hunterCausedDeathIds", []),
+            *night_hunter_ids,
         ]:
             identity = (entry.get("id"), entry.get("name")) if isinstance(entry, dict) else entry
             if identity in seen_deaths:
@@ -213,12 +256,14 @@ def public_event_details(state, event_type):
         sheep_lost = [player_label(state, result.get("targetId")) for result in shepherd_results if not result.get("returned")]
         has_shepherd = bool(shepherd_results) or any(item.get("role") == "shepherds" for item in state.get("players", []))
         return {
+            "couple_members": [name for name in (player_label(state, item) for item in state.get("coupleIds", [])) if name],
+            "wild_child": player_label(state, state.get("wildChildId")),
+            "wild_idol": player_label(state, state.get("wildIdolId")),
             "deaths": death_names,
-            "alien_deaths": [name for name in (player_label(state, item) for item in state.get("alienDeathIds", [])) if name],
-            "barber_deaths": [name for name in (player_label(state, item) for item in state.get("barberDeathIds", [])) if name],
-            "hunter_deaths": [name for name in (player_label(state, item) for item in state.get("hunterCausedDeathIds", [])) if name],
+            "hunter_deaths": [name for name in (player_label(state, item) for item in night_hunter_ids) if name],
             "protected": player_label(state, state.get("protectedId")),
-            "wolves_target": player_label(state, state.get("wolfResolvedTargetId") or state.get("wolfTargetId")),
+            "wolves_target": player_label(state, state.get("wolfTargetId")),
+            "wolves_final_target": player_label(state, state.get("wolfResolvedTargetId")) if state.get("wolfResolvedTargetId") != state.get("wolfTargetId") else None,
             "blocked": player_label(state, state.get("blockedPlayerId")),
             "redirected_to": player_label(state, state.get("prostituteTargetId")),
             "pyromaniac_action": state.get("pyromaniacAction"),
@@ -227,6 +272,11 @@ def public_event_details(state, event_type):
             "pyromaniac_oiled": [name for name in (player_label(state, item) for item in state.get("pyromaniacOiledIds", [])) if name],
             "infection_attempted": bool(state.get("infectionAttempted")),
             "infection_succeeded": bool(state.get("infectionSucceeded")),
+            "infection_target": player_label(state, state.get("infectedPlayerId") or state.get("wolfResolvedTargetId")),
+            "white_wolf_target": player_label(state, state.get("whiteWolfTargetId")),
+            "silenced": player_label(state, state.get("silencedPlayerId")),
+            "talkative_target": player_label(state, state.get("talkativePlayerId")),
+            "talkative_word": state.get("assignedWord"),
             "witch_saved": bool(state.get("witchSave")) and blocked_role != "witches",
             "witch_target": None if blocked_role == "witches" else player_label(state, state.get("witchKillId")),
             "bear_growled": state.get("bearGrowled"),
@@ -249,8 +299,13 @@ def public_event_details(state, event_type):
         if entry.get("votes") is not None and player_label(state, entry.get("targetId"))
     ] or vote_lines(vote_breakdown.get("normal", []))
     return {
+        "speaker": player_label(state, state.get("speakerId")),
+        "accused": [name for name in (player_label(state, item) for item in state.get("qualifiers", [])) if name],
         "eliminated": player_label(state, state.get("lastVote")),
         "vote_deaths": [name for name in (player_label(state, item) for item in state.get("voteDeathIds", [])) if name],
+        "alien_deaths": [name for name in (player_label(state, item) for item in state.get("alienDeathIds", [])) if name],
+        "barber_deaths": [name for name in (player_label(state, item) for item in state.get("barberDeathIds", [])) if name],
+        "hunter_deaths": [name for name in (player_label(state, item) for item in day_hunter_ids) if name],
         "vote_outcome": state.get("voteOutcome"),
         "normal_votes": normal_vote_lines,
         "cancelled_votes": [player_label(state, entry.get("voterId")) for entry in vote_breakdown.get("cancelled", []) if player_label(state, entry.get("voterId"))],
@@ -260,6 +315,15 @@ def public_event_details(state, event_type):
         "powers_lost": [name for name in (player_label(state, item) for item in state.get("lostVillagePowerIds", [])) if name],
         "barber_target": player_label(state, state.get("barberTargetId")),
         "barber_hit": state.get("barberHit"),
+        "alien_guesses": [
+            {
+                "name": player_label(state, result.get("id")),
+                "role": result.get("guessedRole"),
+                "correct": bool(result.get("correct")),
+            }
+            for result in state.get("alienLastGuessResults", [])
+            if player_label(state, result.get("id")) and result.get("guessedRole") in ROLE_KEYS
+        ],
         "alien_correct": state.get("alienLastGuessCorrect"),
         "winner": state.get("winner"),
     }
@@ -356,6 +420,9 @@ def user_management(request):
     user_model = get_user_model()
     error = None
     success = None
+    deleted_username = request.GET.get("deleted", "").strip()
+    if deleted_username:
+        success = f"Le compte {deleted_username} a été supprimé."
     if request.method == "POST":
         action = request.POST.get("action", "create")
         if action == "toggle":
@@ -390,6 +457,61 @@ def user_management(request):
         )
     return render(request, "pages/user_management.html", {
         "managed_users": users,
+        "error": error,
+        "success": success,
+    })
+
+
+def user_detail(request, user_id):
+    if not request.user.is_authenticated or not request.user.is_superuser:
+        raise PermissionDenied
+
+    user_model = get_user_model()
+    account = get_object_or_404(user_model.objects.prefetch_related("groups"), pk=user_id)
+    error = None
+    success = None
+
+    if request.method == "POST":
+        action = request.POST.get("action", "")
+        if action == "toggle":
+            if account.is_superuser:
+                error = "Un compte super-admin ne peut pas être désactivé ici."
+            else:
+                account.is_active = not account.is_active
+                account.save(update_fields=["is_active"])
+                success = "Le compte a été réactivé." if account.is_active else "Le compte a été désactivé."
+        elif action == "set_password":
+            password = request.POST.get("password", "")
+            confirmation = request.POST.get("password_confirmation", "")
+            if len(password) < 4:
+                error = "Le nouveau mot de passe doit contenir au moins 4 caractères."
+            elif password != confirmation:
+                error = "Les deux mots de passe ne correspondent pas."
+            else:
+                account.set_password(password)
+                account.save(update_fields=["password"])
+                success = "Le mot de passe a été modifié. L’ancien mot de passe ne fonctionne plus."
+        elif action == "delete":
+            if account.pk == request.user.pk or account.is_superuser:
+                error = "Un compte super-admin ne peut pas être supprimé ici."
+            else:
+                deleted_username = account.username
+                account.delete()
+                return redirect(f"{reverse('user_management')}?{urlencode({'deleted': deleted_username})}")
+        else:
+            error = "Action invalide."
+
+    account.account_role = (
+        "Super admin" if account.is_superuser
+        else "Narrateur" if any(group.name == NARRATOR_GROUP for group in account.groups.all())
+        else "Joueur"
+    )
+    return render(request, "pages/user_detail.html", {
+        "account": account,
+        "narrated_room_count": account.narrated_rooms.count(),
+        "participation_count": account.game_participations.count(),
+        "can_manage_access": not account.is_superuser,
+        "can_delete": not account.is_superuser and account.pk != request.user.pk,
         "error": error,
         "success": success,
     })
@@ -436,21 +558,23 @@ def room_portal(request):
             pending_name = next((item for item in pending_manual if item.casefold() == name.casefold()), None)
             manual_state_player = next((item for item in game_state.get("players", []) if not item.get("roomPlayerId") and str(item.get("name", "")).casefold() == name.casefold()), None)
 
+            distribution_started = room_distribution_started(room, game_state)
+
             if joined:
                 pass
             elif name_owner:
                 error = text["name_used"]
-            elif room.status == GameRoom.Status.WAITING and pending_name:
+            elif not distribution_started and pending_name:
                 joined = RoomPlayer.objects.create(room=room, name=pending_name, user=request.user)
                 game_state["pendingManualPlayerNames"] = [item for item in pending_manual if item.casefold() != name.casefold()]
                 room.game_state = game_state
                 room.save(update_fields=["game_state", "updated_at"])
-            elif room.status != GameRoom.Status.WAITING and manual_state_player and manual_state_player.get("role") in ROLE_KEYS:
+            elif distribution_started and manual_state_player and manual_state_player.get("role") in ROLE_KEYS:
                 joined = RoomPlayer.objects.create(room=room, name=manual_state_player["name"], role=manual_state_player["role"], user=request.user)
                 manual_state_player["roomPlayerId"] = joined.id
                 room.game_state = game_state
                 room.save(update_fields=["game_state", "updated_at"])
-            elif room.status != GameRoom.Status.WAITING:
+            elif distribution_started:
                 error = text["room_started"]
             elif room.room_players.count() + len(pending_manual) >= room.player_count:
                 error = text["room_full"]
@@ -685,7 +809,8 @@ def room_lobby_api(request, code):
     room = room_for_narrator(request, code.upper())
     if not room:
         return JsonResponse({"error": "forbidden"}, status=403)
-    return JsonResponse({"code": room.code, "status": room.status, "player_count": room.player_count, "players": [{"id": item.id, "name": item.name} for item in room.room_players.all()], "manual_players": (room.game_state or {}).get("pendingManualPlayerNames", [])})
+    effective_status = room.status if room_distribution_started(room) else GameRoom.Status.WAITING
+    return JsonResponse({"code": room.code, "status": effective_status, "player_count": room.player_count, "players": [{"id": item.id, "name": item.name} for item in room.room_players.all()], "manual_players": (room.game_state or {}).get("pendingManualPlayerNames", [])})
 
 
 @require_POST
@@ -695,6 +820,9 @@ def room_start_api(request, code):
     if not room:
         return JsonResponse({"error": "forbidden"}, status=403)
     room = GameRoom.objects.select_for_update().get(code=room.code)
+    if room.status != GameRoom.Status.WAITING and not room_distribution_started(room):
+        room.status = GameRoom.Status.WAITING
+        room.save(update_fields=["status", "updated_at"])
     if room.status != GameRoom.Status.WAITING:
         return JsonResponse({"error": "already_started"}, status=409)
     joined = list(room.room_players.select_for_update().all())
@@ -708,8 +836,11 @@ def room_start_api(request, code):
         joined_player.role = roles[index]
         joined_player.save(update_fields=["role"])
         assignments.append({"room_player_id": joined_player.id, "name": joined_player.name, "role": joined_player.role})
+    game_state = room.game_state or {}
+    game_state["distributionStarted"] = True
+    room.game_state = game_state
     room.status = GameRoom.Status.ACTIVE
-    room.save(update_fields=["status", "updated_at"])
+    room.save(update_fields=["game_state", "status", "updated_at"])
     return JsonResponse({"assignments": assignments, "remaining_roles": roles[len(joined):], "manual_players": manual_players})
 
 
@@ -786,9 +917,17 @@ def room_sync_api(request, code):
     except (TypeError, ValueError, json.JSONDecodeError):
         return JsonResponse({"error": "invalid_json"}, status=400)
     previous_state = room.game_state or {}
+    distribution_started = room_distribution_started(room, previous_state)
+    if distribution_started:
+        state.setdefault("distributionStarted", True)
     undo_requested = request.headers.get("X-Game-Undo") == "1"
     room.game_state = state
-    room.status = GameRoom.Status.FINISHED if state.get("stage") == "game_over" else GameRoom.Status.ACTIVE
+    if state.get("stage") == "game_over":
+        room.status = GameRoom.Status.FINISHED
+    elif distribution_started or state.get("roomStarted") or state.get("distributionStarted"):
+        room.status = GameRoom.Status.ACTIVE
+    else:
+        room.status = GameRoom.Status.WAITING
     room.save(update_fields=["game_state", "status", "updated_at"])
     valid_roles = set(ROLES["fr"])
     for item in state.get("players", []):
@@ -796,6 +935,27 @@ def room_sync_api(request, code):
         role = item.get("role")
         if room_player_id and role in valid_roles:
             room.room_players.filter(id=room_player_id).exclude(role=role).update(role=role)
+
+    previous_round = max(1, int(previous_state.get("round", 1) or 1))
+    current_round = max(1, int(state.get("round", previous_round) or previous_round))
+    previous_stage = previous_state.get("stage")
+    if current_round > previous_round and previous_stage in DAY_STAGES:
+        recovered_day_state = {
+            **previous_state,
+            "stage": "day_end",
+            "round": previous_round,
+            "voteOutcome": previous_state.get("voteOutcome") or "forced_transition",
+        }
+        RoomEvent.objects.get_or_create(
+            room=room,
+            marker=f"day-{previous_round}",
+            defaults={
+                "event_type": "day",
+                "round_number": previous_round,
+                "details": public_event_details(recovered_day_state, "day"),
+            },
+        )
+
     event_type = "night" if state.get("stage") == "dawn" else "day" if state.get("stage") == "day_end" else None
     event_round = state.get("eventRound") if event_type == "night" else state.get("round", 1)
     round_number = max(1, int(event_round or state.get("round", 1)))
@@ -828,12 +988,44 @@ def room_player_api(request, code):
     if not joined:
         return JsonResponse({"error": "forbidden"}, status=403)
     language = current_language(request)
-    role = joined.role
+    game_state = room.game_state or {}
+    distribution_started = room_distribution_started(room, game_state)
+    effective_status = room.status if distribution_started else GameRoom.Status.WAITING
+    role = joined.role if distribution_started else ""
+    published_role_counts = game_state.get("publicAliveRoleCounts")
+    state_players = game_state.get("players")
+    role_counts = {}
+    if distribution_started and isinstance(published_role_counts, dict):
+        for item_role in ROLE_KEYS:
+            try:
+                count = int(published_role_counts.get(item_role, 0))
+            except (TypeError, ValueError):
+                count = 0
+            if count > 0:
+                role_counts[item_role] = count
+    elif distribution_started and isinstance(state_players, list) and state_players and game_state.get("stage") not in {"roster", "player_reveal", "roles"}:
+        for item in state_players:
+            item_role = item.get("role") if isinstance(item, dict) else None
+            if item_role in ROLE_KEYS and item.get("alive", True):
+                role_counts[item_role] = role_counts.get(item_role, 0) + 1
+    elif distribution_started:
+        role_counts = {
+            item_role: int(room.composition.get(item_role, 0))
+            for item_role in ROLE_KEYS
+            if int(room.composition.get(item_role, 0)) > 0
+        }
+    alive_roles = [
+        {"code": item_role, "name": ROLES[language][item_role][0], "count": role_counts[item_role]}
+        for item_role in ROLE_KEYS
+        if role_counts.get(item_role, 0) > 0
+    ]
     return JsonResponse({
-        "status": room.status,
+        "status": effective_status,
         "joined_count": room.room_players.count(),
         "player_count": room.player_count,
         "role": {"code": role, "name": ROLES[language][role][0], "description": ROLES[language][role][1]} if role else None,
+        "alive_roles": alive_roles,
+        "alive_count": sum(item["count"] for item in alive_roles),
     })
 
 

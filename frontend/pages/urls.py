@@ -3,7 +3,7 @@ from django.urls import path
 from .views import (
     game, general_room_qr, health, home, logout_view, room_history, room_history_api, room_history_delete, room_history_finish, room_history_list,
     room_lobby_api, room_player, room_player_api, room_portal, room_reconfigure_api, room_start_api,
-    room_sync_api, roles_guide, service_worker, set_language, pwa_manifest, welcome, dashboard, register, user_management,
+    room_sync_api, roles_guide, service_worker, set_language, pwa_manifest, welcome, dashboard, register, user_detail, user_management,
 )
 
 urlpatterns = [
@@ -14,6 +14,7 @@ urlpatterns = [
     path("dashboard/", dashboard, name="dashboard"),
     path("inscription/", register, name="register"),
     path("utilisateurs/", user_management, name="user_management"),
+    path("utilisateurs/<int:user_id>/", user_detail, name="user_detail"),
     path("roles/", roles_guide, name="roles_guide"),
     path("room/", room_portal, name="room_portal"),
     path("room/qr-general.svg", general_room_qr, name="general_room_qr"),

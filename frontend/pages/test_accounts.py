@@ -55,6 +55,58 @@ class AccountFlowTests(TestCase):
         self.assertContains(users, "firas")
         self.assertContains(users, "Joueur · Actif")
 
+    def test_super_admin_can_open_user_details_and_change_password(self):
+        client = Client()
+        client.force_login(self.super_admin)
+        detail_url = reverse("user_detail", args=[self.player.pk])
+
+        response = client.get(detail_url)
+        self.assertContains(response, "sarra")
+        self.assertContains(response, "Le mot de passe actuel ne peut pas être affiché")
+
+        response = client.post(detail_url, {
+            "action": "set_password",
+            "password": "nouveau-secret",
+            "password_confirmation": "nouveau-secret",
+        })
+        self.assertContains(response, "Le mot de passe a été modifié")
+        self.player.refresh_from_db()
+        self.assertTrue(self.player.check_password("nouveau-secret"))
+        self.assertFalse(self.player.check_password("secret"))
+
+    def test_super_admin_can_disable_enable_and_delete_regular_user(self):
+        client = Client()
+        client.force_login(self.super_admin)
+        detail_url = reverse("user_detail", args=[self.player.pk])
+
+        client.post(detail_url, {"action": "toggle"})
+        self.player.refresh_from_db()
+        self.assertFalse(self.player.is_active)
+
+        client.post(detail_url, {"action": "toggle"})
+        self.player.refresh_from_db()
+        self.assertTrue(self.player.is_active)
+
+        response = client.post(detail_url, {"action": "delete"})
+        self.assertRedirects(response, reverse("user_management") + "?deleted=sarra", fetch_redirect_response=False)
+        self.assertFalse(get_user_model().objects.filter(pk=self.player.pk).exists())
+
+    def test_super_admin_cannot_disable_or_delete_super_admin(self):
+        client = Client()
+        client.force_login(self.super_admin)
+        detail_url = reverse("user_detail", args=[self.super_admin.pk])
+
+        response = client.post(detail_url, {"action": "toggle"})
+        self.assertContains(response, "ne peut pas être désactivé")
+        response = client.post(detail_url, {"action": "delete"})
+        self.assertContains(response, "ne peut pas être supprimé")
+        self.assertTrue(get_user_model().objects.filter(pk=self.super_admin.pk).exists())
+
+    def test_non_super_admin_cannot_open_user_management_details(self):
+        client = Client()
+        client.force_login(self.narrator)
+        self.assertEqual(client.get(reverse("user_detail", args=[self.player.pk])).status_code, 403)
+
     def test_registration_rejects_duplicate_username(self):
         response = Client().post(reverse("register"), {
             "username": "SARRA",

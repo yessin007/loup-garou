@@ -22,6 +22,23 @@
       let roomTimer = null;
       function safe(value) { const node = document.createElement("span"); node.textContent = value; return node.innerHTML; }
       function scheduleRoom() { clearTimeout(roomTimer); roomTimer = setTimeout(refreshRoom, 2500); }
+      function revealRole(role) {
+        if (!card.classList.contains("revealed")) {
+          card.className = "player-secret-card revealed";
+          card.innerHTML = `<p class="eyebrow">{{ room.your_role|escapejs }}</p><h1 id="player-role-name"></h1><p id="player-role-description"></p><strong class="secret-warning">{{ room.keep_secret|escapejs }}</strong><section class="alive-role-roster"><div class="alive-role-heading"><span>{{ room.roles_alive|escapejs }}</span><strong><b id="alive-role-count">0</b> {{ room.roles_alive_count|escapejs }}</strong></div><div id="alive-role-list" class="alive-role-list"></div></section>`;
+        }
+        document.getElementById("player-role-name").textContent = role.name;
+        document.getElementById("player-role-description").textContent = role.description;
+      }
+      function renderAliveRoles(roles, aliveCount) {
+        const count = document.getElementById("alive-role-count");
+        const list = document.getElementById("alive-role-list");
+        if (!count || !list) return;
+        count.textContent = aliveCount;
+        list.innerHTML = roles.length
+          ? roles.map(role => `<article><strong>${safe(role.name)}</strong><span>× ${role.count}</span></article>`).join("")
+          : `<p>{{ room.roles_alive_empty|escapejs }}</p>`;
+      }
       async function refreshRoom() {
         clearTimeout(roomTimer);
         if (document.hidden) { scheduleRoom(); return; }
@@ -31,10 +48,9 @@
           const data = await response.json();
           document.getElementById("room-count")?.replaceChildren(`${data.joined_count} / ${data.player_count} {{ room.players_joined|escapejs }}`);
           if (data.role) {
-            if (!card.classList.contains("revealed")) {
-              card.className = "player-secret-card revealed";
-              card.innerHTML = `<p class="eyebrow">{{ room.your_role|escapejs }}</p><h1>${safe(data.role.name)}</h1><p>${safe(data.role.description)}</p><strong>{{ room.keep_secret|escapejs }}</strong>`;
-            }
+            revealRole(data.role);
+            renderAliveRoles(data.alive_roles || [], data.alive_count || 0);
+            if (data.status !== "finished") scheduleRoom();
             return;
           }
           if (data.status !== "finished") scheduleRoom();

@@ -1,5 +1,5 @@
 import json
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
@@ -8,6 +8,7 @@ from django.urls import reverse
 
 from .models import GameRoom, RoomEvent
 from .translations import ROLES
+from .views import WOLF_ROLE_KEYS, shuffle_roles_for_players
 
 
 @override_settings(
@@ -39,6 +40,45 @@ class RoomFlowTests(TestCase):
         )
         self.assertRedirects(response, reverse("game"), fetch_redirect_response=False)
         return GameRoom.objects.get(code=self.narrator.session["game_setup"]["room_code"])
+
+    def test_marmour_has_a_ninety_percent_wolf_distribution_bias(self):
+        roles = ["villagers", "cerberus_wolves", "seers"]
+        random_source = Mock()
+        random_source.random.return_value = 0.89
+        random_source.choice.side_effect = lambda indexes: indexes[0]
+
+        shuffle_roles_for_players(
+            roles,
+            [("Display name", "MaRmOuR"), ("Sarra",), ("Ali",)],
+            random_source,
+        )
+
+        self.assertIn(roles[0], WOLF_ROLE_KEYS)
+        random_source.shuffle.assert_called_once_with(roles)
+
+    def test_marmour_gets_a_non_wolf_role_on_the_ten_percent_branch(self):
+        roles = ["black_wolves", "villagers", "seers"]
+        random_source = Mock()
+        random_source.random.return_value = 0.9
+        random_source.choice.side_effect = lambda indexes: indexes[-1]
+
+        shuffle_roles_for_players(
+            roles,
+            [("MARMOUR",), ("Sarra",), ("Ali",)],
+            random_source,
+        )
+
+        self.assertNotIn(roles[0], WOLF_ROLE_KEYS)
+
+    def test_distribution_stays_fully_random_when_marmour_is_absent(self):
+        roles = ["simple_wolves", "villagers"]
+        random_source = Mock()
+
+        shuffle_roles_for_players(roles, [("Sarra",), ("Ali",)], random_source)
+
+        random_source.shuffle.assert_called_once_with(roles)
+        random_source.random.assert_not_called()
+        random_source.choice.assert_not_called()
 
     def test_narrator_dashboard_routes_each_admin_action(self):
         dashboard = self.narrator.get(reverse("welcome"))

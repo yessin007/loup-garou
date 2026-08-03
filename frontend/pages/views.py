@@ -41,6 +41,34 @@ DAY_STAGES = {
     "dawn", "accusation", "barber_shot", "barber_result", "alien_guess",
     "alien_result", "final_vote", "servant_choice", "hunter_shot", "day_end",
 }
+MARMOUR_USERNAME = "marmour"
+MARMOUR_WOLF_CHANCE = 0.9
+
+
+def shuffle_roles_for_players(roles, player_aliases, random_source=None):
+    """Shuffle roles, giving Marmour an exact 90% chance of a wolf role."""
+    random_source = random_source or secrets.SystemRandom()
+    random_source.shuffle(roles)
+
+    marmour_index = next(
+        (
+            index
+            for index, aliases in enumerate(player_aliases)
+            if any(str(alias).strip().casefold() == MARMOUR_USERNAME for alias in aliases if alias)
+        ),
+        None,
+    )
+    if marmour_index is None:
+        return
+
+    should_be_wolf = random_source.random() < MARMOUR_WOLF_CHANCE
+    eligible_indexes = [
+        index
+        for index, role in enumerate(roles)
+        if (role in WOLF_ROLE_KEYS) == should_be_wolf
+    ]
+    selected_index = random_source.choice(eligible_indexes)
+    roles[marmour_index], roles[selected_index] = roles[selected_index], roles[marmour_index]
 
 
 def is_narrator(user):
@@ -832,12 +860,16 @@ def room_start_api(request, code):
         room.save(update_fields=["status", "updated_at"])
     if room.status != GameRoom.Status.WAITING:
         return JsonResponse({"error": "already_started"}, status=409)
-    joined = list(room.room_players.select_for_update().all())
+    joined = list(room.room_players.select_for_update())
     manual_players = (room.game_state or {}).get("pendingManualPlayerNames", [])
     roles = [role for role, count in room.composition.items() for _ in range(count)]
     if len(joined) + len(manual_players) > len(roles):
         return JsonResponse({"error": "too_many_players"}, status=409)
-    secrets.SystemRandom().shuffle(roles)
+    player_aliases = [
+        (joined_player.name, joined_player.user.username if joined_player.user else None)
+        for joined_player in joined
+    ] + [(name,) for name in manual_players]
+    shuffle_roles_for_players(roles, player_aliases)
     assignments = []
     for index, joined_player in enumerate(joined):
         joined_player.role = roles[index]

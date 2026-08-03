@@ -6,6 +6,15 @@
 <link rel="manifest" href="{% url 'pwa_manifest' %}" />
 <link rel="apple-touch-icon" href="{% static 'images/favicon-wolf.png' %}" />
 <script>
+  function latestCsrfCookie() {
+    const cookie = document.cookie.split("; ").find(item => item.startsWith("csrftoken="));
+    return cookie ? decodeURIComponent(cookie.split("=").slice(1).join("=")) : "";
+  }
+  document.addEventListener("submit", event => {
+    const input = event.target.querySelector('input[name="csrfmiddlewaretoken"]');
+    const freshToken = latestCsrfCookie();
+    if (input && freshToken) input.value = freshToken;
+  }, true);
   if ("serviceWorker" in navigator) {
     window.addEventListener("load", () => navigator.serviceWorker.register("{% url 'service_worker' %}", {scope: "/"}).catch(() => {}));
   }

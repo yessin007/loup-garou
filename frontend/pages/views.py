@@ -17,6 +17,8 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_POST, require_safe
+from django.views.decorators.csrf import ensure_csrf_cookie
+from django.middleware.csrf import get_token
 
 from .models import GameRoom, RoomEvent, RoomPlayer
 from .role_guides import ROLE_CAMPS, ROLE_CODES, ROLE_GUIDES
@@ -79,6 +81,12 @@ def is_narrator(user):
     )
 
 
+@require_GET
+@ensure_csrf_cookie
+def csrf_token_api(request):
+    return JsonResponse({"csrfToken": get_token(request)})
+
+
 def narrator_can_manage(user, room):
     return is_narrator(user) and (user.is_superuser or room.narrator_id in {None, user.id})
 
@@ -118,6 +126,9 @@ ROOM_TEXT["fr"].update({
     "join_retrying": "Nouvelle tentative automatique dans", "join_retry_now": "Réessayer maintenant",
     "hide_my_role": "Masquer mon rôle", "show_my_role": "Afficher mon rôle",
     "player_identity": "Identité du joueur",
+    "private_notes": "Mes notes privées", "private_notes_help": "Visibles uniquement par toi, même après la partie.",
+    "private_notes_placeholder": "Écris tes observations ici…", "notes_saving": "Sauvegarde…",
+    "notes_saved": "Notes enregistrées", "notes_error": "Échec — réessaie.",
 })
 ROOM_TEXT["en"].update({
     "roles_alive": "Player roles", "roles_alive_count": "alive",
@@ -130,6 +141,9 @@ ROOM_TEXT["en"].update({
     "join_retrying": "Retrying automatically in", "join_retry_now": "Retry now",
     "hide_my_role": "Hide my role", "show_my_role": "Show my role",
     "player_identity": "Player identity",
+    "private_notes": "My private notes", "private_notes_help": "Only visible to you, even after the game.",
+    "private_notes_placeholder": "Write your observations here…", "notes_saving": "Saving…",
+    "notes_saved": "Notes saved", "notes_error": "Failed — try again.",
 })
 ROOM_TEXT["tn"].update({
     "roles_alive": "Roles mta3 les joueurs", "roles_alive_count": "3aychin",
@@ -142,6 +156,9 @@ ROOM_TEXT["tn"].update({
     "join_retrying": "Bech n3awdou automatiquement ba3d", "join_retry_now": "3awed taw",
     "hide_my_role": "5abbi el role", "show_my_role": "Warri el role",
     "player_identity": "Esm el joueur",
+    "private_notes": "Notes privées mte3i", "private_notes_help": "Ken enti tchoufhom, 7ata ba3d el game.",
+    "private_notes_placeholder": "Ekteb les observations mte3ek houni…", "notes_saving": "Nsavegardi…",
+    "notes_saved": "Notes tsavegardew", "notes_error": "Ma tsavegardewch — 3awed.",
 })
 
 ROOM_DETAIL_LABELS = {
@@ -692,11 +709,14 @@ def room_history(request, code):
     if not can_view_room_history(request, room):
         raise PermissionDenied
     language = current_language(request)
+    history_player = room.room_players.filter(user=request.user).first()
     return render(request, "pages/room_history.html", {
         "game_room": room,
         "room": room_text(request),
         "history_labels": ROOM_DETAIL_LABELS[language],
         "role_labels": {key: value[0] for key, value in ROLES[language].items()},
+        "history_notes_available": history_player is not None,
+        "history_private_notes": history_player.private_notes if history_player else None,
     })
 
 
@@ -1199,7 +1219,26 @@ def room_player_api(request, code):
         "alive_count": sum(item["count"] for item in alive_roles),
         "role_roster": role_roster,
         "dead_count": sum(not item["alive"] for item in role_roster),
+        "private_notes": joined.private_notes,
     })
+
+
+@require_POST
+def room_player_notes_api(request, code):
+    room = get_object_or_404(GameRoom, code=code.upper())
+    token = request.session.get("room_player_tokens", {}).get(room.code)
+    joined = room.room_players.filter(token=token).first()
+    if not joined:
+        return JsonResponse({"error": "forbidden"}, status=403)
+    try:
+        notes = json.loads(request.body).get("notes", "")
+    except (AttributeError, json.JSONDecodeError):
+        return JsonResponse({"error": "invalid_notes"}, status=400)
+    if not isinstance(notes, str) or len(notes) > 600:
+        return JsonResponse({"error": "notes_too_long"}, status=400)
+    joined.private_notes = notes
+    joined.save(update_fields=["private_notes"])
+    return JsonResponse({"status": "saved", "length": len(notes)})
 
 
 @require_GET

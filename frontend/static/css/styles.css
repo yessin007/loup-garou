@@ -1103,12 +1103,28 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .alive-role-list article.dead strong { color: #5f676b; text-decoration: line-through; }
 .alive-role-list article.dead span { color: #697277; }
 .alive-role-list > p { grid-column: 1 / -1; color: #68747a; font-size: .72rem; text-align: center; }
+.private-notes-editor { margin-top: 28px; padding-top: 24px; border-top: 1px solid #d4dadd; }
+.private-notes-editor > header { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; margin-bottom: 12px; }
+.private-notes-editor > header div { display: flex; flex-direction: column; gap: 4px; }
+.private-notes-editor > header strong { color: #263238; font: 700 .78rem "Cinzel", serif; letter-spacing: .06em; text-transform: uppercase; }
+.private-notes-editor > header small { color: #748087; font-size: .64rem; line-height: 1.45; }
+.private-notes-editor > header > span { flex: 0 0 auto; color: #748087; font-size: .65rem; }
+.private-notes-editor > header b { color: #7c3b30; font: 700 .75rem "Cinzel", serif; }
+.private-notes-editor textarea { width: 100%; min-height: 135px; resize: vertical; border: 1px solid #cbd1d4; color: #202b30; line-height: 1.55; background: #fff; }
+.private-notes-editor textarea:focus { border-color: #a96151; box-shadow: 0 0 0 3px rgba(169,97,81,.12); }
+.private-notes-editor output { display: block; min-height: 18px; margin-top: 7px; color: #657279; font-size: .62rem; text-align: right; }
+.history-private-notes { max-width: 720px; margin: 0 0 34px; padding: 20px 22px; border: 1px solid rgba(199,139,69,.28); background: rgba(199,139,69,.055); }
+.history-private-notes header { display: flex; align-items: baseline; justify-content: space-between; gap: 18px; margin-bottom: 14px; }
+.history-private-notes header span { color: var(--ember-light); font: 700 .75rem "Cinzel", serif; letter-spacing: .07em; text-transform: uppercase; }
+.history-private-notes header small { color: #7f8d93; font-size: .62rem; }
+.history-private-notes > p { margin: 0; color: #d1d8da; font-size: .76rem; line-height: 1.7; white-space: normal; overflow-wrap: anywhere; }
 .waiting-orbit { display: grid; place-items: center; width: 100px; height: 100px; margin: 32px auto; border: 1px solid rgba(199,139,69,.3); border-radius: 50%; animation: room-pulse 1.8s infinite; }
 .waiting-orbit span { color: var(--ember-light); font-size: 2rem; }
 @keyframes room-pulse { 50% { box-shadow: 0 0 40px rgba(199,139,69,.2); transform: scale(1.04); } }
 @media (max-width: 520px) {
   .alive-role-heading { align-items: flex-start; flex-direction: column; gap: 7px; }
   .alive-role-list { grid-template-columns: 1fr; }
+  .private-notes-editor > header, .history-private-notes header { flex-direction: column; gap: 7px; }
 }
 .history-hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; }
 .history-hero > div:first-child { max-width: 650px; }

@@ -1,13 +1,14 @@
 from django.urls import path
 
 from .views import (
-    game, general_room_qr, health, home, logout_view, room_history, room_history_api, room_history_delete, room_history_finish, room_history_list,
-    room_lobby_api, room_lobby_remove_api, room_player, room_player_api, room_portal, room_reconfigure_api, room_start_api,
+    csrf_token_api, game, general_room_qr, health, home, logout_view, room_history, room_history_api, room_history_delete, room_history_finish, room_history_list,
+    room_lobby_api, room_lobby_remove_api, room_player, room_player_api, room_player_notes_api, room_portal, room_reconfigure_api, room_start_api,
     room_sync_api, roles_guide, service_worker, set_language, pwa_manifest, welcome, dashboard, register, user_detail, user_management,
 )
 
 urlpatterns = [
     path("health/", health, name="health"),
+    path("api/csrf/", csrf_token_api, name="csrf_token_api"),
     path("manifest.webmanifest", pwa_manifest, name="pwa_manifest"),
     path("sw.js", service_worker, name="service_worker"),
     path("", home, name="home"),
@@ -29,6 +30,7 @@ urlpatterns = [
     path("api/rooms/<str:code>/start/", room_start_api, name="room_start_api"),
     path("api/rooms/<str:code>/sync/", room_sync_api, name="room_sync_api"),
     path("api/rooms/<str:code>/player/", room_player_api, name="room_player_api"),
+    path("api/rooms/<str:code>/player/notes/", room_player_notes_api, name="room_player_notes_api"),
     path("api/rooms/<str:code>/history/", room_history_api, name="room_history_api"),
     path("accueil/", welcome, name="welcome"),
     path("partie/", game, name="game"),

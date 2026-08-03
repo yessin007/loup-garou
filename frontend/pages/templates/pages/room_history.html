@@ -21,6 +21,10 @@
         <div><strong>0</strong><span>{{ room.history_days }}</span></div>
         <p>{{ room.history_updated }}</p>
       </section>
+      {% if history_notes_available %}<section class="history-private-notes">
+        <header><span>{{ room.private_notes }}</span><small>{{ room.private_notes_help }}</small></header>
+        <p>{% if history_private_notes %}{{ history_private_notes|linebreaksbr }}{% else %}{{ room.private_notes_placeholder }}{% endif %}</p>
+      </section>{% endif %}
       <div id="history-timeline" class="history-timeline"><p class="history-empty">{{ room.history_empty }}</p></div>
     </main>
     <script>

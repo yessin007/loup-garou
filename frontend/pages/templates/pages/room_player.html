@@ -19,18 +19,73 @@
     </main>
     <script>
       const card = document.getElementById("player-room-card");
+      const csrfToken = "{{ csrf_token }}";
+      function currentCsrfToken() {
+        const cookie = document.cookie.split("; ").find(item => item.startsWith("csrftoken="));
+        return cookie ? decodeURIComponent(cookie.split("=").slice(1).join("=")) : csrfToken;
+      }
+      async function csrfFetch(url, options = {}) {
+        const send = token => {
+          const headers = new Headers(options.headers || {});
+          headers.set("X-CSRFToken", token);
+          return fetch(url, {...options, headers, credentials: "same-origin"});
+        };
+        let response = await send(currentCsrfToken());
+        if (response.status !== 403) return response;
+        const refresh = await fetch("{% url 'csrf_token_api' %}", {cache: "no-store", credentials: "same-origin"});
+        if (!refresh.ok) return response;
+        response = await send((await refresh.json()).csrfToken);
+        return response;
+      }
       let roomTimer = null;
+      let notesSaveTimer = null;
+      let notesLoaded = false;
       function safe(value) { const node = document.createElement("span"); node.textContent = value; return node.innerHTML; }
       function scheduleRoom() { clearTimeout(roomTimer); roomTimer = setTimeout(refreshRoom, 2500); }
       function revealRole(role) {
         if (!card.classList.contains("revealed")) {
           card.className = "player-secret-card revealed";
-          card.innerHTML = `<div class="personal-role-panel"><div id="private-role-details"><p class="eyebrow">{{ room.your_role|escapejs }}</p><h1 id="player-role-name"></h1><p id="player-role-description"></p></div><div id="private-player-identity" hidden><p class="eyebrow">{{ room.player_identity|escapejs }}</p><h1 id="private-player-name"></h1></div><button id="toggle-private-role" class="role-visibility-toggle" type="button"><span id="toggle-private-role-label">{{ room.hide_my_role|escapejs }}</span><i aria-hidden="true">↔</i></button></div><section class="alive-role-roster"><div class="alive-role-heading"><span>{{ room.roles_alive|escapejs }}</span><strong><b id="alive-role-count">0</b> {{ room.roles_alive_count|escapejs }} · <b id="dead-role-count">0</b> {{ room.roles_dead_count|escapejs }}</strong></div><div id="alive-role-list" class="alive-role-list"></div></section>`;
+          card.innerHTML = `<div class="personal-role-panel"><div id="private-role-details"><p class="eyebrow">{{ room.your_role|escapejs }}</p><h1 id="player-role-name"></h1><p id="player-role-description"></p></div><div id="private-player-identity" hidden><p class="eyebrow">{{ room.player_identity|escapejs }}</p><h1 id="private-player-name"></h1></div><button id="toggle-private-role" class="role-visibility-toggle" type="button"><span id="toggle-private-role-label">{{ room.hide_my_role|escapejs }}</span><i aria-hidden="true">↔</i></button></div><section class="alive-role-roster"><div class="alive-role-heading"><span>{{ room.roles_alive|escapejs }}</span><strong><b id="alive-role-count">0</b> {{ room.roles_alive_count|escapejs }} · <b id="dead-role-count">0</b> {{ room.roles_dead_count|escapejs }}</strong></div><div id="alive-role-list" class="alive-role-list"></div><section class="private-notes-editor"><header><div><strong>{{ room.private_notes|escapejs }}</strong><small>{{ room.private_notes_help|escapejs }}</small></div><span><b id="private-notes-count">0</b> / 600</span></header><textarea id="private-notes-input" maxlength="600" rows="6" placeholder="{{ room.private_notes_placeholder|escapejs }}"></textarea><output id="private-notes-status" aria-live="polite"></output></section></section>`;
           document.getElementById("private-player-name").textContent = "{{ joined_player.name|escapejs }}";
           document.getElementById("toggle-private-role").addEventListener("click", togglePrivateRole);
+          const notesInput = document.getElementById("private-notes-input");
+          notesInput.addEventListener("input", schedulePrivateNotesSave);
+          notesInput.addEventListener("change", savePrivateNotes);
         }
         document.getElementById("player-role-name").textContent = role.name;
         document.getElementById("player-role-description").textContent = role.description;
+      }
+      function renderPrivateNotes(notes) {
+        const input = document.getElementById("private-notes-input");
+        if (!input || notesLoaded) return;
+        input.value = notes || "";
+        notesLoaded = true;
+        document.getElementById("private-notes-count").textContent = input.value.length;
+      }
+      function schedulePrivateNotesSave() {
+        const input = document.getElementById("private-notes-input");
+        document.getElementById("private-notes-count").textContent = input.value.length;
+        document.getElementById("private-notes-status").textContent = "{{ room.notes_saving|escapejs }}";
+        clearTimeout(notesSaveTimer);
+        notesSaveTimer = setTimeout(savePrivateNotes, 700);
+      }
+      async function savePrivateNotes() {
+        clearTimeout(notesSaveTimer);
+        const input = document.getElementById("private-notes-input");
+        const status = document.getElementById("private-notes-status");
+        if (!input || !status) return;
+        status.textContent = "{{ room.notes_saving|escapejs }}";
+        try {
+          const response = await csrfFetch("{% url 'room_player_notes_api' game_room.code %}", {
+            method: "POST",
+            headers: {"Content-Type": "application/json", "X-CSRFToken": csrfToken},
+            body: JSON.stringify({notes: input.value}),
+            keepalive: true,
+          });
+          status.textContent = response.ok ? "{{ room.notes_saved|escapejs }}" : "{{ room.notes_error|escapejs }}";
+        } catch (error) {
+          status.textContent = "{{ room.notes_error|escapejs }}";
+        }
       }
       function togglePrivateRole() {
         const roleDetails = document.getElementById("private-role-details");
@@ -63,6 +118,7 @@
           if (data.role) {
             revealRole(data.role);
             renderRoleRoster(data.role_roster || [], data.alive_count || 0, data.dead_count || 0);
+            renderPrivateNotes(data.private_notes || "");
             if (data.status !== "finished") scheduleRoom();
             return;
           }

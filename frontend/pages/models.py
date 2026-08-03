@@ -45,6 +45,7 @@ class RoomPlayer(models.Model):
     name = models.CharField(max_length=150)
     token = models.UUIDField(default=uuid.uuid4, unique=True, editable=False)
     role = models.CharField(max_length=40, blank=True)
+    private_notes = models.TextField(max_length=600, blank=True)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL,
         related_name="game_participations",

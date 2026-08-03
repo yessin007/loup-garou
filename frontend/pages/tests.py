@@ -42,6 +42,29 @@ class RoomFlowTests(TestCase):
         self.assertRedirects(response, reverse("game"), fetch_redirect_response=False)
         return GameRoom.objects.get(code=self.narrator.session["game_setup"]["room_code"])
 
+    def test_csrf_token_can_be_refreshed_and_used_by_long_lived_pages(self):
+        client = Client(enforce_csrf_checks=True)
+        refreshed = client.get(reverse("csrf_token_api"))
+        self.assertEqual(refreshed.status_code, 200)
+        self.assertIn("csrftoken", refreshed.cookies)
+        fresh_token = refreshed.json()["csrfToken"]
+
+        rejected = Client(enforce_csrf_checks=True).post(
+            reverse("set_language"),
+            {"language": "fr", "next": reverse("home")},
+        )
+        self.assertEqual(rejected.status_code, 403)
+        accepted = client.post(
+            reverse("set_language"),
+            {"language": "fr", "next": reverse("home")},
+            HTTP_X_CSRFTOKEN=fresh_token,
+        )
+        self.assertEqual(accepted.status_code, 302)
+
+        home = client.get(reverse("home"))
+        self.assertContains(home, "latestCsrfCookie")
+        self.assertContains(home, 'input[name="csrfmiddlewaretoken"]')
+
     def test_marmour_has_a_ninety_percent_wolf_distribution_bias(self):
         roles = ["villagers", "cerberus_wolves", "seers"]
         random_source = Mock()
@@ -594,6 +617,9 @@ class RoomFlowTests(TestCase):
         self.assertContains(player_page, 'if (data.status !== "finished") scheduleRoom()')
 
         game_page = self.narrator.get(reverse("game"))
+        self.assertContains(game_page, "async function csrfFetch")
+        self.assertContains(game_page, 'response.status !== 403')
+        self.assertContains(game_page, reverse("csrf_token_api"))
         self.assertContains(game_page, "function publishAliveRoleCounts()")
         self.assertContains(game_page, "state.publicAliveRoleCounts = alive().reduce")
         self.assertContains(game_page, 'if (source === "night") publishAliveRoleCounts()')
@@ -702,6 +728,56 @@ class RoomFlowTests(TestCase):
         self.assertContains(game, 'id="lobby-player-count"')
         self.assertContains(game, 'data-action="remove-lobby-player"')
         self.assertContains(game, "/lobby/remove/")
+
+    def test_private_player_notes_are_saved_and_only_visible_to_their_owner(self):
+        room = self.create_room()
+        player = self.player_client("Sarra-notes")
+        player.post(reverse("room_portal"), {"room_code": room.code})
+        self.narrator.post(reverse("room_start_api", args=[room.code]))
+        notes_url = reverse("room_player_notes_api", args=[room.code])
+
+        notes = "La Voyante semble fiable.\nSuspect principal : joueur 04."
+        saved = player.post(
+            notes_url,
+            json.dumps({"notes": notes}),
+            content_type="application/json",
+        )
+        self.assertEqual(saved.status_code, 200)
+        self.assertEqual(saved.json()["length"], len(notes))
+        self.assertEqual(room.room_players.get(name="Sarra-notes").private_notes, notes)
+        self.assertEqual(
+            player.get(reverse("room_player_api", args=[room.code])).json()["private_notes"],
+            notes,
+        )
+
+        too_long = player.post(
+            notes_url,
+            json.dumps({"notes": "x" * 601}),
+            content_type="application/json",
+        )
+        self.assertEqual(too_long.status_code, 400)
+        self.assertEqual(room.room_players.get(name="Sarra-notes").private_notes, notes)
+        self.assertEqual(self.narrator.post(notes_url, json.dumps({"notes": "intrusion"}), content_type="application/json").status_code, 403)
+
+        room.status = GameRoom.Status.FINISHED
+        room.save(update_fields=["status"])
+        final_notes = f"{notes}\nPartie terminée."
+        self.assertEqual(
+            player.post(notes_url, json.dumps({"notes": final_notes}), content_type="application/json").status_code,
+            200,
+        )
+        owner_history = player.get(reverse("room_history", args=[room.code]))
+        self.assertContains(owner_history, "Mes notes privées")
+        self.assertContains(owner_history, "Partie terminée.")
+        narrator_history = self.narrator.get(reverse("room_history", args=[room.code]))
+        self.assertNotContains(narrator_history, "Partie terminée.")
+
+        player_page = player.get(reverse("room_player", args=[room.code]))
+        self.assertContains(player_page, 'maxlength="600"')
+        self.assertContains(player_page, "schedulePrivateNotesSave")
+        self.assertContains(player_page, "keepalive: true")
+        self.assertContains(player_page, "async function csrfFetch")
+        self.assertContains(player_page, reverse("csrf_token_api"))
 
     def test_roster_sync_does_not_close_room_before_distribution(self):
         room = self.create_room()

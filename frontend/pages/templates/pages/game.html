@@ -136,6 +136,24 @@
       const roomCode = "{{ room_code|escapejs }}";
       const websiteQrUrl = "{% url 'general_room_qr' %}";
       const csrfToken = "{{ csrf_token }}";
+      function currentCsrfToken() {
+        const cookie = document.cookie.split("; ").find(item => item.startsWith("csrftoken="));
+        return cookie ? decodeURIComponent(cookie.split("=").slice(1).join("=")) : csrfToken;
+      }
+      async function csrfFetch(url, options = {}) {
+        const send = token => {
+          const headers = new Headers(options.headers || {});
+          headers.set("X-CSRFToken", token);
+          return fetch(url, {...options, headers, credentials: "same-origin"});
+        };
+        let response = await send(currentCsrfToken());
+        if (response.status !== 403) return response;
+        const refresh = await fetch("{% url 'csrf_token_api' %}", {cache: "no-store", credentials: "same-origin"});
+        if (!refresh.ok) return response;
+        const freshToken = (await refresh.json()).csrfToken;
+        response = await send(freshToken);
+        return response;
+      }
       function t(key, values = {}) {
         return Object.entries(values).reduce((text, [name, value]) => text.replaceAll(`{${name}}`, value), L[key]);
       }
@@ -279,7 +297,7 @@
       let lastRenderedStage = null;
       let distributionEditing = false;
       async function syncState(snapshot, isUndo = false, keepalive = false) {
-        const response = await fetch(`/api/rooms/${roomCode}/sync/`, {
+        const response = await csrfFetch(`/api/rooms/${roomCode}/sync/`, {
           method: "POST",
           keepalive,
           headers: {"Content-Type": "application/json", "X-CSRFToken": csrfToken, ...(isUndo ? {"X-Game-Undo": "1"} : {})},
@@ -1016,7 +1034,7 @@
         const payload = button.dataset.roomPlayerId
           ? {room_player_id: Number(button.dataset.roomPlayerId)}
           : {manual_name: decodeURIComponent(button.dataset.manualName)};
-        const response = await fetch(`/api/rooms/${roomCode}/lobby/remove/`, {
+        const response = await csrfFetch(`/api/rooms/${roomCode}/lobby/remove/`, {
           method: "POST",
           headers: {"Content-Type": "application/json", "X-CSRFToken": csrfToken},
           body: JSON.stringify(payload),
@@ -1027,7 +1045,7 @@
 
       async function startRoomDistribution(button) {
         button.disabled = true;
-        const response = await fetch(`/api/rooms/${roomCode}/start/`, {method: "POST", headers: {"X-CSRFToken": csrfToken}});
+        const response = await csrfFetch(`/api/rooms/${roomCode}/start/`, {method: "POST"});
         if (!response.ok) { button.disabled = false; return; }
         const data = await response.json();
         state.pendingManualPlayerNames = data.manual_players || state.pendingManualPlayerNames || [];
@@ -1119,7 +1137,7 @@
         const removedPlayerIds = removedInputs.map(input => Number(input.dataset.removePlayer)).filter(Boolean);
         const removedLocalPlayerIds = new Set(removedInputs.map(input => Number(input.dataset.removeLocalPlayer)).filter(Boolean));
         const manualPlayers = state.players.filter(item => !item.roomPlayerId && !removedLocalPlayerIds.has(item.id)).map(item => item.name);
-        const response = await fetch(`/api/rooms/${roomCode}/reconfigure/`, {
+        const response = await csrfFetch(`/api/rooms/${roomCode}/reconfigure/`, {
           method: "POST",
           headers: {"Content-Type": "application/json", "X-CSRFToken": csrfToken},
           body: JSON.stringify({composition, removed_player_ids: removedPlayerIds, manual_players: manualPlayers}),

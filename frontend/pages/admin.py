@@ -33,3 +33,4 @@ class RoomPlayerAdmin(SuperuserDeleteOnlyMixin, admin.ModelAdmin):
     search_fields = ("name", "room__code")
     list_select_related = ("room",)
     readonly_fields = ("room", "name", "token", "role", "joined_at")
+    exclude = ("private_notes",)

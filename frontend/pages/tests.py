@@ -585,6 +585,12 @@ class RoomFlowTests(TestCase):
         self.assertContains(player_page, "renderRoleRoster")
         self.assertContains(player_page, 'id="dead-role-count"')
         self.assertContains(player_page, 'role.alive ? "alive" : "dead"')
+        self.assertContains(player_page, 'id="toggle-private-role"')
+        self.assertContains(player_page, "togglePrivateRole")
+        self.assertContains(player_page, 'id="private-player-name"')
+        self.assertContains(player_page, "Masquer mon rôle")
+        self.assertContains(player_page, "Afficher mon rôle")
+        self.assertNotContains(player_page, "Garde cet écran secret")
         self.assertContains(player_page, 'if (data.status !== "finished") scheduleRoom()')
 
         game_page = self.narrator.get(reverse("game"))

@@ -116,6 +116,8 @@ ROOM_TEXT["fr"].update({
     "empty_lobby": "Aucun joueur inscrit pour le moment.",
     "joining_room": "Inscription en cours…", "join_queue_wait": "Beaucoup de joueurs rejoignent la room en même temps.",
     "join_retrying": "Nouvelle tentative automatique dans", "join_retry_now": "Réessayer maintenant",
+    "hide_my_role": "Masquer mon rôle", "show_my_role": "Afficher mon rôle",
+    "player_identity": "Identité du joueur",
 })
 ROOM_TEXT["en"].update({
     "roles_alive": "Player roles", "roles_alive_count": "alive",
@@ -126,6 +128,8 @@ ROOM_TEXT["en"].update({
     "empty_lobby": "No registered players yet.",
     "joining_room": "Joining the room…", "join_queue_wait": "Many players are joining the room at the same time.",
     "join_retrying": "Retrying automatically in", "join_retry_now": "Retry now",
+    "hide_my_role": "Hide my role", "show_my_role": "Show my role",
+    "player_identity": "Player identity",
 })
 ROOM_TEXT["tn"].update({
     "roles_alive": "Roles mta3 les joueurs", "roles_alive_count": "3aychin",
@@ -136,6 +140,8 @@ ROOM_TEXT["tn"].update({
     "empty_lobby": "Mezel ma d5al 7atta joueur.",
     "joining_room": "Da5la lel room…", "join_queue_wait": "Fama barcha joueurs ye7ebbou yod5lou fard wa9t.",
     "join_retrying": "Bech n3awdou automatiquement ba3d", "join_retry_now": "3awed taw",
+    "hide_my_role": "5abbi el role", "show_my_role": "Warri el role",
+    "player_identity": "Esm el joueur",
 })
 
 ROOM_DETAIL_LABELS = {

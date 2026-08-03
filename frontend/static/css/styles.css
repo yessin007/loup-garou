@@ -1079,6 +1079,13 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .personal-role-panel { padding: clamp(28px, 7vw, 55px); }
 .personal-role-panel > p:not(.eyebrow) { color: #91a0a7; line-height: 1.7; }
 .personal-role-panel > strong { display: block; margin-top: 28px; color: var(--ember-light); }
+.personal-role-panel [hidden] { display: none; }
+#private-role-details > p:not(.eyebrow) { color: #91a0a7; line-height: 1.7; }
+#private-player-identity { min-height: 170px; }
+#private-player-identity h1 { display: flex; align-items: center; justify-content: center; min-height: 110px; overflow-wrap: anywhere; }
+.role-visibility-toggle { display: inline-flex; align-items: center; justify-content: space-between; gap: 28px; min-width: min(100%, 290px); margin-top: 26px; padding: 13px 16px; border: 1px solid rgba(199,139,69,.4); color: var(--ivory); font-size: .72rem; background: rgba(199,139,69,.09); }
+.role-visibility-toggle:hover { border-color: var(--ember-light); background: rgba(199,139,69,.16); }
+.role-visibility-toggle i { color: var(--ember-light); font-size: 1rem; font-style: normal; }
 .player-secret-card h1 { margin: 10px 0 25px; font-size: clamp(2.5rem, 10vw, 5.5rem); }
 .player-secret-card h2 { margin-top: 25px; }
 .player-secret-card > p:not(.eyebrow) { color: #91a0a7; line-height: 1.7; }

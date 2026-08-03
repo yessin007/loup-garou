@@ -25,10 +25,21 @@
       function revealRole(role) {
         if (!card.classList.contains("revealed")) {
           card.className = "player-secret-card revealed";
-          card.innerHTML = `<div class="personal-role-panel"><p class="eyebrow">{{ room.your_role|escapejs }}</p><h1 id="player-role-name"></h1><p id="player-role-description"></p><strong class="secret-warning">{{ room.keep_secret|escapejs }}</strong></div><section class="alive-role-roster"><div class="alive-role-heading"><span>{{ room.roles_alive|escapejs }}</span><strong><b id="alive-role-count">0</b> {{ room.roles_alive_count|escapejs }} · <b id="dead-role-count">0</b> {{ room.roles_dead_count|escapejs }}</strong></div><div id="alive-role-list" class="alive-role-list"></div></section>`;
+          card.innerHTML = `<div class="personal-role-panel"><div id="private-role-details"><p class="eyebrow">{{ room.your_role|escapejs }}</p><h1 id="player-role-name"></h1><p id="player-role-description"></p></div><div id="private-player-identity" hidden><p class="eyebrow">{{ room.player_identity|escapejs }}</p><h1 id="private-player-name"></h1></div><button id="toggle-private-role" class="role-visibility-toggle" type="button"><span id="toggle-private-role-label">{{ room.hide_my_role|escapejs }}</span><i aria-hidden="true">↔</i></button></div><section class="alive-role-roster"><div class="alive-role-heading"><span>{{ room.roles_alive|escapejs }}</span><strong><b id="alive-role-count">0</b> {{ room.roles_alive_count|escapejs }} · <b id="dead-role-count">0</b> {{ room.roles_dead_count|escapejs }}</strong></div><div id="alive-role-list" class="alive-role-list"></div></section>`;
+          document.getElementById("private-player-name").textContent = "{{ joined_player.name|escapejs }}";
+          document.getElementById("toggle-private-role").addEventListener("click", togglePrivateRole);
         }
         document.getElementById("player-role-name").textContent = role.name;
         document.getElementById("player-role-description").textContent = role.description;
+      }
+      function togglePrivateRole() {
+        const roleDetails = document.getElementById("private-role-details");
+        const playerIdentity = document.getElementById("private-player-identity");
+        const label = document.getElementById("toggle-private-role-label");
+        const shouldHideRole = !roleDetails.hidden;
+        roleDetails.hidden = shouldHideRole;
+        playerIdentity.hidden = !shouldHideRole;
+        label.textContent = shouldHideRole ? "{{ room.show_my_role|escapejs }}" : "{{ room.hide_my_role|escapejs }}";
       }
       function renderRoleRoster(roles, aliveCount, deadCount) {
         const count = document.getElementById("alive-role-count");

@@ -1,11 +1,15 @@
 {% load static %}
 <meta name="mobile-web-app-capable" content="yes" />
 <meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black" />
 <meta name="apple-mobile-web-app-title" content="Loup Garou" />
+<meta name="format-detection" content="telephone=no" />
 <link rel="manifest" href="{% url 'pwa_manifest' %}" />
 <link rel="apple-touch-icon" href="{% static 'images/favicon-wolf.png' %}" />
 <script>
+  const runningStandalone = window.matchMedia("(display-mode: standalone)").matches || window.navigator.standalone === true;
+  document.documentElement.classList.toggle("is-standalone", runningStandalone);
+
   function latestCsrfCookie() {
     const cookie = document.cookie.split("; ").find(item => item.startsWith("csrftoken="));
     return cookie ? decodeURIComponent(cookie.split("=").slice(1).join("=")) : "";
@@ -16,6 +20,16 @@
     if (input && freshToken) input.value = freshToken;
   }, true);
   if ("serviceWorker" in navigator) {
-    window.addEventListener("load", () => navigator.serviceWorker.register("{% url 'service_worker' %}", {scope: "/"}).catch(() => {}));
+    window.addEventListener("load", async () => {
+      try {
+        const registration = await navigator.serviceWorker.register("{% url 'service_worker' %}", {
+          scope: "/",
+          updateViaCache: "none",
+        });
+        await registration.update();
+      } catch (error) {
+        // The website remains fully usable when installation is unavailable.
+      }
+    });
   }
 </script>

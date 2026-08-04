@@ -18,6 +18,7 @@ from django.urls import reverse
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.views.decorators.http import require_GET, require_POST, require_safe
 from django.views.decorators.csrf import ensure_csrf_cookie
+from django.views.decorators.cache import never_cache
 from django.middleware.csrf import get_token
 
 from .models import GameRoom, RoomEvent, RoomPlayer
@@ -170,7 +171,6 @@ ROOM_TEXT["fr"].update({
     "joining_room": "Inscription en cours…", "join_queue_wait": "Beaucoup de joueurs rejoignent la room en même temps.",
     "join_queue_attempt": "File d’attente — tentative", "join_retrying": "Nouvelle tentative automatique dans",
     "join_retry_now": "Réessayer maintenant", "join_retry_limit": "La room est toujours occupée. Réessaie maintenant : ton inscription ne sera jamais créée deux fois.",
-    "join_failed": "La connexion à la room a échoué. Réessaie : aucune inscription en double ne sera créée.",
     "connected_as": "Connecté avec succès en tant que",
     "hide_my_role": "Masquer mon rôle", "show_my_role": "Afficher mon rôle",
     "player_identity": "Identité du joueur",
@@ -188,7 +188,6 @@ ROOM_TEXT["en"].update({
     "joining_room": "Joining the room…", "join_queue_wait": "Many players are joining the room at the same time.",
     "join_queue_attempt": "Joining queue — attempt", "join_retrying": "Retrying automatically in",
     "join_retry_now": "Retry now", "join_retry_limit": "The room is still busy. Retry now: your player will never be added twice.",
-    "join_failed": "Could not connect to the room. Try again: no duplicate player will be created.",
     "connected_as": "Successfully connected as",
     "hide_my_role": "Hide my role", "show_my_role": "Show my role",
     "player_identity": "Player identity",
@@ -206,7 +205,6 @@ ROOM_TEXT["tn"].update({
     "joining_room": "Da5la lel room…", "join_queue_wait": "Fama barcha joueurs ye7ebbou yod5lou fard wa9t.",
     "join_queue_attempt": "File d’attente — tentative", "join_retrying": "Bech n3awdou automatiquement ba3d",
     "join_retry_now": "3awed taw", "join_retry_limit": "El room mezelt occupée. 3awed taw: esm el joueur ma yetzedch marrtin.",
-    "join_failed": "Ma najjemnech nconnectiw lel room. 3awed: esm el joueur ma yetzedch marrtin.",
     "connected_as": "Connecté avec succès b esm",
     "hide_my_role": "5abbi el role", "show_my_role": "Warri el role",
     "player_identity": "Esm el joueur",
@@ -278,16 +276,20 @@ def health(request):
 
 @require_GET
 def pwa_manifest(request):
-    return JsonResponse(
+    response = JsonResponse(
         {
+            "id": "/",
             "name": "Loup Garou — Narrateur",
             "short_name": "Loup Garou",
             "description": "Parties de Loup Garou avec narrateur, rooms et rôles secrets.",
             "start_url": "/",
             "scope": "/",
             "display": "standalone",
+            "display_override": ["standalone"],
+            "orientation": "portrait-primary",
             "background_color": "#070d12",
             "theme_color": "#080d12",
+            "prefer_related_applications": False,
             "icons": [
                 {
                     "src": f"{settings.STATIC_URL}images/favicon-wolf.png",
@@ -299,6 +301,8 @@ def pwa_manifest(request):
         },
         content_type="application/manifest+json",
     )
+    response["Cache-Control"] = "no-cache, no-store, must-revalidate"
+    return response
 
 
 @require_GET
@@ -484,6 +488,7 @@ def set_language(request):
     return redirect(target)
 
 
+@never_cache
 def home(request):
     if request.user.is_authenticated:
         return redirect("dashboard")
@@ -530,6 +535,7 @@ def dashboard(request):
     return redirect("welcome" if is_narrator(request.user) else "room_portal")
 
 
+@never_cache
 def register(request):
     if request.user.is_authenticated:
         return redirect("dashboard")
@@ -690,6 +696,7 @@ def roles_guide(request):
     return render(request, "pages/roles_guide.html", {"role_guides": guides})
 
 
+@never_cache
 def room_portal(request):
     if not request.user.is_authenticated:
         return redirect(f"{reverse('home')}?{urlencode({'next': request.get_full_path()})}")
@@ -813,6 +820,7 @@ def room_portal(request):
     return response
 
 
+@never_cache
 def room_player(request, code):
     room = get_object_or_404(GameRoom, code=code.upper())
     token = request.session.get("room_player_tokens", {}).get(room.code)
@@ -897,6 +905,7 @@ def room_history_delete(request, code):
     return redirect("room_history_list")
 
 
+@never_cache
 def welcome(request):
     if not request.user.is_authenticated:
         return redirect("home")
@@ -975,6 +984,7 @@ def welcome(request):
     })
 
 
+@never_cache
 def game(request):
     if not request.user.is_authenticated:
         return redirect("home")

@@ -26,7 +26,7 @@
         <div><strong>{{ room.join_queue_attempt }} <b id="join-attempt-label">{{ join_attempt }}</b>/5</strong><p id="join-retry-message">{% if join_attempt < 5 %}{{ room.join_retrying }} <b id="join-retry-countdown">{{ retry_after }}</b> s.{% else %}{{ room.join_retry_limit }}{% endif %}</p></div>
       </aside>{% endif %}
       <div class="room-portals">
-        <form id="join-room-form" class="room-card" method="post" data-retry-after="{{ retry_after|default:0 }}">
+        <form id="join-room-form" class="room-card" method="post" action="{% url 'room_portal' %}" data-retry-after="{{ retry_after|default:0 }}">
           {% csrf_token %}<input type="hidden" name="action" value="join" />
           <input id="join-attempt-input" type="hidden" name="join_attempt" value="{{ join_attempt }}" />
           <span>01</span><h2>{{ room.join }}</h2>
@@ -57,8 +57,6 @@
       let joinAttempt = Number(joinAttemptInput?.value || 1);
       let retrySeconds = Number(joinForm?.dataset.retryAfter || 0) + (Math.random() * .75);
       let joinInProgress = false;
-      const wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
-
       function showJoinLoading(message = "{{ room.joining_room|escapejs }}") {
         joinButton.disabled = true;
         joinLoading.hidden = false;
@@ -67,78 +65,13 @@
         joinForm.classList.add("is-joining");
       }
 
-      function stopJoinLoading(message) {
-        joinInProgress = false;
-        joinButton.disabled = false;
-        joinLoading.hidden = false;
-        joinLoading.classList.add("is-error");
-        joinLoadingText.textContent = message;
-        joinForm.classList.remove("is-joining");
-      }
-
-      async function refreshJoinCsrf() {
-        const response = await fetch("{% url 'csrf_token_api' %}", {
-          cache: "no-store",
-          credentials: "same-origin",
-        });
-        if (!response.ok) return false;
-        const data = await response.json();
-        const csrfInput = joinForm.querySelector('input[name="csrfmiddlewaretoken"]');
-        if (!csrfInput || !data.csrfToken) return false;
-        csrfInput.value = data.csrfToken;
-        return true;
-      }
-
-      async function postJoin() {
-        let response = await fetch(joinForm.action || window.location.href, {
-          method: "POST",
-          body: new FormData(joinForm),
-          credentials: "same-origin",
-        });
-        if (response.status === 403 && await refreshJoinCsrf()) {
-          response = await fetch(joinForm.action || window.location.href, {
-            method: "POST",
-            body: new FormData(joinForm),
-            credentials: "same-origin",
-          });
+      function submitJoin(event) {
+        if (joinInProgress) {
+          event.preventDefault();
+          return;
         }
-        return response;
-      }
-
-      async function submitJoin(event) {
-        event.preventDefault();
-        if (joinInProgress || !joinForm.reportValidity()) return;
         joinInProgress = true;
-        for (let attempt = joinAttempt; attempt <= maxJoinAttempts; attempt += 1) {
-          joinAttempt = attempt;
-          joinAttemptInput.value = attempt;
-          showJoinLoading(`{{ room.join_queue_attempt|escapejs }} ${attempt}/${maxJoinAttempts}`);
-          try {
-            const response = await postJoin();
-            if (response.ok && response.redirected) {
-              showJoinLoading(`{{ room.connected_as|escapejs }} {{ request.user.username|escapejs }} — ✓`);
-              window.location.assign(response.url);
-              return;
-            }
-            if (response.status === 502 || response.status === 503 || response.status === 504) {
-              if (attempt < maxJoinAttempts) {
-                const retryAfter = Math.min(2, Math.max(.4, Number(response.headers.get("Retry-After")) || .4 * (2 ** (attempt - 1))));
-                await wait((retryAfter * 1000) + (Math.random() * 500));
-                continue;
-              }
-            } else {
-              const page = new DOMParser().parseFromString(await response.text(), "text/html");
-              stopJoinLoading(page.querySelector(".form-error")?.textContent?.trim() || "{{ room.join_failed|escapejs }}");
-              return;
-            }
-          } catch (error) {
-            if (attempt < maxJoinAttempts) {
-              await wait((400 * (2 ** (attempt - 1))) + (Math.random() * 500));
-              continue;
-            }
-          }
-        }
-        stopJoinLoading("{{ room.join_retry_limit|escapejs }}");
+        showJoinLoading(`{{ room.join_queue_attempt|escapejs }} ${joinAttempt}/${maxJoinAttempts}`);
       }
 
       joinForm?.addEventListener("submit", submitJoin);

@@ -16,23 +16,88 @@
       <section class="login-content" aria-labelledby="register-title">
         <p class="eyebrow">Nouveau joueur</p>
         <h1 id="register-title"><span>Créer</span> un compte</h1>
-        <form class="login-card" method="post" novalidate>
+        <form id="registration-form" class="login-card" method="post" novalidate>
           {% csrf_token %}
           <div class="form-heading">
             <p class="form-kicker">Inscription joueur</p>
             <h2>Rejoins le village</h2>
           </div>
           {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+          <p id="registration-status" class="registration-status" role="status" aria-live="polite" hidden></p>
           <label for="username">Nom d’utilisateur</label>
           <input id="username" name="username" value="{{ username }}" maxlength="150" autocomplete="username" required autofocus />
           <label for="password">Mot de passe</label>
           <input id="password" name="password" type="password" minlength="4" autocomplete="new-password" required />
           <label for="password-confirmation">Confirmer le mot de passe</label>
           <input id="password-confirmation" name="password_confirmation" type="password" minlength="4" autocomplete="new-password" required />
-          <button type="submit">Créer mon compte <span aria-hidden="true">→</span></button>
+          <button id="registration-button" type="submit">Créer mon compte <span aria-hidden="true">→</span></button>
           <a class="role-guide-link" href="{% url 'home' %}">J’ai déjà un compte <span aria-hidden="true">→</span></a>
         </form>
       </section>
     </main>
+    <script>
+      const registrationForm = document.getElementById("registration-form");
+      const registrationButton = document.getElementById("registration-button");
+      const registrationStatus = document.getElementById("registration-status");
+      const maxAttempts = 5;
+      const wait = milliseconds => new Promise(resolve => setTimeout(resolve, milliseconds));
+
+      function showRegistrationStatus(message, isError = false) {
+        registrationStatus.hidden = false;
+        registrationStatus.classList.toggle("is-error", isError);
+        registrationStatus.textContent = message;
+      }
+
+      registrationForm.addEventListener("submit", async event => {
+        event.preventDefault();
+        if (!registrationForm.checkValidity()) {
+          registrationForm.reportValidity();
+          return;
+        }
+        const password = document.getElementById("password").value;
+        const confirmation = document.getElementById("password-confirmation").value;
+        if (password !== confirmation) {
+          showRegistrationStatus("Les mots de passe ne correspondent pas.", true);
+          return;
+        }
+
+        registrationButton.disabled = true;
+        for (let attempt = 1; attempt <= maxAttempts; attempt += 1) {
+          showRegistrationStatus(`Connexion en cours — tentative ${attempt}/${maxAttempts}`);
+          try {
+            const response = await fetch(registrationForm.action || window.location.href, {
+              method: "POST",
+              body: new FormData(registrationForm),
+              credentials: "same-origin",
+            });
+            if (response.ok && response.redirected && new URL(response.url).pathname.startsWith("/room")) {
+              showRegistrationStatus("Compte créé et connexion réussie. Ouverture de ton espace…");
+              window.location.assign(response.url);
+              return;
+            }
+            if (response.status === 502 || response.status === 503 || response.status === 504) {
+              if (attempt < maxAttempts) {
+                const retryAfter = Math.min(2, Math.max(.4, Number(response.headers.get("Retry-After")) || .4 * (2 ** (attempt - 1))));
+                await wait((retryAfter * 1000) + (Math.random() * 500));
+                continue;
+              }
+            } else {
+              const page = new DOMParser().parseFromString(await response.text(), "text/html");
+              const error = page.querySelector(".form-error")?.textContent?.trim();
+              showRegistrationStatus(error || "L’inscription n’a pas abouti. Vérifie les informations.", true);
+              registrationButton.disabled = false;
+              return;
+            }
+          } catch (error) {
+            if (attempt < maxAttempts) {
+              await wait((400 * (2 ** (attempt - 1))) + (Math.random() * 500));
+              continue;
+            }
+          }
+        }
+        showRegistrationStatus("Le serveur est encore occupé. Réessaie maintenant : si le compte a été créé, tu seras connecté sans doublon.", true);
+        registrationButton.disabled = false;
+      });
+    </script>
   </body>
 </html>

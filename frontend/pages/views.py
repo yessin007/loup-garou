@@ -123,7 +123,9 @@ ROOM_TEXT["fr"].update({
     "manual_player": "Manuel", "remove_player": "Retirer ce joueur",
     "empty_lobby": "Aucun joueur inscrit pour le moment.",
     "joining_room": "Inscription en cours…", "join_queue_wait": "Beaucoup de joueurs rejoignent la room en même temps.",
-    "join_retrying": "Nouvelle tentative automatique dans", "join_retry_now": "Réessayer maintenant",
+    "join_queue_attempt": "File d’attente — tentative", "join_retrying": "Nouvelle tentative automatique dans",
+    "join_retry_now": "Réessayer maintenant", "join_retry_limit": "La room est toujours occupée. Réessaie maintenant : ton inscription ne sera jamais créée deux fois.",
+    "connected_as": "Connecté avec succès en tant que",
     "hide_my_role": "Masquer mon rôle", "show_my_role": "Afficher mon rôle",
     "player_identity": "Identité du joueur",
     "private_notes": "Mes notes privées", "private_notes_help": "Visibles uniquement par toi, même après la partie.",
@@ -138,7 +140,9 @@ ROOM_TEXT["en"].update({
     "manual_player": "Manual", "remove_player": "Remove this player",
     "empty_lobby": "No registered players yet.",
     "joining_room": "Joining the room…", "join_queue_wait": "Many players are joining the room at the same time.",
-    "join_retrying": "Retrying automatically in", "join_retry_now": "Retry now",
+    "join_queue_attempt": "Joining queue — attempt", "join_retrying": "Retrying automatically in",
+    "join_retry_now": "Retry now", "join_retry_limit": "The room is still busy. Retry now: your player will never be added twice.",
+    "connected_as": "Successfully connected as",
     "hide_my_role": "Hide my role", "show_my_role": "Show my role",
     "player_identity": "Player identity",
     "private_notes": "My private notes", "private_notes_help": "Only visible to you, even after the game.",
@@ -153,7 +157,9 @@ ROOM_TEXT["tn"].update({
     "manual_player": "Manuel", "remove_player": "Na7i el joueur",
     "empty_lobby": "Mezel ma d5al 7atta joueur.",
     "joining_room": "Da5la lel room…", "join_queue_wait": "Fama barcha joueurs ye7ebbou yod5lou fard wa9t.",
-    "join_retrying": "Bech n3awdou automatiquement ba3d", "join_retry_now": "3awed taw",
+    "join_queue_attempt": "File d’attente — tentative", "join_retrying": "Bech n3awdou automatiquement ba3d",
+    "join_retry_now": "3awed taw", "join_retry_limit": "El room mezelt occupée. 3awed taw: esm el joueur ma yetzedch marrtin.",
+    "connected_as": "Connecté avec succès b esm",
     "hide_my_role": "5abbi el role", "show_my_role": "Warri el role",
     "player_identity": "Esm el joueur",
     "private_notes": "Notes privées mte3i", "private_notes_help": "Ken enti tchoufhom, 7ata ba3d el game.",
@@ -489,16 +495,29 @@ def register(request):
         user_model = get_user_model()
         if not username:
             error = "Le nom d’utilisateur est obligatoire."
-        elif user_model.objects.filter(username__iexact=username).exists():
-            error = "Ce nom d’utilisateur existe déjà."
         elif len(password) < 4:
             error = "Le mot de passe doit contenir au moins 4 caractères."
         elif password != password_confirmation:
             error = "Les deux mots de passe ne correspondent pas."
         else:
-            user = user_model.objects.create_user(username=username, password=password)
-            login(request, user)
-            return redirect("room_portal")
+            existing_user = user_model.objects.filter(username__iexact=username).first()
+            if existing_user:
+                user = authenticate(request, username=existing_user.username, password=password)
+                if user is not None and user.is_active:
+                    login(request, user)
+                    return redirect("room_portal")
+                error = "Ce nom d’utilisateur existe déjà."
+            else:
+                try:
+                    with transaction.atomic():
+                        user = user_model.objects.create_user(username=username, password=password)
+                except IntegrityError:
+                    existing_user = user_model.objects.filter(username__iexact=username).first()
+                    user = authenticate(request, username=existing_user.username, password=password) if existing_user else None
+                if user is not None and user.is_active:
+                    login(request, user)
+                    return redirect("room_portal")
+                error = "Ce nom d’utilisateur existe déjà."
 
     return render(request, "pages/register.html", {"error": error, "username": username})
 
@@ -629,6 +648,10 @@ def room_portal(request):
     text = room_text(request)
     error = None
     retry_after = 0
+    try:
+        join_attempt = max(1, min(5, int(request.POST.get("join_attempt", 1))))
+    except (TypeError, ValueError):
+        join_attempt = 1
     initial_code = request.GET.get("code", "").strip()
     if not (initial_code.isdigit() and len(initial_code) == 6):
         initial_code = ""
@@ -643,7 +666,10 @@ def room_portal(request):
             room = None
             try:
                 with transaction.atomic():
-                    room = GameRoom.objects.select_for_update(nowait=True).filter(code=code).first()
+                    # Queue simultaneous joins briefly on the room row. The
+                    # transaction is intentionally small, so this is cheaper
+                    # than returning a burst of 503 responses and retries.
+                    room = GameRoom.objects.select_for_update().filter(code=code).first()
                     if room:
                         joined = room.room_players.filter(user=request.user).first()
                         name_owner = room.room_players.filter(name__iexact=name).first()
@@ -674,7 +700,7 @@ def room_portal(request):
                         else:
                             joined = RoomPlayer.objects.create(room=room, name=name, user=request.user)
             except (IntegrityError, OperationalError):
-                retry_after = 15
+                retry_after = 2
 
             if not room and not retry_after:
                 error = text["invalid_room"]
@@ -689,6 +715,7 @@ def room_portal(request):
         "initial_code": initial_code,
         "narrator_mode": is_narrator(request.user),
         "retry_after": retry_after,
+        "join_attempt": join_attempt,
     })
     if retry_after:
         response.status_code = 503

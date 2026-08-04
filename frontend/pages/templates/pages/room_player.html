@@ -10,6 +10,7 @@
   <body class="room-page">
     <header class="guide-header"><a class="brand" href="{% url 'dashboard' %}">Loup <span>Garou</span></a><div class="guide-header-actions"><span class="account-username"><span aria-hidden="true">●</span>{{ request.user.username }}</span><strong class="room-code-chip">{{ game_room.code }}</strong><a class="guide-back" href="{% url 'logout' %}">{{ ui.logout }}</a></div></header>
     <main class="room-shell compact-room-shell">
+      <aside class="connection-success-banner" role="status"><span aria-hidden="true">✓</span>{{ room.connected_as }} <strong>{{ request.user.username }}</strong></aside>
       <section id="player-room-card" class="player-secret-card waiting">
         <p class="eyebrow">{{ room.joined }}</p><h1>{{ joined_player.name }}</h1>
         <div class="waiting-orbit"><span>…</span></div>
@@ -41,7 +42,12 @@
       let notesSaveTimer = null;
       let notesLoaded = false;
       function safe(value) { const node = document.createElement("span"); node.textContent = value; return node.innerHTML; }
-      function scheduleRoom() { clearTimeout(roomTimer); roomTimer = setTimeout(refreshRoom, 2500); }
+      function scheduleRoom() {
+        clearTimeout(roomTimer);
+        const roleRevealed = card.classList.contains("revealed");
+        const delay = roleRevealed ? 5000 + Math.random() * 3000 : 2500 + Math.random() * 1500;
+        roomTimer = setTimeout(refreshRoom, delay);
+      }
       function revealRole(role) {
         if (!card.classList.contains("revealed")) {
           card.className = "player-secret-card revealed";

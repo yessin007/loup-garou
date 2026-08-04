@@ -1048,6 +1048,13 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .join-queue-banner strong { color: var(--ivory); font-size: .8rem; }
 .join-queue-banner p { margin: 5px 0 0; color: #9da9ae; font-size: .7rem; }
 .join-queue-banner b { color: var(--ember-light); font: 700 .82rem "Cinzel", serif; }
+.connection-success-banner { display: flex; align-items: center; gap: 9px; max-width: 720px; margin: 0 0 18px; padding: 12px 15px; border: 1px solid rgba(93, 193, 135, .38); color: #b9dcca; background: rgba(93, 193, 135, .09); font-size: .76rem; }
+.connection-success-banner > span { display: grid; place-items: center; width: 21px; height: 21px; border-radius: 50%; color: #07110c; background: #72c795; font-weight: 800; }
+.connection-success-banner strong { color: #e7f4ec; }
+.registration-status { margin: 0; padding: 10px 12px; border-left: 2px solid var(--ember-light); color: #d7c1a5; background: rgba(199,139,69,.08); font-size: .78rem; line-height: 1.45; }
+.registration-status.is-error { border-left-color: var(--danger); color: var(--danger); background: rgba(255,85,75,.08); }
+.join-loading-message.is-error { color: var(--danger); }
+.join-loading-message.is-error .join-queue-spinner { display: none; }
 .join-queue-spinner { display: inline-block; flex: 0 0 auto; width: 20px; height: 20px; border: 2px solid rgba(199,139,69,.25); border-top-color: var(--ember-light); border-radius: 50%; animation: join-queue-spin .8s linear infinite; }
 .join-loading-message { display: flex; align-items: center; gap: 9px; margin: 0 0 14px !important; color: var(--ember-light) !important; font-size: .7rem; }
 .join-loading-message[hidden] { display: none; }

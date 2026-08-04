@@ -796,6 +796,11 @@ class RoomFlowTests(TestCase):
         self.assertContains(player_page, "keepalive: true")
         self.assertContains(player_page, "async function csrfFetch")
         self.assertContains(player_page, reverse("csrf_token_api"))
+        self.assertContains(player_page, 'const roleRevealed = card.classList.contains("revealed")')
+        self.assertContains(player_page, "5000 + Math.random() * 3000")
+        self.assertContains(player_page, "2500 + Math.random() * 1500")
+        self.assertContains(player_page, "Connecté avec succès en tant que")
+        self.assertContains(player_page, "Sarra-notes")
 
     def test_roster_sync_does_not_close_room_before_distribution(self):
         room = self.create_room()
@@ -1284,7 +1289,7 @@ class RoomFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertContains(response, "exactement 6 chiffres")
 
-    def test_busy_room_join_shows_queue_and_retries_after_fifteen_seconds(self):
+    def test_busy_room_join_shows_short_jittered_retry(self):
         room = self.create_room()
         player = self.player_client("queued-player")
 
@@ -1292,14 +1297,72 @@ class RoomFlowTests(TestCase):
             "pages.views.GameRoom.objects.select_for_update",
             side_effect=OperationalError("room is locked"),
         ):
-            response = player.post(reverse("room_portal"), {"room_code": room.code})
+            response = player.post(reverse("room_portal"), {"room_code": room.code, "join_attempt": "2"})
 
         self.assertEqual(response.status_code, 503)
-        self.assertEqual(response.headers["Retry-After"], "15")
-        self.assertContains(response, 'data-retry-after="15"', status_code=503)
+        self.assertEqual(response.headers["Retry-After"], "2")
+        self.assertContains(response, 'data-retry-after="2"', status_code=503)
         self.assertContains(response, 'id="join-retry-countdown"', status_code=503)
+        self.assertContains(response, 'name="join_attempt" value="2"', status_code=503)
+        self.assertContains(response, "tentative <b id=\"join-attempt-label\">2</b>/5", status_code=503)
+        self.assertContains(response, "Math.random() * .75", status_code=503)
+        self.assertContains(response, "joinAttempt += 1", status_code=503)
         self.assertContains(response, "joinForm.requestSubmit()", status_code=503)
+        self.assertContains(response, "response.status === 502 || response.status === 503 || response.status === 504", status_code=503)
+        self.assertContains(response, "window.location.assign(response.url)", status_code=503)
         self.assertFalse(room.room_players.filter(name="queued-player").exists())
+
+    def test_fifth_busy_join_attempt_stops_automatic_retry_but_stays_idempotent(self):
+        room = self.create_room()
+        player = self.player_client("patient-player")
+
+        with patch(
+            "pages.views.GameRoom.objects.select_for_update",
+            side_effect=OperationalError("room is locked"),
+        ):
+            response = player.post(reverse("room_portal"), {"room_code": room.code, "join_attempt": "5"})
+
+        self.assertEqual(response.status_code, 503)
+        self.assertContains(response, 'name="join_attempt" value="5"', status_code=503)
+        self.assertContains(response, "ton inscription ne sera jamais créée deux fois", status_code=503)
+        self.assertNotContains(response, 'id="join-retry-countdown"', status_code=503)
+
+    def test_registration_retry_with_matching_credentials_logs_into_committed_account(self):
+        credentials = {
+            "username": "registration-retry",
+            "password": "safe-password",
+            "password_confirmation": "safe-password",
+        }
+        first = Client()
+        self.assertRedirects(first.post(reverse("register"), credentials), reverse("room_portal"), fetch_redirect_response=False)
+
+        retry = Client()
+        response = retry.post(reverse("register"), credentials)
+
+        self.assertRedirects(response, reverse("room_portal"), fetch_redirect_response=False)
+        self.assertEqual(retry.session["_auth_user_id"], str(get_user_model().objects.get(username="registration-retry").id))
+
+    def test_registration_retry_does_not_accept_wrong_password(self):
+        get_user_model().objects.create_user(username="existing-player", password="correct-password")
+
+        response = Client().post(reverse("register"), {
+            "username": "existing-player",
+            "password": "wrong-password",
+            "password_confirmation": "wrong-password",
+        })
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "Ce nom d’utilisateur existe déjà.")
+
+    def test_registration_page_retries_short_overloads_and_confirms_login(self):
+        response = Client().get(reverse("register"))
+
+        self.assertContains(response, 'id="registration-status"')
+        self.assertContains(response, "tentative ${attempt}/${maxAttempts}")
+        self.assertContains(response, "response.status === 502 || response.status === 503 || response.status === 504")
+        self.assertContains(response, "Math.min(2")
+        self.assertContains(response, "Compte créé et connexion réussie")
+        self.assertContains(response, "window.location.assign(response.url)")
 
     def test_home_opens_general_room_join_form(self):
         home = Client().get(reverse("home"))

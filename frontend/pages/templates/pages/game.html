@@ -239,7 +239,9 @@
       if (state.lastProtectedId === undefined) state.lastProtectedId = null;
       if (state.lastProstituteTargetId === undefined) state.lastProstituteTargetId = null;
       if (state.lastSilencedPlayerId === undefined) state.lastSilencedPlayerId = null;
-      if (state.roomStarted === undefined) state.roomStarted = state.players.length > 0;
+      if (state.roomStarted === undefined) state.roomStarted = Boolean(
+        state.distributionStarted || state.players.some(item => item?.role && roleMeta[item.role])
+      );
       if (!Array.isArray(state.seatingOrderIds)) state.seatingOrderIds = state.players.map(item => item.id);
       if (state.barberSignalReady === undefined) state.barberSignalReady = state.players.some(item => item.role === "barbers");
       if (state.barberShotAvailable === undefined) state.barberShotAvailable = !state.barberTargetId;
@@ -1010,7 +1012,8 @@
 
       let lobbyRefreshTimer = null;
       async function refreshLobby() {
-        if (state.stage !== "roster" || state.roomStarted) return;
+        clearTimeout(lobbyRefreshTimer);
+        if (!["roster", "player_reveal", "roles"].includes(state.stage)) return;
         try {
           const response = await fetch(`/api/rooms/${roomCode}/lobby/`, {cache: "no-store"});
           if (!response.ok) return;
@@ -1018,6 +1021,25 @@
           const list = document.getElementById("online-player-list");
           const manualPlayers = data.manual_players || [];
           state.pendingManualPlayerNames = manualPlayers;
+          if (state.roomStarted) {
+            const knownRoomPlayerIds = new Set(state.players.map(item => Number(item.roomPlayerId)).filter(Boolean));
+            const latePlayers = data.players.filter(item => item.role && !knownRoomPlayerIds.has(Number(item.id)));
+            if (latePlayers.length) {
+              let nextId = Math.max(0, ...state.players.map(item => Number(item.id) || 0));
+              latePlayers.forEach(item => {
+                const targetRoleIndex = state.players.length;
+                const selectedRoleIndex = Array.isArray(state.roleDeck) ? state.roleDeck.indexOf(item.role, targetRoleIndex) : -1;
+                if (selectedRoleIndex >= 0 && targetRoleIndex < state.roleDeck.length) {
+                  [state.roleDeck[targetRoleIndex], state.roleDeck[selectedRoleIndex]] = [state.roleDeck[selectedRoleIndex], state.roleDeck[targetRoleIndex]];
+                }
+                state.players.push({id: ++nextId, roomPlayerId: item.id, name: item.name, role: item.role, alive: true});
+              });
+              state.seatingOrderIds = normalizedSeatingOrder();
+              save({recordUndo: false});
+              if (state.stage === "roles") render();
+            }
+            return;
+          }
           const connectedRows = data.players.map((item, index) => `<article><span><b>${String(index + 1).padStart(2, "0")}</b><strong>${escapeHtml(item.name)}</strong><small>{{ room.account_player|escapejs }}</small></span><button type="button" data-action="remove-lobby-player" data-room-player-id="${item.id}" title="{{ room.remove_player|escapejs }}" aria-label="{{ room.remove_player|escapejs }}">−</button></article>`);
           const manualRows = manualPlayers.map((name, index) => `<article><span><b>${String(data.players.length + index + 1).padStart(2, "0")}</b><strong>${escapeHtml(name)}</strong><small>{{ room.manual_player|escapejs }}</small></span><button type="button" data-action="remove-lobby-player" data-manual-name="${encodeURIComponent(name)}" title="{{ room.remove_player|escapejs }}" aria-label="{{ room.remove_player|escapejs }}">−</button></article>`);
           const registeredCount = Number(data.registered_count ?? connectedRows.length + manualRows.length);
@@ -1025,7 +1047,7 @@
           if (list) list.innerHTML = connectedRows.length || manualRows.length ? [...connectedRows, ...manualRows].join("") : `<p>{{ room.empty_lobby|escapejs }}</p>`;
         } finally {
           clearTimeout(lobbyRefreshTimer);
-          if (state.stage === "roster" && !state.roomStarted) lobbyRefreshTimer = setTimeout(refreshLobby, 2000);
+          if (["roster", "player_reveal", "roles"].includes(state.stage)) lobbyRefreshTimer = setTimeout(refreshLobby, 2000);
         }
       }
 
@@ -1087,6 +1109,7 @@
 
       function renderRoles() {
         setHeading(L.preparation, L.secret_distribution);
+        refreshLobby();
         if (distributionEditing) {
           const roleRows = Object.keys(roleMeta).map(role => {
             const count = Number(setup.composition[role] || 0);
@@ -2043,6 +2066,7 @@
           state.revealVisible = false;
           state.stage = state.players.length === setup.player_count ? "roles" : "roster";
         } else if (action === "begin-night") {
+          state.gameplayStarted = true;
           const bearInfectedGrowlSelect = document.getElementById("bear-infected-growl");
           if (bearInfectedGrowlSelect) state.bearGrowlsWhenInfected = bearInfectedGrowlSelect.value === "yes";
           const bearCalculationTimingSelect = document.getElementById("bear-calculation-timing");

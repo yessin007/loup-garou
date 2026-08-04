@@ -95,11 +95,56 @@ def room_distribution_started(room, state=None):
     state = (room.game_state or {}) if state is None else state
     if room.status == GameRoom.Status.FINISHED:
         return True
+    state_players = state.get("players", [])
+    state_has_assigned_roles = isinstance(state_players, list) and any(
+        isinstance(player, dict) and player.get("role") in ROLE_KEYS
+        for player in state_players
+    )
     return bool(
         state.get("distributionStarted")
-        or state.get("roomStarted")
+        or state_has_assigned_roles
         or room.room_players.exclude(role="").exists()
     )
+
+
+PRE_GAME_STAGES = {None, "roster", "player_reveal", "roles"}
+
+
+def room_gameplay_started(room, state=None):
+    """New players are accepted until the narrator actually starts Night 1."""
+    state = (room.game_state or {}) if state is None else state
+    if room.status == GameRoom.Status.FINISHED or room.events.exists():
+        return True
+    return bool(state.get("gameplayStarted") or state.get("stage") not in PRE_GAME_STAGES)
+
+
+def remaining_room_roles(room, state):
+    """Return composition roles not owned by an online or manual player."""
+    available = [
+        role
+        for role, count in room.composition.items()
+        for _ in range(max(0, int(count)))
+    ]
+    state_players = state.get("players", []) if isinstance(state, dict) else []
+    represented_room_player_ids = set()
+    assigned_roles = []
+    if isinstance(state_players, list):
+        for player in state_players:
+            if not isinstance(player, dict):
+                continue
+            if player.get("role") in ROLE_KEYS:
+                assigned_roles.append(player["role"])
+            if player.get("roomPlayerId"):
+                represented_room_player_ids.add(player["roomPlayerId"])
+    assigned_roles.extend(
+        room.room_players.exclude(id__in=represented_room_player_ids)
+        .exclude(role="")
+        .values_list("role", flat=True)
+    )
+    for role in assigned_roles:
+        if role in available:
+            available.remove(role)
+    return available
 
 ROOM_TEXT = {
     "fr": {
@@ -678,6 +723,7 @@ def room_portal(request):
                         pending_name = next((item for item in pending_manual if item.casefold() == name.casefold()), None)
                         manual_state_player = next((item for item in game_state.get("players", []) if not item.get("roomPlayerId") and str(item.get("name", "")).casefold() == name.casefold()), None)
                         distribution_started = room_distribution_started(room, game_state)
+                        gameplay_started = room_gameplay_started(room, game_state)
 
                         if joined:
                             pass
@@ -693,10 +739,51 @@ def room_portal(request):
                             manual_state_player["roomPlayerId"] = joined.id
                             room.game_state = game_state
                             room.save(update_fields=["game_state", "updated_at"])
-                        elif distribution_started:
+                        elif gameplay_started:
                             error = text["room_started"]
-                        elif room.room_players.count() + len(pending_manual) >= room.player_count:
+                        elif room.room_players.count() + len(pending_manual) - int(bool(pending_name)) >= room.player_count:
                             error = text["room_full"]
+                        elif distribution_started:
+                            available_roles = remaining_room_roles(room, game_state)
+                            if not available_roles:
+                                error = text["room_full"]
+                            else:
+                                joined = RoomPlayer.objects.create(
+                                    room=room,
+                                    name=pending_name or name,
+                                    role=secrets.choice(available_roles),
+                                    user=request.user,
+                                )
+                                if pending_name:
+                                    game_state["pendingManualPlayerNames"] = [
+                                        item for item in pending_manual if item.casefold() != name.casefold()
+                                    ]
+                                state_players = game_state.setdefault("players", [])
+                                target_role_index = len(state_players)
+                                role_deck = game_state.get("roleDeck")
+                                if isinstance(role_deck, list):
+                                    try:
+                                        selected_role_index = role_deck.index(joined.role, target_role_index)
+                                    except ValueError:
+                                        selected_role_index = -1
+                                    if selected_role_index >= 0 and target_role_index < len(role_deck):
+                                        role_deck[target_role_index], role_deck[selected_role_index] = (
+                                            role_deck[selected_role_index],
+                                            role_deck[target_role_index],
+                                        )
+                                next_player_id = max(
+                                    (int(item.get("id", 0) or 0) for item in state_players if isinstance(item, dict)),
+                                    default=0,
+                                ) + 1
+                                state_players.append({
+                                    "id": next_player_id,
+                                    "roomPlayerId": joined.id,
+                                    "name": joined.name,
+                                    "role": joined.role,
+                                    "alive": True,
+                                })
+                                room.game_state = game_state
+                                room.save(update_fields=["game_state", "updated_at"])
                         else:
                             joined = RoomPlayer.objects.create(room=room, name=name, user=request.user)
             except (IntegrityError, OperationalError):
@@ -943,7 +1030,7 @@ def room_lobby_api(request, code):
         return JsonResponse({"error": "forbidden"}, status=403)
     effective_status = room.status if room_distribution_started(room) else GameRoom.Status.WAITING
     manual_players = (room.game_state or {}).get("pendingManualPlayerNames", [])
-    players = [{"id": item.id, "name": item.name} for item in room.room_players.all()]
+    players = [{"id": item.id, "name": item.name, "role": item.role} for item in room.room_players.all()]
     return JsonResponse({
         "code": room.code,
         "status": effective_status,
@@ -1111,11 +1198,16 @@ def room_sync_api(request, code):
     distribution_started = room_distribution_started(room, previous_state)
     if distribution_started:
         state.setdefault("distributionStarted", True)
+    elif state.get("stage") in {None, "roster", "player_reveal"} and not room_distribution_started(room, state):
+        # `roomStarted` used to be inferred from the presence of lobby
+        # players in older browser state. It is not proof that roles were
+        # distributed and must never close the lobby by itself.
+        state["roomStarted"] = False
     undo_requested = request.headers.get("X-Game-Undo") == "1"
     room.game_state = state
     if state.get("stage") == "game_over":
         room.status = GameRoom.Status.FINISHED
-    elif distribution_started or state.get("roomStarted") or state.get("distributionStarted"):
+    elif room_distribution_started(room, state):
         room.status = GameRoom.Status.ACTIVE
     else:
         room.status = GameRoom.Status.WAITING

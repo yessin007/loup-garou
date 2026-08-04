@@ -692,6 +692,37 @@ class RoomFlowTests(TestCase):
             [("simple_wolves", True), ("wild_children", True), ("villagers", False)],
         )
 
+    def test_new_player_can_join_after_distribution_until_first_night_starts(self):
+        room = self.create_room()
+        first = self.player_client("BeforeDistribution")
+        first.post(reverse("room_portal"), {"room_code": room.code})
+        self.narrator.post(reverse("room_start_api", args=[room.code]))
+
+        late = self.player_client("AfterDistribution")
+        joined = late.post(reverse("room_portal"), {"room_code": room.code})
+
+        self.assertRedirects(joined, reverse("room_player", args=[room.code]), fetch_redirect_response=False)
+        late_role = late.get(reverse("room_player_api", args=[room.code])).json()["role"]
+        self.assertIsNotNone(late_role)
+        room.refresh_from_db()
+        late_player = room.room_players.get(user__username="AfterDistribution")
+        self.assertEqual(late_player.role, late_role["code"])
+        self.assertTrue(any(item.get("roomPlayerId") == late_player.id for item in room.game_state["players"]))
+
+        night_state = room.game_state
+        night_state.update({"stage": "wolves", "round": 1, "gameplayStarted": True})
+        self.narrator.post(
+            reverse("room_sync_api", args=[room.code]),
+            json.dumps(night_state),
+            content_type="application/json",
+        )
+        too_late = self.player_client("AfterNightStarted").post(
+            reverse("room_portal"),
+            {"room_code": room.code},
+        )
+        self.assertContains(too_late, "Cette partie a déjà commencé.")
+        self.assertFalse(room.room_players.filter(user__username="AfterNightStarted").exists())
+
     def test_narrator_lobby_shows_capacity_and_can_remove_players(self):
         room = self.create_room()
         sarra = self.player_client("Sarra")
@@ -812,7 +843,9 @@ class RoomFlowTests(TestCase):
             json.dumps({
                 "stage": "roster",
                 "round": 1,
-                "roomStarted": False,
+                # A legacy browser could infer this from players.length even
+                # though no role had been distributed yet.
+                "roomStarted": True,
                 "players": [{"id": 1, "name": "Sarra", "alive": True}],
             }),
             content_type="application/json",
@@ -820,6 +853,7 @@ class RoomFlowTests(TestCase):
         self.assertEqual(response.status_code, 200)
         room.refresh_from_db()
         self.assertEqual(room.status, GameRoom.Status.WAITING)
+        self.assertFalse(room.game_state["roomStarted"])
 
         waiting = sarra.get(reverse("room_player_api", args=[room.code])).json()
         self.assertEqual(waiting["status"], GameRoom.Status.WAITING)

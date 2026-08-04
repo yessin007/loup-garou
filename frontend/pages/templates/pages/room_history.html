@@ -116,8 +116,8 @@
           const hunterVictims = d.hunter_deaths?.length ? d.hunter_deaths : d.hunter_targets;
           if (hunterVictims?.length) add("hunter", H.story_hunter, {actor: actor("hunters"), names: names(hunterVictims)});
           if (d.powers_lost?.length) add("powers", H.story_powers_lost, {names: names(d.powers_lost)});
-          if (d.winner) add("winner", H.story_winner, {name: H[`winner_${d.winner}`] || d.winner});
         }
+        if (d.winner) add("winner", H.story_winner, {name: H[`winner_${d.winner}`] || d.winner});
         if (!lines.length) {
           Object.entries(d).filter(([key, value]) => shouldShow(key, value)).forEach(([key, value]) => lines.push({key, text: `${detailLabels[key] || key} : ${display(key, value)}`}));
         }

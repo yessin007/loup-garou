@@ -105,35 +105,23 @@
           {% csrf_token %}
           {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
 
-          <div class="players-row">
-            <div>
-              <span class="step-label">01 — {{ ui.participants }}</span>
-              <h2>{{ ui.player_count }}</h2>
-              <p>{{ ui.narrator_not_counted }}</p>
-            </div>
-            <div class="player-input-wrap">
-              <button class="small-stepper" type="button" data-player-step="-1" aria-label="{{ ui.remove_player }}">−</button>
-              <input id="player-count" name="player_count" type="number" min="8" max="30" value="10" required />
-              <button class="small-stepper" type="button" data-player-step="1" aria-label="{{ ui.add_player }}">+</button>
-            </div>
-          </div>
+          <input id="player-count" name="player_count" type="hidden" value="0" />
 
           <div class="roles-heading">
             <div>
-              <span class="step-label">02 — {{ ui.distribution }}</span>
+              <span class="step-label">01 — {{ ui.distribution }}</span>
               <h2>{{ ui.suggested_roles }}</h2>
             </div>
-            <button id="suggest-button" class="ghost-button" type="button">{{ ui.recalculate }}</button>
           </div>
 
           <div class="roles-list">
             <article class="role-row wolf-role" data-role="infecting_fathers">
               <div class="role-mark">LP</div><div class="role-copy"><strong>{{ role_text.infecting_fathers.0 }}</strong><span>{{ role_text.infecting_fathers.1 }}</span></div>
-              <div class="counter"><button type="button" data-step="-1">−</button><input name="infecting_fathers" type="number" min="0" max="1" value="1" readonly /><button type="button" data-step="1">+</button></div>
+              <div class="counter"><button type="button" data-step="-1">−</button><input name="infecting_fathers" type="number" min="0" max="1" value="0" readonly /><button type="button" data-step="1">+</button></div>
             </article>
             <article class="role-row wolf-role" data-role="cerberus_wolves">
               <div class="role-mark">LC</div><div class="role-copy"><strong>{{ role_text.cerberus_wolves.0 }}</strong><span>{{ role_text.cerberus_wolves.1 }}</span></div>
-              <div class="counter"><button type="button" data-step="-1">−</button><input name="cerberus_wolves" type="number" min="0" max="1" value="1" readonly /><button type="button" data-step="1">+</button></div>
+              <div class="counter"><button type="button" data-step="-1">−</button><input name="cerberus_wolves" type="number" min="0" max="1" value="0" readonly /><button type="button" data-step="1">+</button></div>
             </article>
             <article class="role-row wolf-role" data-role="black_wolves">
               <div class="role-mark">LN</div><div class="role-copy"><strong>{{ role_text.black_wolves.0 }}</strong><span>{{ role_text.black_wolves.1 }}</span></div>
@@ -153,19 +141,19 @@
             </article>
             <article class="role-row wolf-role" data-role="simple_wolves">
               <div class="role-mark">LG</div><div class="role-copy"><strong>{{ role_text.simple_wolves.0 }}</strong><span>{{ role_text.simple_wolves.1 }}</span></div>
-              <div class="counter"><button type="button" data-step="-1">−</button><input name="simple_wolves" type="number" min="0" value="1" inputmode="numeric" /><button type="button" data-step="1">+</button></div>
+              <div class="counter"><button type="button" data-step="-1">−</button><input name="simple_wolves" type="number" min="0" value="0" inputmode="numeric" /><button type="button" data-step="1">+</button></div>
             </article>
             <article class="role-row" data-role="seers">
               <div class="role-mark">VO</div><div class="role-copy"><strong>{{ role_text.seers.0 }}</strong><span>{{ role_text.seers.1 }}</span></div>
-              <div class="counter"><button type="button" data-step="-1">−</button><input name="seers" type="number" min="0" max="1" value="1" readonly /><button type="button" data-step="1">+</button></div>
+              <div class="counter"><button type="button" data-step="-1">−</button><input name="seers" type="number" min="0" max="1" value="0" readonly /><button type="button" data-step="1">+</button></div>
             </article>
             <article class="role-row" data-role="witches">
               <div class="role-mark">SO</div><div class="role-copy"><strong>{{ role_text.witches.0 }}</strong><span>{{ role_text.witches.1 }}</span></div>
-              <div class="counter"><button type="button" data-step="-1">−</button><input name="witches" type="number" min="0" max="1" value="1" readonly /><button type="button" data-step="1">+</button></div>
+              <div class="counter"><button type="button" data-step="-1">−</button><input name="witches" type="number" min="0" max="1" value="0" readonly /><button type="button" data-step="1">+</button></div>
             </article>
             <article class="role-row" data-role="protectors">
               <div class="role-mark">PR</div><div class="role-copy"><strong>{{ role_text.protectors.0 }}</strong><span>{{ role_text.protectors.1 }}</span></div>
-              <div class="counter"><button type="button" data-step="-1">−</button><input name="protectors" type="number" min="0" max="1" value="1" readonly /><button type="button" data-step="1">+</button></div>
+              <div class="counter"><button type="button" data-step="-1">−</button><input name="protectors" type="number" min="0" max="1" value="0" readonly /><button type="button" data-step="1">+</button></div>
             </article>
             <article class="role-row" data-role="barbers">
               <div class="role-mark">BA</div><div class="role-copy"><strong>{{ role_text.barbers.0 }}</strong><span>{{ role_text.barbers.1 }}</span></div>
@@ -233,12 +221,12 @@
             </article>
             <article class="role-row villager-role" data-role="villagers">
               <div class="role-mark">VI</div><div class="role-copy"><strong>{{ role_text.villagers.0 }}</strong><span>{{ role_text.villagers.1 }}</span></div>
-              <div class="counter"><button type="button" data-step="-1">−</button><input name="villagers" type="number" min="0" value="5" inputmode="numeric" /><button type="button" data-step="1">+</button></div>
+              <div class="counter"><button type="button" data-step="-1">−</button><input name="villagers" type="number" min="0" value="0" inputmode="numeric" /><button type="button" data-step="1">+</button></div>
             </article>
           </div>
 
           <div class="setup-footer">
-            <div class="total-status"><span id="assigned-count">10</span> / <span id="target-count">10</span><small>{{ ui.assigned_roles }}</small></div>
+            <div class="total-status"><span id="assigned-count">0</span><small>{{ ui.assigned_roles }}</small></div>
             <button id="start-button" class="start-button" type="submit">{{ ui.start_game }} <span>→</span></button>
           </div>
           <p id="count-message" class="count-message" aria-live="polite"></p>
@@ -252,11 +240,8 @@
       const playerInput = document.getElementById("player-count");
       const roleInputs = [...document.querySelectorAll(".role-row input")];
       const assignedNode = document.getElementById("assigned-count");
-      const targetNode = document.getElementById("target-count");
       const startButton = document.getElementById("start-button");
       const countMessage = document.getElementById("count-message");
-
-      function inputFor(role) { return document.querySelector(`[name="${role}"]`); }
 
       function syncRoleToggle(row, checkbox, input) {
         input.value = checkbox.checked ? "1" : "0";
@@ -298,47 +283,17 @@
         });
       }
 
-      function refreshRoleToggles() {
-        document.querySelectorAll(".toggle-role").forEach(row => {
-          const input = row.querySelector('input[type="hidden"]');
-          const checkbox = row.querySelector(".role-selection-checkbox");
-          checkbox.checked = Number(input.value) === 1;
-          syncRoleToggle(row, checkbox, input);
-        });
-      }
-
       function updateTotal() {
-        const target = Number(playerInput.value);
         const assigned = roleInputs.reduce((sum, input) => sum + Number(input.value), 0);
+        playerInput.value = assigned;
         assignedNode.textContent = assigned;
-        targetNode.textContent = target;
-        const difference = target - assigned;
-        startButton.disabled = difference !== 0;
-        countMessage.textContent = difference > 0 ? `${difference} {{ ui.remaining|escapejs }}` : difference < 0 ? `${Math.abs(difference)} {{ ui.too_many|escapejs }}` : "{{ ui.ready|escapejs }}";
-        countMessage.className = `count-message ${difference === 0 ? "ready" : "warning"}`;
-      }
-
-      function suggestRoles() {
-        const players = Math.max(8, Math.min(30, Number(playerInput.value) || 8));
-        playerInput.value = players;
-        const wolves = players <= 11 ? 2 : players <= 16 ? 3 : Math.ceil(players / 5);
-        const wolfRolePriority = ["infecting_fathers", "cerberus_wolves", "black_wolves", "talkative_wolves", "blue_wolves", "white_wolves"];
-        const specialRolePriority = ["seers", "witches", "protectors", "hunters", "red_riding_hoods", "bears", "shepherds", "judges", "cupids", "prostitutes", "ancients", "barbers", "servants", "wild_children", "ankous", "little_girls", "aliens", "pyromaniacs", "angels"];
-        [...wolfRolePriority, ...specialRolePriority, "simple_wolves", "villagers"].forEach(role => { inputFor(role).value = 0; });
-        wolfRolePriority.slice(0, wolves).forEach(role => { inputFor(role).value = 1; });
-        inputFor("simple_wolves").value = Math.max(0, wolves - wolfRolePriority.length);
-        const nonWolfSlots = players - wolves;
-        specialRolePriority.slice(0, nonWolfSlots).forEach(role => { inputFor(role).value = 1; });
-        inputFor("villagers").value = Math.max(0, nonWolfSlots - specialRolePriority.length);
-        refreshRoleToggles();
-        updateTotal();
+        const validCount = assigned >= 8 && assigned <= 30;
+        startButton.disabled = !validCount;
+        countMessage.textContent = validCount ? "{{ ui.ready|escapejs }}" : "{{ ui.player_range|escapejs }}";
+        countMessage.className = `count-message ${validCount ? "ready" : "warning"}`;
       }
 
       prepareSingletonRoleToggles();
-      document.querySelectorAll("[data-player-step]").forEach(button => button.addEventListener("click", () => {
-        playerInput.value = Math.max(8, Math.min(30, Number(playerInput.value) + Number(button.dataset.playerStep)));
-        suggestRoles();
-      }));
       document.querySelectorAll(".counter button").forEach(button => button.addEventListener("click", () => {
         const input = button.parentElement.querySelector("input");
         const maximum = input.max ? Number(input.max) : Infinity;
@@ -352,9 +307,7 @@
           updateTotal();
         });
       });
-      playerInput.addEventListener("change", suggestRoles);
-      document.getElementById("suggest-button").addEventListener("click", suggestRoles);
-      suggestRoles();
+      updateTotal();
     </script>
     {% endif %}
   </body>

@@ -115,11 +115,18 @@ class RoomFlowTests(TestCase):
         new_game = self.narrator.get(reverse("welcome"), {"mode": "new"})
         self.assertContains(new_game, 'id="setup-form"')
         self.assertNotContains(new_game, 'id="resume-room-code"')
-        self.assertContains(new_game, "const wolfRolePriority")
-        self.assertContains(new_game, "const specialRolePriority")
-        self.assertContains(new_game, 'nonWolfSlots - specialRolePriority.length')
+        self.assertNotContains(new_game, 'class="players-row"')
+        self.assertContains(new_game, 'id="player-count" name="player_count" type="hidden" value="0"')
+        self.assertNotContains(new_game, 'id="suggest-button"')
+        self.assertNotContains(new_game, "function suggestRoles()")
+        self.assertNotContains(new_game, 'max="1" value="1"')
+        self.assertNotContains(new_game, 'name="simple_wolves" type="number" min="0" value="1"')
+        self.assertNotContains(new_game, 'name="villagers" type="number" min="0" value="5"')
         self.assertContains(new_game, "prepareSingletonRoleToggles()")
         self.assertContains(new_game, '["simple_wolves", "villagers"]')
+        self.assertContains(new_game, "playerInput.value = assigned")
+        self.assertContains(new_game, "const validCount = assigned >= 8 && assigned <= 30")
+        self.assertNotContains(new_game, 'id="target-count"')
 
         resume_game = self.narrator.get(reverse("welcome"), {"mode": "resume"})
         self.assertContains(resume_game, 'id="resume-room-code"')
@@ -171,13 +178,24 @@ class RoomFlowTests(TestCase):
         )
         self.assertContains(game, 'class="bilan-section night-death-section"')
         self.assertContains(game, 'const nightOutIds = [...new Set([...state.deaths, ...hunterOutIds])]')
+        self.assertContains(game, 'const pendingNightHunter = state.pendingHunterSource === "night" && player(state.pendingHunterId)')
+        self.assertContains(game, 'actionButton(L.hunter_last_shot, "begin-night-hunter-shot")')
+        self.assertContains(game, 'action === "begin-night-hunter-shot"')
+        self.assertContains(
+            game,
+            'state.pendingHunterSource = "night";\n          state.winner = null;\n          publishAliveRoleCounts();\n          state.stage = "dawn";',
+        )
         self.assertContains(game, 'state.alienDeathIds = [...new Set([...(state.alienDeathIds || []), ...guessDeaths.map(item => item.id)])]')
         self.assertContains(game, 'cause === "hunter" ? "died_due_to_hunter_player_role"')
         self.assertContains(game, 'cause === "barber" ? "died_due_to_barber_player_role"')
-        self.assertContains(game, ': "died_due_to_alien_player_role"')
+        self.assertContains(game, 'cause === "alien" ? "died_due_to_alien_player_role"')
         self.assertContains(game, 'state.barberDeathIds = [...new Set([...(state.barberDeathIds || []), ...barberDeaths.map(item => item.id)])]')
-        self.assertContains(game, 'class="bilan-section day-death-section"')
-        self.assertContains(game, 'const dayOutIds = new Set([...(state.voteDeathIds || []), ...daySpecialOutIds])')
+        self.assertContains(game, 'class="bilan-section night-death-section day-death-section"')
+        self.assertContains(game, "function dayDeathBilan(includeVote = false)")
+        self.assertContains(game, "function renderLiveDayDeathBilan()")
+        self.assertContains(game, "if (liveDayDeathStages.includes(state.stage)) renderLiveDayDeathBilan()")
+        self.assertContains(game, "...(includeVote ? state.voteDeathIds || [] : [])")
+        self.assertContains(game, '"died_during_day_player_role"')
         self.assertContains(game, 'state.hunterCausedDeathIds = [...new Set([...(state.hunterCausedDeathIds || []), ...hunterDeaths.map(item => item.id)])]')
         self.assertContains(game, 'class="witch-night-result ${nightVictim ? "danger" : "safe"}"')
         self.assertContains(game, 'nightVictim ? escapeHtml(nightVictim.name) : L.witch_nobody_died')
@@ -964,6 +982,7 @@ class RoomFlowTests(TestCase):
             "sheepRemaining": 2, "shepherdWasBlocked": False,
             "judgeFirstId": 1, "judgeSecondId": 2, "judgeSameClan": False,
             "seerTargetId": 2, "seerDisplayedRole": "villagers",
+            "winner": "wolves",
         }
         sync_url = reverse("room_sync_api", args=[room.code])
         self.narrator.post(sync_url, json.dumps(state), content_type="application/json")
@@ -1010,6 +1029,7 @@ class RoomFlowTests(TestCase):
         self.assertFalse(night["judge_same_clan"])
         self.assertEqual(night["seer_target"], "Sarra")
         self.assertEqual(night["seer_role"], "villagers")
+        self.assertEqual(night["winner"], "wolves")
         day = history["events"][1]["details"]
         self.assertEqual(day["speaker"], "Sarra")
         self.assertEqual(day["accused"], ["Ahmed", "Sarra"])
@@ -1030,6 +1050,7 @@ class RoomFlowTests(TestCase):
         self.assertContains(history_page, "H.story_prostitute")
         self.assertContains(history_page, "H.story_barber_hit")
         self.assertContains(history_page, "H.story_accused")
+        self.assertContains(history_page, 'if (d.winner) add("winner", H.story_winner')
         self.assertContains(history_page, 'actor: actor("protectors")')
         self.assertContains(history_page, "`${roleLabels[role] || role} (${name})`")
 
@@ -1039,6 +1060,34 @@ class RoomFlowTests(TestCase):
         self.narrator.post(sync_url, json.dumps(state), content_type="application/json")
         self.assertEqual(Client().get(reverse("room_history_api", args=[room.code])).status_code, 403)
         self.assertEqual(Client().get(reverse("room_history", args=[room.code])).status_code, 403)
+
+    def test_finished_history_cleans_stale_day_actions_and_restores_final_winner(self):
+        room = self.create_room()
+        room.status = GameRoom.Status.FINISHED
+        room.game_state = {"winner": "wolves", "players": []}
+        room.save(update_fields=["status", "game_state"])
+        RoomEvent.objects.create(
+            room=room,
+            marker="day-1",
+            event_type="day",
+            round_number=1,
+            details={
+                "barber_target": "Dead wolf",
+                "barber_hit": True,
+                "barber_deaths": [],
+                "alien_guesses": [{"name": "Dead seer", "role": "seers", "correct": True}],
+                "alien_correct": True,
+                "alien_deaths": [],
+            },
+        )
+
+        details = self.narrator.get(reverse("room_history_api", args=[room.code])).json()["events"][0]["details"]
+
+        self.assertIsNone(details["barber_target"])
+        self.assertIsNone(details["barber_hit"])
+        self.assertEqual(details["alien_guesses"], [])
+        self.assertIsNone(details["alien_correct"])
+        self.assertEqual(details["winner"], "wolves")
 
     def test_setup_rejects_duplicate_special_roles_and_all_wolves(self):
         duplicate_seer = {**self.composition, "seers": 2, "villagers": 4}

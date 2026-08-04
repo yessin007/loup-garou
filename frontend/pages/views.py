@@ -377,6 +377,7 @@ def public_event_details(state, event_type):
             "judge_same_clan": state.get("judgeSameClan"),
             "seer_target": player_label(state, state.get("seerTargetId")),
             "seer_role": state.get("seerDisplayedRole"),
+            "winner": state.get("winner"),
         }
     hunter_targets = [player_label(state, record.get("targetId")) for record in state.get("hunterShotRecords", []) if record.get("source") != "night"]
     vote_breakdown = state.get("voteBreakdown") or {}
@@ -1251,11 +1252,22 @@ def room_history_api(request, code):
         for item in (room.game_state or {}).get("players", [])
         if item.get("name") and item.get("role") in ROLE_KEYS
     }
+    room_events = list(room.events.all())
+    final_winner = (room.game_state or {}).get("winner") if room.status == GameRoom.Status.FINISHED else None
     events = []
-    for event in room.events.all():
+    for index, event in enumerate(room_events):
         details = dict(event.details or {})
         if current_player_roles and not details.get("player_roles"):
             details["player_roles"] = current_player_roles
+        if event.event_type == "day":
+            if not details.get("barber_deaths"):
+                details["barber_target"] = None
+                details["barber_hit"] = None
+            if not details.get("alien_deaths"):
+                details["alien_guesses"] = []
+                details["alien_correct"] = None
+        if final_winner and index == len(room_events) - 1:
+            details["winner"] = final_winner
         events.append({
             "type": event.event_type,
             "round": event.round_number,

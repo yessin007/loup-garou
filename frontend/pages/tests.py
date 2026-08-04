@@ -1407,6 +1407,10 @@ class RoomFlowTests(TestCase):
         self.assertNotContains(portal, 'name="player_name"')
         self.assertContains(portal, "Nom dans la partie")
         self.assertContains(portal, reverse("general_room_qr"))
+        self.assertContains(portal, "response.status === 403")
+        self.assertContains(portal, reverse("csrf_token_api"))
+        self.assertContains(portal, "await refreshJoinCsrf()")
+        self.assertContains(portal, "La connexion à la room a échoué")
 
     def test_narrator_can_resume_active_room_from_another_session(self):
         room = self.create_room()

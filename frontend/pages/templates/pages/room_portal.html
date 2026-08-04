@@ -76,6 +76,35 @@
         joinForm.classList.remove("is-joining");
       }
 
+      async function refreshJoinCsrf() {
+        const response = await fetch("{% url 'csrf_token_api' %}", {
+          cache: "no-store",
+          credentials: "same-origin",
+        });
+        if (!response.ok) return false;
+        const data = await response.json();
+        const csrfInput = joinForm.querySelector('input[name="csrfmiddlewaretoken"]');
+        if (!csrfInput || !data.csrfToken) return false;
+        csrfInput.value = data.csrfToken;
+        return true;
+      }
+
+      async function postJoin() {
+        let response = await fetch(joinForm.action || window.location.href, {
+          method: "POST",
+          body: new FormData(joinForm),
+          credentials: "same-origin",
+        });
+        if (response.status === 403 && await refreshJoinCsrf()) {
+          response = await fetch(joinForm.action || window.location.href, {
+            method: "POST",
+            body: new FormData(joinForm),
+            credentials: "same-origin",
+          });
+        }
+        return response;
+      }
+
       async function submitJoin(event) {
         event.preventDefault();
         if (joinInProgress || !joinForm.reportValidity()) return;
@@ -85,11 +114,7 @@
           joinAttemptInput.value = attempt;
           showJoinLoading(`{{ room.join_queue_attempt|escapejs }} ${attempt}/${maxJoinAttempts}`);
           try {
-            const response = await fetch(joinForm.action || window.location.href, {
-              method: "POST",
-              body: new FormData(joinForm),
-              credentials: "same-origin",
-            });
+            const response = await postJoin();
             if (response.ok && response.redirected) {
               showJoinLoading(`{{ room.connected_as|escapejs }} {{ request.user.username|escapejs }} — ✓`);
               window.location.assign(response.url);
@@ -103,7 +128,7 @@
               }
             } else {
               const page = new DOMParser().parseFromString(await response.text(), "text/html");
-              stopJoinLoading(page.querySelector(".form-error")?.textContent?.trim() || "{{ room.invalid_room|escapejs }}");
+              stopJoinLoading(page.querySelector(".form-error")?.textContent?.trim() || "{{ room.join_failed|escapejs }}");
               return;
             }
           } catch (error) {

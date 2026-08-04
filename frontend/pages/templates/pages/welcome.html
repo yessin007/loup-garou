@@ -20,6 +20,7 @@
         {% include "pages/_language_selector.html" %}
         <span class="account-username"><span aria-hidden="true">●</span>{{ request.user.username }}</span>
         <span class="narrator-badge">{{ ui.narrator_mode }}</span>
+        {% if dashboard_mode != "dashboard" %}<a class="text-link home-navigation" href="{% url 'welcome' %}">← {{ ui.back_home }}</a>{% endif %}
         <a class="text-link" href="{% url 'logout' %}">{{ ui.logout }}</a>
       </div>
     </header>

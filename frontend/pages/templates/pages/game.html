@@ -39,6 +39,7 @@
         </details>
         <a class="header-action history-header-link" href="{% url 'room_history' room_code %}" target="_blank">{{ room.history }}</a>
         {% include "pages/_language_selector.html" %}
+        <a class="header-action home-navigation" href="{% url 'welcome' %}">← {{ ui.back_home }}</a>
         <button id="reset-game" class="header-action" type="button">{{ ui.restart }}</button>
       </div>
     </header>

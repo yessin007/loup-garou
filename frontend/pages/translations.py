@@ -14,7 +14,7 @@ UI = {
         "roles_guide_link": "Guide complet des rôles", "roles_guide_title": "Guide des rôles", "roles_guide_eyebrow": "Toutes les règles au même endroit", "roles_guide_intro": "Pouvoirs, blocages du Loup Cerbère, infections, couples et cas particuliers de chaque rôle.", "roles_guide_search": "Rechercher un rôle ou une règle", "roles_guide_all": "Tous", "roles_guide_wolves": "Loups", "roles_guide_village": "Village", "roles_guide_solo": "Solo / variable", "roles_guide_back": "Retour à la connexion", "roles_guide_no_result": "Aucun rôle ne correspond à cette recherche.", "roles_guide_rules": "Règles et interactions", "roles_guide_camp": "Camp",
         "temporary_access": "Accès temporaire", "chapter": "Chapitre I", "village_sleeps": "Le village s'endort",
         "auth_error": "Nom d'utilisateur ou mot de passe incorrect.", "setup_title": "Préparer la partie",
-        "dashboard_title": "Que veux-tu faire ?", "dashboard_help": "Choisis une action pour gérer les parties du narrateur.", "manage_history": "Supprimer un historique", "manage_history_help": "Ouvre les archives, choisis la partie concernée puis confirme sa suppression.", "start_new_game": "Commencer une nouvelle partie", "start_new_game_help": "Choisis la composition des rôles ; elle détermine le nombre de joueurs.", "continue_old_game": "Continuer une ancienne partie", "continue_old_game_help": "Entre le code de la room pour reprendre exactement où tu t'es arrêté.", "choose_action": "Ouvrir", "back_dashboard": "Retour au tableau de bord",
+        "dashboard_title": "Que veux-tu faire ?", "dashboard_help": "Choisis une action pour gérer les parties du narrateur.", "manage_history": "Supprimer un historique", "manage_history_help": "Ouvre les archives, choisis la partie concernée puis confirme sa suppression.", "start_new_game": "Commencer une nouvelle partie", "start_new_game_help": "Choisis la composition des rôles ; elle détermine le nombre de joueurs.", "continue_old_game": "Continuer une ancienne partie", "continue_old_game_help": "Entre le code de la room pour reprendre exactement où tu t'es arrêté.", "choose_action": "Ouvrir", "back_dashboard": "Retour au tableau de bord", "back_home": "Retour à l’accueil",
         "narrator_mode": "Mode narrateur", "logout": "Déconnexion", "new_game": "Nouvelle partie",
         "compose": "Composez<br>votre village", "compose_help": "Choisissez librement les rôles. Leur total détermine le nombre de joueurs.",
         "participants": "Participants", "player_count": "Nombre de joueurs", "narrator_not_counted": "Le narrateur n'est pas compté.",
@@ -36,7 +36,7 @@ UI = {
         "password_placeholder": "Your password", "enter": "Enter the village", "temporary_access": "Temporary access",
         "roles_guide_link": "Complete role guide", "roles_guide_title": "Role guide", "roles_guide_eyebrow": "Every rule in one place", "roles_guide_intro": "Powers, Cerberus Wolf blocks, infections, couples and special cases for every role.", "roles_guide_search": "Search for a role or rule", "roles_guide_all": "All", "roles_guide_wolves": "Wolves", "roles_guide_village": "Village", "roles_guide_solo": "Solo / variable", "roles_guide_back": "Back to sign in", "roles_guide_no_result": "No role matches this search.", "roles_guide_rules": "Rules and interactions", "roles_guide_camp": "Team",
         "chapter": "Chapter I", "village_sleeps": "The village falls asleep", "auth_error": "Incorrect username or password.",
-        "dashboard_title": "What do you want to do?", "dashboard_help": "Choose an action to manage the narrator's games.", "manage_history": "Delete game history", "manage_history_help": "Open the archive, choose the game, then confirm its deletion.", "start_new_game": "Start a new game", "start_new_game_help": "Choose the role composition; it determines the number of players.", "continue_old_game": "Continue an old game", "continue_old_game_help": "Enter the room code to resume exactly where you stopped.", "choose_action": "Open", "back_dashboard": "Back to dashboard",
+        "dashboard_title": "What do you want to do?", "dashboard_help": "Choose an action to manage the narrator's games.", "manage_history": "Delete game history", "manage_history_help": "Open the archive, choose the game, then confirm its deletion.", "start_new_game": "Start a new game", "start_new_game_help": "Choose the role composition; it determines the number of players.", "continue_old_game": "Continue an old game", "continue_old_game_help": "Enter the room code to resume exactly where you stopped.", "choose_action": "Open", "back_dashboard": "Back to dashboard", "back_home": "Back to home",
         "setup_title": "Set up the game", "narrator_mode": "Narrator mode", "logout": "Sign out", "new_game": "New game",
         "compose": "Build<br>your village", "compose_help": "Choose the roles freely. Their total determines the number of players.",
         "participants": "Players", "player_count": "Number of players", "narrator_not_counted": "The narrator is not included.",
@@ -57,7 +57,7 @@ UI = {
         "password": "Mot de passe", "password_placeholder": "Ekteb el mot de passe", "enter": "Od5ol lel village", "temporary_access": "Acces temporaire",
         "roles_guide_link": "Guide kemel mta3 les roles", "roles_guide_title": "Guide mta3 les roles", "roles_guide_eyebrow": "El regles lkol fi blasa wa7da", "roles_guide_intro": "", "roles_guide_search": "Lawwej 3la role wala regle", "roles_guide_all": "El kol", "roles_guide_wolves": "Loups", "roles_guide_village": "Village", "roles_guide_solo": "Solo / variable", "roles_guide_back": "Erja3 lel connexion", "roles_guide_no_result": "Ma fama 7atta role ymatchi el recherche.", "roles_guide_rules": "Regles w interactions", "roles_guide_camp": "Camp",
         "chapter": "Chapitre I", "village_sleeps": "El village yor9od", "auth_error": "Esm el utilisateur wala el mot de passe 8altin.",
-        "dashboard_title": "Chnouwa t7eb ta3mel?", "dashboard_help": "", "manage_history": "Fasa5 historique", "manage_history_help": "7ell el archive, e5tar historique mta3 el game w confirmi el suppression.", "start_new_game": "Abda game jdida", "start_new_game_help": "E5tar composition mta3 les roles; heya t7added 3dad el joueurs.", "continue_old_game": "Kammel game 9dima", "continue_old_game_help": "Da5el code el room w kammel el game.", "choose_action": "7ell", "back_dashboard": "Erja3 lel dashboard",
+        "dashboard_title": "Chnouwa t7eb ta3mel?", "dashboard_help": "", "manage_history": "Fasa5 historique", "manage_history_help": "7ell el archive, e5tar historique mta3 el game w confirmi el suppression.", "start_new_game": "Abda game jdida", "start_new_game_help": "E5tar composition mta3 les roles; heya t7added 3dad el joueurs.", "continue_old_game": "Kammel game 9dima", "continue_old_game_help": "Da5el code el room w kammel el game.", "choose_action": "7ell", "back_dashboard": "Erja3 lel dashboard", "back_home": "Arja3 lel accueil",
         "setup_title": "7adher el game", "narrator_mode": "Mode narrateur", "logout": "Deconnecti", "new_game": "Game jdida",
         "compose": "Rakkeb<br>el village mte3ek", "compose_help": "E5tar les roles wa7dek. Total mte3hom howa 3dad el joueurs.",
         "participants": "El joueurs", "player_count": "3dad el joueurs", "narrator_not_counted": "El narrateur ma yet7sebch.",
@@ -622,9 +622,9 @@ GAME["tn"].update({
 
 
 def language_context(request):
-    code = request.session.get("language", "fr")
+    code = request.session.get("language", "tn")
     if code not in LANGUAGES:
-        code = "fr"
+        code = "tn"
     return {
         "language_code": code,
         "language_dir": LANGUAGES[code]["dir"],

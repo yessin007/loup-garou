@@ -8,6 +8,7 @@ from django.test import Client, TestCase, override_settings
 from django.urls import reverse
 
 from .models import GameRoom, RoomEvent
+from .role_guides import ROLE_GUIDES
 from .translations import ROLES
 from .views import WOLF_ROLE_KEYS, shuffle_roles_for_players
 
@@ -22,6 +23,7 @@ class RoomFlowTests(TestCase):
     def setUp(self):
         self.narrator = Client()
         self.narrator.post(reverse("home"), {"username": "yessin", "password": "yessin"})
+        self.narrator.post(reverse("set_language"), {"language": "fr", "next": reverse("welcome")})
         self.composition = {role: 0 for role in ROLES["fr"]}
         self.composition.update({"simple_wolves": 2, "villagers": 6})
 
@@ -32,6 +34,12 @@ class RoomFlowTests(TestCase):
             user.save(update_fields=["password"])
         client = Client()
         client.force_login(user)
+        client.post(reverse("set_language"), {"language": "fr", "next": reverse("room_portal")})
+        return client
+
+    def visitor_client(self, language="fr"):
+        client = Client()
+        client.post(reverse("set_language"), {"language": language, "next": reverse("home")})
         return client
 
     def create_room(self):
@@ -282,7 +290,7 @@ class RoomFlowTests(TestCase):
         setup = self.narrator.get(reverse("welcome"), {"mode": "new"})
         self.assertContains(setup, 'data-role="red_riding_hoods"')
         self.assertContains(setup, 'name="red_riding_hoods"')
-        guide = Client().get(reverse("roles_guide"))
+        guide = self.visitor_client().get(reverse("roles_guide"))
         self.assertContains(guide, "Chaperon Rouge")
         self.assertContains(guide, "Protection bloquée par le Loup Cerbère")
 
@@ -323,7 +331,7 @@ class RoomFlowTests(TestCase):
         )
         self.assertContains(game, 't("bear_seating_loop"')
 
-        guide = Client().get(reverse("roles_guide"))
+        guide = self.visitor_client().get(reverse("roles_guide"))
         self.assertContains(guide, "narrateur classe les joueurs")
         self.assertContains(guide, "le dernier joueur est voisin du premier")
 
@@ -340,7 +348,7 @@ class RoomFlowTests(TestCase):
             'if (wolfVictimDies && wolfVictim?.role === "ancients" && !state.ancientWolfHits[wolfVictim.id])',
         )
 
-        guide = Client().get(reverse("roles_guide"))
+        guide = self.visitor_client().get(reverse("roles_guide"))
         self.assertContains(guide, "son attaque est redirigée vers la personne visitée")
         self.assertContains(guide, "la Pute reste la cible et peut être tuée ou infectée")
 
@@ -366,7 +374,7 @@ class RoomFlowTests(TestCase):
         self.assertContains(game, "state.sheepRemaining = stock")
         self.assertContains(game, "state.shepherdStockConfigured = true")
 
-        guide = Client().get(reverse("roles_guide"))
+        guide = self.visitor_client().get(reverse("roles_guide"))
         self.assertContains(guide, "stock initial de un à dix moutons")
 
     def test_pyromaniac_douses_or_ignites_once_per_night_and_can_be_blocked(self):
@@ -397,7 +405,7 @@ class RoomFlowTests(TestCase):
         setup = self.narrator.get(reverse("welcome"), {"mode": "new"})
         self.assertContains(setup, 'data-role="pyromaniacs"')
         self.assertContains(setup, 'name="pyromaniacs"')
-        guide = Client().get(reverse("roles_guide"))
+        guide = self.visitor_client().get(reverse("roles_guide"))
         self.assertContains(guide, "Pyromane")
         self.assertContains(guide, "exactement une action")
         self.assertContains(guide, "désactivés et rouges")
@@ -454,7 +462,7 @@ class RoomFlowTests(TestCase):
         )
         self.assertNotContains(game, 'isRoleBlocked("servants")) return')
 
-        guide = Client().get(reverse("roles_guide"))
+        guide = self.visitor_client().get(reverse("roles_guide"))
         self.assertContains(guide, "Normalement, la Servante est immunisée")
         self.assertContains(guide, "son immunité nocturne disparaît")
         self.assertContains(guide, "garde son choix")
@@ -511,7 +519,7 @@ class RoomFlowTests(TestCase):
         self.assertNotContains(game, 'document.getElementById("alien-target")')
         self.assertNotContains(game, 'document.getElementById("alien-role")')
 
-        guide = Client().get(reverse("roles_guide"))
+        guide = self.visitor_client().get(reverse("roles_guide"))
         self.assertContains(guide, "utiliser son signal sans limite")
         self.assertContains(guide, "autant de survivants non validés")
         self.assertContains(guide, "à la première erreur")
@@ -581,18 +589,30 @@ class RoomFlowTests(TestCase):
         self.assertEqual(private_narrator.session["narrator_username"], "yessin")
 
     def test_tunisian_pages_omit_removed_intro_copy(self):
-        visitor = Client()
-        session = visitor.session
-        session["language"] = "tn"
-        session.save()
+        visitor = self.visitor_client("tn")
         self.assertNotContains(visitor.get(reverse("home")), "Od5ol lel game. Ra9eb. Chok. W ab9a 7ay.")
         self.assertNotContains(visitor.get(reverse("roles_guide")), "Pouvoirs, blocage mta3 Loup Cerbere")
         self.assertRedirects(visitor.get(reverse("room_history_list")), reverse("home"), fetch_redirect_response=False)
 
-        session = self.narrator.session
-        session["language"] = "tn"
-        session.save()
+        self.narrator.post(reverse("set_language"), {"language": "tn", "next": reverse("welcome")})
         self.assertNotContains(self.narrator.get(reverse("welcome")), "E5tar action bech tetsarref")
+
+    def test_tounsi_is_default_and_each_session_can_choose_all_three_languages(self):
+        visitor = Client()
+        default_page = visitor.get(reverse("home"))
+        self.assertContains(default_page, 'option value="tn" selected')
+        self.assertContains(default_page, "Connecti")
+        self.assertContains(default_page, "Français")
+        self.assertContains(default_page, "English")
+        self.assertContains(default_page, "Tounsi")
+
+        visitor.post(reverse("set_language"), {"language": "en", "next": reverse("home")})
+        self.assertContains(visitor.get(reverse("home")), 'option value="en" selected')
+        self.assertContains(visitor.get(reverse("home")), "Sign in")
+
+        visitor.post(reverse("set_language"), {"language": "fr", "next": reverse("home")})
+        self.assertContains(visitor.get(reverse("home")), 'option value="fr" selected')
+        self.assertContains(visitor.get(reverse("home")), "Se connecter")
 
     def test_player_joins_and_receives_role_after_narrator_starts(self):
         room = self.create_room()
@@ -615,6 +635,10 @@ class RoomFlowTests(TestCase):
         private_state = player.get(reverse("room_player_api", args=[room.code])).json()
         self.assertEqual(private_state["status"], GameRoom.Status.ACTIVE)
         self.assertIsNotNone(private_state["role"])
+        self.assertEqual(
+            private_state["role"]["rules"],
+            list(ROLE_GUIDES["fr"][private_state["role"]["code"]]),
+        )
         self.assertEqual(private_state["alive_count"], 8)
         self.assertEqual(
             {item["code"]: item["count"] for item in private_state["alive_roles"]},
@@ -629,12 +653,28 @@ class RoomFlowTests(TestCase):
         self.assertContains(player_page, 'id="toggle-private-role"')
         self.assertContains(player_page, "togglePrivateRole")
         self.assertContains(player_page, 'id="private-player-name"')
+        self.assertContains(player_page, 'class="language-selector"')
+        self.assertContains(player_page, 'id="player-role-rules"')
+        self.assertContains(player_page, "Règles et cas particuliers")
+        self.assertContains(player_page, "role.rules || []")
         self.assertContains(player_page, "Masquer mon rôle")
         self.assertContains(player_page, "Afficher mon rôle")
         self.assertNotContains(player_page, "Garde cet écran secret")
         self.assertContains(player_page, 'if (data.status !== "finished") scheduleRoom()')
 
+        role_code = private_state["role"]["code"]
+        player.post(
+            reverse("set_language"),
+            {"language": "tn", "next": reverse("room_player", args=[room.code])},
+        )
+        tunisian_state = player.get(reverse("room_player_api", args=[room.code])).json()
+        self.assertEqual(tunisian_state["role"]["code"], role_code)
+        self.assertEqual(tunisian_state["role"]["rules"], list(ROLE_GUIDES["tn"][role_code]))
+        self.assertTrue(any("Cerbere" in rule for rule in tunisian_state["role"]["rules"]))
+        self.assertContains(player.get(reverse("room_player", args=[room.code])), 'option value="tn" selected')
+
         game_page = self.narrator.get(reverse("game"))
+        self.assertContains(game_page, 'option value="fr" selected')
         self.assertContains(game_page, "async function csrfFetch")
         self.assertContains(game_page, 'response.status !== 403')
         self.assertContains(game_page, reverse("csrf_token_api"))
@@ -691,6 +731,67 @@ class RoomFlowTests(TestCase):
             [(item["code"], item["alive"]) for item in private_state["role_roster"]],
             [("simple_wolves", True), ("wild_children", True), ("villagers", False)],
         )
+
+    def test_only_eliminated_player_sees_and_can_open_active_game_summary(self):
+        room = self.create_room()
+        eliminated = self.player_client("EliminatedPlayer")
+        living = self.player_client("LivingPlayer")
+        eliminated.post(reverse("room_portal"), {"room_code": room.code})
+        living.post(reverse("room_portal"), {"room_code": room.code})
+        assignments = self.narrator.post(reverse("room_start_api", args=[room.code])).json()["assignments"]
+        by_name = {item["name"]: item for item in assignments}
+        state = {
+            "stage": "dawn",
+            "round": 1,
+            "distributionStarted": True,
+            "players": [
+                {
+                    "id": 1,
+                    "roomPlayerId": by_name["EliminatedPlayer"]["room_player_id"],
+                    "name": "EliminatedPlayer",
+                    "role": by_name["EliminatedPlayer"]["role"],
+                    "alive": False,
+                },
+                {
+                    "id": 2,
+                    "roomPlayerId": by_name["LivingPlayer"]["room_player_id"],
+                    "name": "LivingPlayer",
+                    "role": by_name["LivingPlayer"]["role"],
+                    "alive": True,
+                },
+            ],
+        }
+        self.narrator.post(
+            reverse("room_sync_api", args=[room.code]),
+            json.dumps(state),
+            content_type="application/json",
+        )
+
+        eliminated_state = eliminated.get(reverse("room_player_api", args=[room.code])).json()
+        living_state = living.get(reverse("room_player_api", args=[room.code])).json()
+        self.assertFalse(eliminated_state["player_alive"])
+        self.assertTrue(living_state["player_alive"])
+
+        eliminated_page = eliminated.get(reverse("room_player", args=[room.code]))
+        self.assertContains(eliminated_page, 'id="eliminated-history-link"')
+        self.assertContains(eliminated_page, "Voir le bilan de la partie")
+        self.assertContains(eliminated_page, "data.player_alive !== false")
+
+        history_url = reverse("room_history", args=[room.code])
+        history_api_url = reverse("room_history_api", args=[room.code])
+        self.assertEqual(eliminated.get(history_url).status_code, 200)
+        self.assertEqual(eliminated.get(history_api_url).status_code, 200)
+        self.assertEqual(living.get(history_url).status_code, 403)
+        self.assertEqual(living.get(history_api_url).status_code, 403)
+
+        state["players"][0]["alive"] = True
+        self.narrator.post(
+            reverse("room_sync_api", args=[room.code]),
+            json.dumps(state),
+            content_type="application/json",
+        )
+        self.assertTrue(eliminated.get(reverse("room_player_api", args=[room.code])).json()["player_alive"])
+        self.assertEqual(eliminated.get(history_url).status_code, 403)
 
     def test_new_player_can_join_after_distribution_until_first_night_starts(self):
         room = self.create_room()
@@ -1410,6 +1511,34 @@ class RoomFlowTests(TestCase):
         self.assertContains(portal, f'action="{reverse("room_portal")}"')
         self.assertNotContains(portal, "new FormData(joinForm)")
         self.assertContains(portal, "function submitJoin(event)")
+
+    def test_authenticated_player_and_narrator_pages_have_home_buttons(self):
+        room = self.create_room()
+        player = self.player_client("home-button-player")
+
+        portal = player.get(reverse("room_portal"))
+        self.assertContains(portal, 'class="guide-back home-navigation"')
+        self.assertContains(portal, "Retour à l’accueil")
+
+        player.post(reverse("room_portal"), {"room_code": room.code})
+        player_room = player.get(reverse("room_player", args=[room.code]))
+        self.assertContains(player_room, 'class="guide-back home-navigation"')
+
+        history = self.narrator.get(reverse("room_history", args=[room.code]))
+        self.assertContains(history, 'class="guide-back home-navigation"')
+        self.assertContains(history, 'class="language-selector"')
+
+        narrator_game = self.narrator.get(reverse("game"))
+        self.assertContains(narrator_game, 'class="header-action home-navigation"')
+
+        narrator_setup = self.narrator.get(reverse("welcome") + "?mode=new")
+        self.assertContains(narrator_setup, 'class="text-link home-navigation"')
+
+        role_guide = player.get(reverse("roles_guide"))
+        self.assertContains(role_guide, 'class="guide-back home-navigation"')
+
+        users = self.narrator.get(reverse("user_management"))
+        self.assertContains(users, 'class="text-link home-navigation"')
 
     def test_narrator_can_resume_active_room_from_another_session(self):
         room = self.create_room()

@@ -12,7 +12,7 @@
   <body class="setup-page">
     <header class="setup-header">
       <a class="brand" href="{% url 'welcome' %}">Loup <span>Garou</span></a>
-      <div><strong>{{ request.user.username }} · Super admin</strong><a class="text-link" href="{% url 'logout' %}">{{ ui.logout }}</a></div>
+      <div><strong>{{ request.user.username }} · Super admin</strong><a class="text-link home-navigation" href="{% url 'welcome' %}">← {{ ui.back_home }}</a><a class="text-link" href="{% url 'logout' %}">{{ ui.logout }}</a></div>
     </header>
     <main class="user-management-shell">
       <section class="admin-dashboard-hero">

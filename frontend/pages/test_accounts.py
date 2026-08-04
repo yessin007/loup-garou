@@ -160,6 +160,7 @@ class AccountFlowTests(TestCase):
     def test_narrator_has_game_and_player_actions(self):
         client = Client()
         client.force_login(self.narrator)
+        client.post(reverse("set_language"), {"language": "fr", "next": reverse("welcome")})
         response = client.get(reverse("welcome"))
         self.assertContains(response, 'class="account-username"')
         self.assertContains(response, "nour")

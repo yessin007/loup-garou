@@ -172,6 +172,8 @@ ROOM_TEXT["fr"].update({
     "join_queue_attempt": "File d’attente — tentative", "join_retrying": "Nouvelle tentative automatique dans",
     "join_retry_now": "Réessayer maintenant", "join_retry_limit": "La room est toujours occupée. Réessaie maintenant : ton inscription ne sera jamais créée deux fois.",
     "connected_as": "Connecté avec succès en tant que",
+    "role_rules": "Règles et cas particuliers",
+    "eliminated_summary": "Voir le bilan de la partie",
     "hide_my_role": "Masquer mon rôle", "show_my_role": "Afficher mon rôle",
     "player_identity": "Identité du joueur",
     "private_notes": "Mes notes privées", "private_notes_help": "Visibles uniquement par toi, même après la partie.",
@@ -189,6 +191,8 @@ ROOM_TEXT["en"].update({
     "join_queue_attempt": "Joining queue — attempt", "join_retrying": "Retrying automatically in",
     "join_retry_now": "Retry now", "join_retry_limit": "The room is still busy. Retry now: your player will never be added twice.",
     "connected_as": "Successfully connected as",
+    "role_rules": "Rules and special cases",
+    "eliminated_summary": "View the game summary",
     "hide_my_role": "Hide my role", "show_my_role": "Show my role",
     "player_identity": "Player identity",
     "private_notes": "My private notes", "private_notes_help": "Only visible to you, even after the game.",
@@ -206,6 +210,8 @@ ROOM_TEXT["tn"].update({
     "join_queue_attempt": "File d’attente — tentative", "join_retrying": "Bech n3awdou automatiquement ba3d",
     "join_retry_now": "3awed taw", "join_retry_limit": "El room mezelt occupée. 3awed taw: esm el joueur ma yetzedch marrtin.",
     "connected_as": "Connecté avec succès b esm",
+    "role_rules": "El règles w les cas particuliers",
+    "eliminated_summary": "Chouf bilan el game",
     "hide_my_role": "5abbi el role", "show_my_role": "Warri el role",
     "player_identity": "Esm el joueur",
     "private_notes": "Notes privées mte3i", "private_notes_help": "Ken enti tchoufhom, 7ata ba3d el game.",
@@ -318,8 +324,8 @@ def service_worker(request):
 
 
 def current_language(request):
-    code = request.session.get("language", "fr")
-    return code if code in LANGUAGES else "fr"
+    code = request.session.get("language", "tn")
+    return code if code in LANGUAGES else "tn"
 
 
 def room_text(request):
@@ -337,14 +343,31 @@ def room_for_narrator(request, code):
     return room if room and narrator_can_manage(request.user, room) else None
 
 
+def room_player_is_alive(room, joined_player, state=None):
+    state = (room.game_state or {}) if state is None else state
+    matched = next(
+        (
+            item for item in state.get("players", [])
+            if isinstance(item, dict)
+            and (
+                str(item.get("roomPlayerId") or "") == str(joined_player.id)
+                or str(item.get("name", "")).casefold() == joined_player.name.casefold()
+            )
+        ),
+        None,
+    )
+    return bool(matched.get("alive", True)) if matched else True
+
+
 def can_view_room_history(request, room):
     if narrator_can_manage(request.user, room):
         return True
-    return bool(
-        request.user.is_authenticated
-        and room.status == GameRoom.Status.FINISHED
-        and room.room_players.filter(user=request.user).exists()
-    )
+    if not request.user.is_authenticated:
+        return False
+    joined_player = room.room_players.filter(user=request.user).first()
+    if not joined_player:
+        return False
+    return room.status == GameRoom.Status.FINISHED or not room_player_is_alive(room, joined_player)
 
 
 def player_label(state, player_id):
@@ -479,7 +502,7 @@ def public_event_details(state, event_type):
 
 def set_language(request):
     if request.method == "POST":
-        code = request.POST.get("language", "fr")
+        code = request.POST.get("language", "tn")
         if code in LANGUAGES:
             request.session["language"] = code
     target = request.POST.get("next", reverse("home"))
@@ -1288,6 +1311,7 @@ def room_player_api(request, code):
     distribution_started = room_distribution_started(room, game_state)
     effective_status = room.status if distribution_started else GameRoom.Status.WAITING
     role = joined.role if distribution_started else ""
+    player_alive = room_player_is_alive(room, joined, game_state)
     published_role_counts = game_state.get("publicAliveRoleCounts")
     state_players = game_state.get("players")
     role_counts = {}
@@ -1347,11 +1371,17 @@ def room_player_api(request, code):
         "status": effective_status,
         "joined_count": room.room_players.count(),
         "player_count": room.player_count,
-        "role": {"code": role, "name": ROLES[language][role][0], "description": ROLES[language][role][1]} if role else None,
+        "role": {
+            "code": role,
+            "name": ROLES[language][role][0],
+            "description": ROLES[language][role][1],
+            "rules": ROLE_GUIDES[language][role],
+        } if role else None,
         "alive_roles": alive_roles,
         "alive_count": sum(item["count"] for item in alive_roles),
         "role_roster": role_roster,
         "dead_count": sum(not item["alive"] for item in role_roster),
+        "player_alive": player_alive,
         "private_notes": joined.private_notes,
     })
 

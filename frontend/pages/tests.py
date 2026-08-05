@@ -178,8 +178,21 @@ class RoomFlowTests(TestCase):
         )
         self.assertContains(
             game,
-            'if (stage === "wild_child") return hasAliveRole("wild_children") && !state.wildChildLinked',
+            'if (stage === "wild_child") return hasActiveAliveRole("wild_children") && !state.wildChildLinked',
         )
+        self.assertContains(game, "function villagePowerLost(item)")
+        self.assertContains(
+            game,
+            'const affected = state.players.filter(item => roleMeta[item.role]?.faction === "village" && item.role !== "villagers")',
+        )
+        self.assertNotContains(game, 'affected.forEach(item => { item.role = "villagers"; })')
+        self.assertContains(game, 'item.role === "hunters" && !villagePowerLost(item)')
+        self.assertContains(game, 'hasActiveAliveRole("witches")')
+        self.assertNotContains(
+            game,
+            'player(state.witchKillId)?.role === "ancients") removeVillagePowersAfterAncientVote()',
+        )
+        self.assertEqual(game.content.decode().count("state.lostVillagePowerIds = [];"), 1)
         self.assertContains(
             game,
             '"protector", "prostitute", "cerberus", "pyromaniac", "wolves", "infection"',
@@ -276,7 +289,7 @@ class RoomFlowTests(TestCase):
         self.assertContains(game, 'red_riding_hoods: { short: "CR"')
         self.assertContains(
             game,
-            'item?.role === "red_riding_hoods" && hasAliveRole("hunters") && !isRoleBlocked("red_riding_hoods")',
+            'item?.role === "red_riding_hoods" && !villagePowerLost(item) && hasActiveAliveRole("hunters") && !isRoleBlocked("red_riding_hoods")',
         )
         self.assertContains(
             game,
@@ -300,11 +313,11 @@ class RoomFlowTests(TestCase):
         game = self.narrator.get(reverse("game"))
         self.assertContains(
             game,
-            'if (stage === "bear") return state.round === 1 && hasAliveRole("bears");',
+            'if (stage === "bear") return state.round === 1 && hasActiveAliveRole("bears");',
         )
         self.assertContains(
             game,
-            'if (next === "bear" && (state.round !== 1 || !hasAliveRole("bears")))',
+            'if (next === "bear" && (state.round !== 1 || !hasActiveAliveRole("bears")))',
         )
         self.assertContains(game, "seatingOrderIds: []")
         self.assertContains(game, "function normalizedSeatingOrder()")
@@ -340,12 +353,12 @@ class RoomFlowTests(TestCase):
         game = self.narrator.get(reverse("game"))
         self.assertContains(
             game,
-            'if (target?.role === "prostitutes" && !isRoleBlocked("prostitutes") && state.prostituteTargetId) return state.prostituteTargetId',
+            'if (target?.role === "prostitutes" && !villagePowerLost(target) && !isRoleBlocked("prostitutes") && state.prostituteTargetId) return state.prostituteTargetId',
         )
         self.assertContains(game, "const actualWolfTargetId = effectiveWolfTargetId()")
         self.assertContains(
             game,
-            'if (wolfVictimDies && wolfVictim?.role === "ancients" && !state.ancientWolfHits[wolfVictim.id])',
+            'if (wolfVictimDies && wolfVictim?.role === "ancients" && !villagePowerLost(wolfVictim) && !state.ancientWolfHits[wolfVictim.id])',
         )
 
         guide = self.visitor_client().get(reverse("roles_guide"))
@@ -423,11 +436,11 @@ class RoomFlowTests(TestCase):
         )
         self.assertContains(
             game,
-            'if (wolfVictimDies && wolfVictim?.role === "ancients" && !state.ancientWolfHits[wolfVictim.id])',
+            'if (wolfVictimDies && wolfVictim?.role === "ancients" && !villagePowerLost(wolfVictim) && !state.ancientWolfHits[wolfVictim.id])',
         )
         self.assertContains(
             game,
-            'if (target?.role === "ancients" && !state.ancientWolfHits?.[target.id]) return null',
+            'if (target?.role === "ancients" && !villagePowerLost(target) && !state.ancientWolfHits?.[target.id]) return null',
         )
         self.assertContains(game, "const victim = wolfVictimVisibleToWitch()")
         self.assertContains(
@@ -480,7 +493,7 @@ class RoomFlowTests(TestCase):
         )
         self.assertContains(
             game,
-            'if (state.witchKillId && !isRoleBlocked("witches") && !deathIds.includes(state.witchKillId)) deathIds.push(state.witchKillId)',
+            'if (witch && !villagePowerLost(witch) && state.witchKillId && !isRoleBlocked("witches") && !deathIds.includes(state.witchKillId)) deathIds.push(state.witchKillId)',
         )
 
     def test_alien_can_signal_without_daily_limit_and_guess_multiple_players(self):

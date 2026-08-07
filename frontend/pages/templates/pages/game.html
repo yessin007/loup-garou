@@ -193,9 +193,9 @@
       function freshState() {
         return {
           stage: "roster", round: 1, players: [], seatingOrderIds: [], protectedId: null, lastProtectedId: null, roomStarted: false,
-          wolfTargetId: null, wolfResolvedTargetId: null, prostituteTargetId: null, lastProstituteTargetId: null, blockedPlayerId: null, silencedPlayerId: null, lastSilencedPlayerId: null,
+          wolfTargetId: null, wolfResolvedTargetId: null, prostituteTargetId: null, lastProstituteTargetId: null, blockedPlayerId: null, lastBlockedPlayerId: null, silencedPlayerId: null, lastSilencedPlayerId: null,
           infectionAvailable: true, infectionAttempted: false, infectionSucceeded: false, infectedPlayerId: null,
-          talkativePlayerId: null, assignedWord: "", talkativeRevealVisible: false, witchSave: false, witchKillId: null,
+          talkativePlayerId: null, lastTalkativePlayerId: null, assignedWord: "", talkativeRevealVisible: false, witchSave: false, witchKillId: null,
           barberSignalReady: false, barberShotAvailable: true, barberPlayerId: null, barberTargetId: null, barberHit: null, barberDeathIds: [],
           alienSignalReady: false, alienCorrectGuesses: [], alienLastGuessCorrect: null, alienLastGuessResults: [], alienDeathIds: [], alienRemainingCount: null, alienLastActionRound: null, alienContactRequired: false, alienContactAvailableRound: null,
           pyromaniacOiledIds: [], pyromaniacAction: null, pyromaniacDousedIds: [], pyromaniacIgnitedIds: [],
@@ -239,7 +239,9 @@
       if (state.wolfResolvedTargetId === undefined) state.wolfResolvedTargetId = null;
       if (state.lastProtectedId === undefined) state.lastProtectedId = null;
       if (state.lastProstituteTargetId === undefined) state.lastProstituteTargetId = null;
+      if (state.lastBlockedPlayerId === undefined) state.lastBlockedPlayerId = null;
       if (state.lastSilencedPlayerId === undefined) state.lastSilencedPlayerId = null;
+      if (state.lastTalkativePlayerId === undefined) state.lastTalkativePlayerId = null;
       if (state.roomStarted === undefined) state.roomStarted = Boolean(
         state.distributionStarted || state.players.some(item => item?.role && roleMeta[item.role])
       );
@@ -970,8 +972,9 @@
         const disabled = new Set(disabledIds.map(Number));
         return `<option value="">${placeholder}</option>${players.map(item => `<option value="${item.id}" ${disabled.has(item.id) ? "disabled" : ""}>#${String(item.id).padStart(2, "0")} — ${escapeHtml(item.name)} (${escapeHtml(playerRoleStatus(item))})${disabled.has(item.id) ? ` — ${disabledLabel}` : ""}</option>`).join("")}`;
       }
-      function nameOnlyOptions(players, placeholder = L.choose_probe) {
-        return `<option value="">${placeholder}</option>${players.map(item => `<option value="${item.id}">#${String(item.id).padStart(2, "0")} — ${escapeHtml(item.name)}</option>`).join("")}`;
+      function nameOnlyOptions(players, placeholder = L.choose_probe, disabledIds = [], disabledLabel = L.protected_previous_target) {
+        const disabled = new Set(disabledIds.map(Number));
+        return `<option value="">${placeholder}</option>${players.map(item => `<option value="${item.id}" ${disabled.has(item.id) ? "disabled" : ""}>#${String(item.id).padStart(2, "0")} — ${escapeHtml(item.name)}${disabled.has(item.id) ? ` — ${disabledLabel}` : ""}</option>`).join("")}`;
       }
       function actionButton(label, action, disabled = false, secondary = false, compact = false, extraClass = "") {
         return `<button class="scene-action ${secondary ? "secondary" : ""} ${compact ? "test-action" : ""} ${extraClass}" type="button" data-action="${action}" ${disabled ? "disabled" : ""}>${label}<span>→</span></button>`;
@@ -1210,9 +1213,9 @@
           const prostitute = alive().find(item => item.role === "prostitutes");
           return alive().some(item => item.id !== prostitute?.id && item.id !== state.lastProstituteTargetId);
         }
-        if (stage === "cerberus") return alive().some(item => item.role !== "cerberus_wolves");
+        if (stage === "cerberus") return alive().some(item => item.role !== "cerberus_wolves" && item.id !== state.lastBlockedPlayerId);
         if (stage === "black_wolf") return alive().some(item => item.role !== "black_wolves" && item.id !== state.lastSilencedPlayerId);
-        if (stage === "talkative_wolf") return alive().some(item => item.role !== "talkative_wolves" && item.id !== effectiveSilencedPlayer()?.id);
+        if (stage === "talkative_wolf") return alive().some(item => item.role !== "talkative_wolves" && item.id !== effectiveSilencedPlayer()?.id && item.id !== state.lastTalkativePlayerId);
         if (stage === "seer") return alive().some(item => item.role !== "seers");
         if (stage === "shepherd") {
           const shepherd = alive().find(item => item.role === "shepherds");
@@ -1364,7 +1367,9 @@
       function renderCerberus() {
         setHeading(t("night", {n: state.round}), L.cerberus);
         const targets = alive().filter(item => item.role !== "cerberus_wolves");
-        scene.innerHTML = nightFrame(L.cerberus_alone, roleWakeTitle(L.cerberus_wake, "cerberus_wolves"), L.cerberus_q, `<select id="night-select">${options(targets, L.choose_blocked, false)}</select>`, actionButton(L.confirm_block, "confirm-cerberus", true));
+        const previous = player(state.lastBlockedPlayerId);
+        const previousNotice = previous?.alive ? `<div class="protector-lock-note"><span>${L.cerberus_previous_target}</span><strong>${playerIdentity(previous)}</strong><small>${L.cerberus_no_repeat}</small></div>` : "";
+        scene.innerHTML = nightFrame(L.cerberus_alone, roleWakeTitle(L.cerberus_wake, "cerberus_wolves"), L.cerberus_q, `${previousNotice}<select id="night-select">${options(targets, L.choose_blocked, false, previous?.alive ? [previous.id] : [], L.cerberus_previous_target)}</select>`, actionButton(L.confirm_block, "confirm-cerberus", true));
       }
 
       function renderPyromaniac() {
@@ -1487,7 +1492,10 @@
       function renderTalkativeWolf() {
         setHeading(t("night", {n: state.round}), L.talkative_wolf);
         const targets = alive().filter(item => item.role !== "talkative_wolves" && item.id !== effectiveSilencedPlayer()?.id);
-        const content = `<select id="night-select">${nameOnlyOptions(targets, L.choose_talkative_target)}</select><label class="single-name talkative-word"><span>${L.word_label}</span><input id="assigned-word" type="text" maxlength="40" placeholder="${L.word_placeholder}" autocomplete="off"></label>`;
+        const previous = player(state.lastTalkativePlayerId);
+        const previousNotice = previous?.alive ? `<div class="protector-lock-note"><span>${L.talkative_previous_target}</span><strong>${playerIdentity(previous)}</strong><small>${L.talkative_no_repeat}</small></div>` : "";
+        const disabledIds = previous?.alive ? [previous.id] : [];
+        const content = `${previousNotice}<select id="night-select">${nameOnlyOptions(targets, L.choose_talkative_target, disabledIds, L.talkative_previous_target)}</select><label class="single-name talkative-word"><span>${L.word_label}</span><input id="assigned-word" type="text" maxlength="40" placeholder="${L.word_placeholder}" autocomplete="off"></label>`;
         scene.innerHTML = nightFrame(L.talkative_wolf_alone, roleWakeTitle(L.talkative_wolf_wake, "talkative_wolves"), L.talkative_wolf_q, content, actionButton(L.confirm_word, "confirm-talkative-wolf", true));
       }
 
@@ -1521,7 +1529,7 @@
         const lifeDisabled = !victim || !state.lifePotion || savedByProtector || savedByRedHood;
         const witch = alive().find(item => item.role === "witches");
         const targets = alive().filter(item => item.id !== victim?.id && item.id !== witch?.id);
-        const instruction = !victim ? L.no_wolf_attack : savedByProtector ? t("protected_saved", {name: playerText(victim, false)}) : savedByRedHood ? t("red_hood_saved", {name: playerText(victim, false)}) : t("pack_chose", {name: playerText(victim, false)});
+        const instruction = !victim ? L.no_wolf_attack : savedByProtector ? t("protected_saved", {name: playerText(victim, false)}) : savedByRedHood ? L.witch_nobody_died : t("pack_chose", {name: playerText(victim, false)});
         const nightVictim = victim && !savedByProtector && !savedByRedHood ? victim : null;
         const witchNightResult = `<div class="witch-night-result ${nightVictim ? "danger" : "safe"}">
           <span>${L.witch_night_result}</span>
@@ -2123,7 +2131,11 @@
           state.wolfResolvedTargetId = packVictimIdBeforeInfection();
           nextNightStage("wolves"); return;
         } else if (action === "confirm-cerberus") {
-          state.blockedPlayerId = Number(document.getElementById("night-select").value); nextNightStage("cerberus"); return;
+          const targetId = Number(document.getElementById("night-select").value);
+          if (!targetId || targetId === state.lastBlockedPlayerId || player(targetId)?.role === "cerberus_wolves") return;
+          state.blockedPlayerId = targetId;
+          state.lastBlockedPlayerId = targetId;
+          nextNightStage("cerberus"); return;
         } else if (action === "confirm-pyromaniac-douse") {
           if (isRoleBlocked("pyromaniacs")) return;
           const pyromaniac = livingPyromaniac();
@@ -2217,8 +2229,12 @@
           state.lastSilencedPlayerId = targetId;
           nextNightStage("black_wolf"); return;
         } else if (action === "confirm-talkative-wolf") {
-          state.talkativePlayerId = Number(document.getElementById("night-select").value);
-          state.assignedWord = document.getElementById("assigned-word").value.trim();
+          const targetId = Number(document.getElementById("night-select").value);
+          const assignedWord = document.getElementById("assigned-word").value.trim();
+          if (!targetId || !assignedWord || targetId === state.lastTalkativePlayerId || player(targetId)?.role === "talkative_wolves" || targetId === effectiveSilencedPlayer()?.id) return;
+          state.talkativePlayerId = targetId;
+          state.lastTalkativePlayerId = targetId;
+          state.assignedWord = assignedWord;
           state.talkativeRevealVisible = false;
           if (isRoleBlocked("talkative_wolves")) { nextNightStage("talkative_wolf"); return; }
           state.stage = "talkative_reveal"; save(); render(); return;

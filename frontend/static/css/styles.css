@@ -1088,6 +1088,11 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .personal-role-panel > strong { display: block; margin-top: 28px; color: var(--ember-light); }
 .personal-role-panel [hidden] { display: none; }
 #private-role-details > p:not(.eyebrow) { color: #91a0a7; line-height: 1.7; }
+.role-guide-toggle { display: inline-flex; align-items: center; justify-content: space-between; gap: 24px; min-width: min(100%, 360px); padding: 13px 16px; border: 1px solid rgba(199,139,69,.32); color: var(--ivory); font-size: .7rem; background: rgba(199,139,69,.06); }
+.role-guide-toggle:hover, .role-guide-toggle[aria-expanded="true"] { border-color: var(--ember-light); background: rgba(199,139,69,.13); }
+.role-guide-toggle i { color: var(--ember-light); font-size: 1.05rem; font-style: normal; }
+#private-role-guide[hidden] { display: none; }
+#private-role-guide > p { max-width: 700px; margin: 24px auto 0; color: #aeb9bd; line-height: 1.7; }
 .private-role-rules { max-width: 760px; margin: 30px auto 0; padding: 22px; border: 1px solid rgba(199,139,69,.25); text-align: left; background: rgba(199,139,69,.055); }
 .private-role-rules > strong { display: block; margin-bottom: 13px; color: var(--ember-light); font: 700 .75rem "Cinzel", serif; letter-spacing: .08em; text-transform: uppercase; }
 .private-role-rules ul { display: grid; gap: 9px; margin: 0; padding: 0; list-style: none; }

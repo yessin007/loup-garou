@@ -296,7 +296,7 @@ class RoomFlowTests(TestCase):
             "!redHoodProtectionActive(wolfVictim)",
         )
         self.assertContains(game, "savedByProtector || savedByRedHood")
-        self.assertContains(game, 't("red_hood_saved"')
+        self.assertContains(game, 'savedByRedHood ? L.witch_nobody_died')
         self.assertContains(game, "L.red_hood_protection_blocked")
         self.assertContains(game, 'class="day-effect-card passive-blocked"')
 
@@ -306,6 +306,32 @@ class RoomFlowTests(TestCase):
         guide = self.visitor_client().get(reverse("roles_guide"))
         self.assertContains(guide, "Chaperon Rouge")
         self.assertContains(guide, "Protection bloquée par le Loup Cerbère")
+
+    def test_cerberus_cannot_block_the_same_player_on_consecutive_nights(self):
+        self.composition.update({"cerberus_wolves": 1, "villagers": 5})
+        self.create_room()
+        game = self.narrator.get(reverse("game"))
+        self.assertContains(game, "lastBlockedPlayerId: null")
+        self.assertContains(
+            game,
+            'item.role !== "cerberus_wolves" && item.id !== state.lastBlockedPlayerId',
+        )
+        self.assertContains(game, "targetId === state.lastBlockedPlayerId")
+        self.assertContains(game, "state.lastBlockedPlayerId = targetId")
+        self.assertContains(game, "L.cerberus_no_repeat")
+
+    def test_talkative_wolf_cannot_target_the_same_player_on_consecutive_nights(self):
+        self.composition.update({"talkative_wolves": 1, "villagers": 5})
+        self.create_room()
+        game = self.narrator.get(reverse("game"))
+        self.assertContains(game, "lastTalkativePlayerId: null")
+        self.assertContains(
+            game,
+            'item.id !== state.lastTalkativePlayerId',
+        )
+        self.assertContains(game, "targetId === state.lastTalkativePlayerId")
+        self.assertContains(game, "state.lastTalkativePlayerId = targetId")
+        self.assertContains(game, "L.talkative_no_repeat")
 
     def test_bear_uses_narrator_defined_circular_seating_order(self):
         self.composition.update({"bears": 1, "villagers": 5})
@@ -665,6 +691,10 @@ class RoomFlowTests(TestCase):
         self.assertContains(player_page, 'role.alive ? "alive" : "dead"')
         self.assertContains(player_page, 'id="toggle-private-role"')
         self.assertContains(player_page, "togglePrivateRole")
+        self.assertContains(player_page, 'id="toggle-role-guide"')
+        self.assertContains(player_page, 'aria-expanded="false"')
+        self.assertContains(player_page, "toggleRoleGuide")
+        self.assertContains(player_page, "Voir les pouvoirs et les cas particuliers")
         self.assertContains(player_page, 'id="private-player-name"')
         self.assertContains(player_page, 'class="language-selector"')
         self.assertContains(player_page, 'id="player-role-rules"')
@@ -684,7 +714,10 @@ class RoomFlowTests(TestCase):
         self.assertEqual(tunisian_state["role"]["code"], role_code)
         self.assertEqual(tunisian_state["role"]["rules"], list(ROLE_GUIDES["tn"][role_code]))
         self.assertTrue(any("Cerbere" in rule for rule in tunisian_state["role"]["rules"]))
-        self.assertContains(player.get(reverse("room_player", args=[room.code])), 'option value="tn" selected')
+        tunisian_page = player.get(reverse("room_player", args=[room.code]))
+        self.assertContains(tunisian_page, 'option value="tn" selected')
+        self.assertContains(tunisian_page, "Chouf el pouvoir w les cas particuliers")
+        self.assertContains(tunisian_page, "T7eb tchouf el bilan en temps reel?")
 
         game_page = self.narrator.get(reverse("game"))
         self.assertContains(game_page, 'option value="fr" selected')
@@ -787,7 +820,7 @@ class RoomFlowTests(TestCase):
 
         eliminated_page = eliminated.get(reverse("room_player", args=[room.code]))
         self.assertContains(eliminated_page, 'id="eliminated-history-link"')
-        self.assertContains(eliminated_page, "Voir le bilan de la partie")
+        self.assertContains(eliminated_page, "Voir le bilan de la partie en temps réel")
         self.assertContains(eliminated_page, "data.player_alive !== false")
 
         history_url = reverse("room_history", args=[room.code])

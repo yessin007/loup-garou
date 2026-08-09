@@ -70,7 +70,7 @@
           if (d.witch_saved) add("witch", H.story_witch_saved, {actor: actor("witches"), name: person(d.wolves_final_target || d.wolves_target)});
           if (d.witch_target) add("witch", H.story_witch_killed, {actor: actor("witches"), name: person(d.witch_target)});
           if (d.ancient_resisted) add("ancient", H.story_ancient_resisted, {name: person(d.ancient_resisted)});
-          if (d.seer_target && d.seer_role) add("seer", H.story_seer, {actor: actor("seers"), name: person(d.seer_target), role: roleLabels[d.seer_role] || d.seer_role});
+          if (d.seer_target && d.seer_role) add("seer", H.story_seer, {actor: d.seer_actor ? person(d.seer_actor) : actor("seers"), name: person(d.seer_target), role: roleLabels[d.seer_role] || d.seer_role});
           if (d.bear_growled !== null && d.bear_growled !== undefined) add("bear", d.bear_growled ? H.story_bear_yes : H.story_bear_no, {actor: actor("bears")});
           if (d.shepherd_blocked && (d.sheep_returned?.length || d.sheep_lost?.length)) add("shepherd", H.story_shepherd_blocked, {actor: actor("shepherds")});
           (d.sheep_returned || []).forEach(name => add("shepherd", H.story_sheep_returned_one, {actor: actor("shepherds"), name: person(name)}));
@@ -90,6 +90,7 @@
           else if (d.vote_outcome === "tie") add("tie", H.story_vote_tie);
           else if (d.vote_outcome === "skipped") add("skipped", H.story_vote_skipped);
           else if (d.vote_outcome === "forced_transition") add("forced", H.story_day_forced);
+          if (d.servant && d.servant_inherited_role) add("servant", H.story_servant_inherited, {name: d.servant, role: roleLabels[d.servant_inherited_role] || d.servant_inherited_role});
           const chainedVoteDeaths = (d.vote_deaths || []).filter(name => name !== d.eliminated);
           if (chainedVoteDeaths.length) add("vote-deaths", H.story_vote_deaths, {names: names(chainedVoteDeaths)});
           const hunterVictims = d.hunter_deaths?.length ? d.hunter_deaths : d.hunter_targets;

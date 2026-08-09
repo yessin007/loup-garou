@@ -1237,7 +1237,7 @@ class RoomFlowTests(TestCase):
             ],
             "sheepRemaining": 2, "shepherdWasBlocked": False,
             "judgeFirstId": 1, "judgeSecondId": 2, "judgeSameClan": False,
-            "seerTargetId": 2, "seerDisplayedRole": "villagers",
+            "seerActorId": 1, "seerTargetId": 2, "seerDisplayedRole": "villagers",
             "winner": "wolves",
         }
         sync_url = reverse("room_sync_api", args=[room.code])
@@ -1246,6 +1246,7 @@ class RoomFlowTests(TestCase):
         state.update({
             "stage": "day_end", "lastVote": 1, "voteDeathIds": [1, 2], "voteOutcome": "eliminated",
             "speakerId": 2, "qualifiers": [1, 2],
+            "servantPlayerId": 2, "servantInheritedRole": "seers",
             "voteBreakdown": {
                 "normal": [{"targetId": 1, "votes": 3}],
                 "cancelled": [{"voterId": 1, "reason": "silenced"}],
@@ -1289,6 +1290,7 @@ class RoomFlowTests(TestCase):
         self.assertFalse(night["judge_same_clan"])
         self.assertEqual(night["seer_target"], "Sarra")
         self.assertEqual(night["seer_role"], "villagers")
+        self.assertEqual(night["seer_actor"], "Ahmed")
         self.assertEqual(night["winner"], "wolves")
         day = history["events"][1]["details"]
         self.assertEqual(day["speaker"], "Sarra")
@@ -1298,6 +1300,8 @@ class RoomFlowTests(TestCase):
         self.assertEqual(day["alien_guesses"], [{"name": "Sarra", "role": "villagers", "correct": True}])
         self.assertEqual(day["barber_deaths"], ["Sarra"])
         self.assertEqual(day["hunter_deaths"], ["Sarra"])
+        self.assertEqual(day["servant"], "Sarra")
+        self.assertEqual(day["servant_inherited_role"], "seers")
         self.assertEqual(day["normal_votes"], ["Ahmed: 3"])
         self.assertEqual(day["cancelled_votes"], ["Ahmed"])
         self.assertEqual(day["secret_votes"], ["Ahmed → Sarra"])
@@ -1309,6 +1313,8 @@ class RoomFlowTests(TestCase):
         self.assertContains(history_page, "function renderPlayerState(event)")
         self.assertContains(history_page, 'class="history-role-state ${item.alive ? "alive" : "dead"}"')
         self.assertContains(history_page, "H.story_seer")
+        self.assertContains(history_page, 'd.seer_actor ? person(d.seer_actor) : actor("seers")')
+        self.assertContains(history_page, "H.story_servant_inherited")
         self.assertContains(history_page, "event.round === 1 && d.couple_members?.length")
         self.assertContains(history_page, "H.story_sheep_returned_one")
         self.assertContains(history_page, "H.story_sheep_lost_one")

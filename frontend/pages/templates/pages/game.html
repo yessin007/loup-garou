@@ -210,9 +210,9 @@
           angelChanceExpired: false, eventRound: null,
           ankouGhost: null,
           whiteWolfTargetId: null,
-          lifePotion: true, deathPotion: true, seerTargetId: null, seerDisplayedRole: null, seerWasBlocked: false,
+          lifePotion: true, deathPotion: true, seerActorId: null, seerTargetId: null, seerDisplayedRole: null, seerWasBlocked: false,
           deaths: [], speakerId: null, qualifiers: [], accusationDraftIds: [], lastVote: null, voteDeathIds: [], voteBreakdown: {normal: [], cancelled: [], secret: [], totals: []},
-          roleDeck: [], revealVisible: false, pendingManualPlayerNames: [], voteOutcome: null, voteRevealedRole: null, servantAccepted: null, winner: null,
+          roleDeck: [], revealVisible: false, pendingManualPlayerNames: [], voteOutcome: null, voteRevealedRole: null, servantAccepted: null, servantPlayerId: null, servantInheritedRole: null, winner: null,
         };
       }
 
@@ -552,10 +552,10 @@
         state.shepherdLastResults = []; state.shepherdReportedThisNight = false; state.shepherdWasBlocked = false;
         state.judgeFirstId = null; state.judgeSecondId = null; state.judgeSameClan = null;
         state.silencedPlayerId = null; state.talkativePlayerId = null; state.assignedWord = ""; state.talkativeRevealVisible = false;
-        state.witchSave = false; state.witchKillId = null; state.seerTargetId = null; state.seerDisplayedRole = null; state.seerWasBlocked = false;
+        state.witchSave = false; state.witchKillId = null; state.seerActorId = null; state.seerTargetId = null; state.seerDisplayedRole = null; state.seerWasBlocked = false;
         state.ancientResistedPlayerId = null; state.lostVillagePowerIds = []; state.pendingHunterId = null; state.pendingHunterSource = null; state.hunterShotRecords = []; state.alienDeathIds = []; state.barberDeathIds = []; state.hunterCausedDeathIds = [];
         state.deaths = []; state.qualifiers = []; state.accusationDraftIds = []; state.lastVote = null; state.voteDeathIds = []; state.voteOutcome = null; state.voteRevealedRole = null;
-        state.servantAccepted = null; state.specialReturnStage = null;
+        state.servantAccepted = null; state.servantPlayerId = null; state.servantInheritedRole = null; state.specialReturnStage = null;
         state.voteBreakdown = {normal: [], cancelled: [], secret: [], totals: []};
         state.winner = null;
       }
@@ -571,6 +571,8 @@
         state.pendingHunterSource = null;
         state.specialReturnStage = null;
         state.servantAccepted = null;
+        state.servantPlayerId = null;
+        state.servantInheritedRole = null;
         state.barberPlayerId = null;
         state.barberTargetId = null;
         state.barberHit = null;
@@ -2108,7 +2110,7 @@
             state.sheepRemaining = stock;
             state.shepherdStockConfigured = true;
           }
-          state.protectedId = null; state.wolfTargetId = null; state.wolfInitialTargetId = null; state.wolfTargetChanged = false; state.prostituteTargetId = null; state.blockedPlayerId = null; state.pyromaniacAction = null; state.pyromaniacDousedIds = []; state.pyromaniacIgnitedIds = []; state.infectionAttempted = false; state.infectionSucceeded = false; state.infectedPlayerId = null; state.whiteWolfTargetId = null; state.bearPlayerId = null; state.bearGrowled = null; state.bearNeighborIds = []; state.shepherdLastResults = []; state.shepherdReportedThisNight = false; state.shepherdWasBlocked = false; state.judgeFirstId = null; state.judgeSecondId = null; state.judgeSameClan = null; state.silencedPlayerId = null; state.talkativePlayerId = null; state.assignedWord = ""; state.talkativeRevealVisible = false; state.witchSave = false; state.witchKillId = null; state.seerTargetId = null; state.seerDisplayedRole = null; state.seerWasBlocked = false; state.ancientResistedPlayerId = null; state.deaths = []; state.alienDeathIds = []; state.barberDeathIds = []; state.hunterCausedDeathIds = []; state.voteDeathIds = [];
+          state.protectedId = null; state.wolfTargetId = null; state.wolfInitialTargetId = null; state.wolfTargetChanged = false; state.prostituteTargetId = null; state.blockedPlayerId = null; state.pyromaniacAction = null; state.pyromaniacDousedIds = []; state.pyromaniacIgnitedIds = []; state.infectionAttempted = false; state.infectionSucceeded = false; state.infectedPlayerId = null; state.whiteWolfTargetId = null; state.bearPlayerId = null; state.bearGrowled = null; state.bearNeighborIds = []; state.shepherdLastResults = []; state.shepherdReportedThisNight = false; state.shepherdWasBlocked = false; state.judgeFirstId = null; state.judgeSecondId = null; state.judgeSameClan = null; state.silencedPlayerId = null; state.talkativePlayerId = null; state.assignedWord = ""; state.talkativeRevealVisible = false; state.witchSave = false; state.witchKillId = null; state.seerActorId = null; state.seerTargetId = null; state.seerDisplayedRole = null; state.seerWasBlocked = false; state.ancientResistedPlayerId = null; state.deaths = []; state.alienDeathIds = []; state.barberDeathIds = []; state.hunterCausedDeathIds = []; state.voteDeathIds = [];
           startNightSequence(); return;
         } else if (action === "confirm-cupid") {
           const firstId = Number(document.getElementById("cupid-first").value);
@@ -2274,6 +2276,7 @@
           if (!isRoleBlocked("witches") && state.witchKillId) state.deathPotion = false;
           nextNightStage("witch"); return;
         } else if (action === "reveal-seer") {
+          state.seerActorId = alive().find(item => item.role === "seers")?.id || null;
           state.seerTargetId = Number(document.getElementById("night-select").value);
           const target = player(state.seerTargetId);
           const possibleRoles = [...new Set(alive().map(item => item.role))];
@@ -2388,6 +2391,8 @@
           state.voteBreakdown = {normal: [], cancelled: [], secret: [], totals: []};
           state.voteRevealedRole = player(state.lastVote)?.role || null;
           state.servantAccepted = null;
+          state.servantPlayerId = null;
+          state.servantInheritedRole = null;
           spendAnkouVotingDay();
           state.voteDeathIds = killVotedPlayer(state.lastVote).map(item => item.id);
           const majorityPlayer = player(state.lastVote);
@@ -2414,6 +2419,8 @@
           state.voteDeathIds = state.lastVote ? killVotedPlayer(state.lastVote).map(item => item.id) : [];
           state.voteRevealedRole = state.lastVote ? player(state.lastVote).role : null;
           state.servantAccepted = null;
+          state.servantPlayerId = null;
+          state.servantInheritedRole = null;
           const votedPlayer = player(state.lastVote);
           const angelWonFirstDay = state.round === 1 && votedPlayer?.role === "angels" && competitionFaction(votedPlayer) === "angel";
           if (angelWonFirstDay) {
@@ -2430,6 +2437,8 @@
           const inheritedRole = eliminated.role;
           eliminated.role = servant.role;
           servant.role = inheritedRole;
+          state.servantPlayerId = servant.id;
+          state.servantInheritedRole = inheritedRole;
           if ((state.coupleIds || []).includes(eliminated.id)) {
             state.coupleIds = state.coupleIds.map(id => id === eliminated.id ? servant.id : id);
           }
@@ -2485,7 +2494,7 @@
           }
           state.round += 1;
           state.eventRound = null;
-          state.protectedId = null; state.wolfTargetId = null; state.wolfInitialTargetId = null; state.wolfTargetChanged = false; state.prostituteTargetId = null; state.blockedPlayerId = null; state.pyromaniacAction = null; state.pyromaniacDousedIds = []; state.pyromaniacIgnitedIds = []; state.infectionAttempted = false; state.infectionSucceeded = false; state.infectedPlayerId = null; state.whiteWolfTargetId = null; state.bearPlayerId = null; state.bearGrowled = null; state.bearNeighborIds = []; state.shepherdLastResults = []; state.shepherdReportedThisNight = false; state.shepherdWasBlocked = false; state.judgeFirstId = null; state.judgeSecondId = null; state.judgeSameClan = null; state.silencedPlayerId = null; state.talkativePlayerId = null; state.assignedWord = ""; state.talkativeRevealVisible = false; state.witchSave = false; state.witchKillId = null; state.seerTargetId = null; state.seerDisplayedRole = null; state.seerWasBlocked = false; state.ancientResistedPlayerId = null; state.pendingHunterId = null; state.pendingHunterSource = null; state.hunterShotRecords = []; state.qualifiers = []; state.accusationDraftIds = []; state.lastVote = null; state.voteDeathIds = []; state.voteOutcome = null; state.voteRevealedRole = null; state.servantAccepted = null; state.specialReturnStage = null;
+          state.protectedId = null; state.wolfTargetId = null; state.wolfInitialTargetId = null; state.wolfTargetChanged = false; state.prostituteTargetId = null; state.blockedPlayerId = null; state.pyromaniacAction = null; state.pyromaniacDousedIds = []; state.pyromaniacIgnitedIds = []; state.infectionAttempted = false; state.infectionSucceeded = false; state.infectedPlayerId = null; state.whiteWolfTargetId = null; state.bearPlayerId = null; state.bearGrowled = null; state.bearNeighborIds = []; state.shepherdLastResults = []; state.shepherdReportedThisNight = false; state.shepherdWasBlocked = false; state.judgeFirstId = null; state.judgeSecondId = null; state.judgeSameClan = null; state.silencedPlayerId = null; state.talkativePlayerId = null; state.assignedWord = ""; state.talkativeRevealVisible = false; state.witchSave = false; state.witchKillId = null; state.seerActorId = null; state.seerTargetId = null; state.seerDisplayedRole = null; state.seerWasBlocked = false; state.ancientResistedPlayerId = null; state.pendingHunterId = null; state.pendingHunterSource = null; state.hunterShotRecords = []; state.qualifiers = []; state.accusationDraftIds = []; state.lastVote = null; state.voteDeathIds = []; state.voteOutcome = null; state.voteRevealedRole = null; state.servantAccepted = null; state.servantPlayerId = null; state.servantInheritedRole = null; state.specialReturnStage = null;
           state.wolfResolvedTargetId = null;
           state.alienDeathIds = [];
           state.alienLastGuessCorrect = null;

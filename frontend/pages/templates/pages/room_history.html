@@ -55,9 +55,20 @@
         if (event.type === "night") {
           if (event.round === 1 && d.couple_members?.length) add("couple", H.story_couple, {actor: actor("cupids"), names: names(d.couple_members)});
           if (event.round === 1 && d.wild_child && d.wild_idol) add("wild", H.story_wild, {actor: person(d.wild_child), name: person(d.wild_idol)});
+          if (d.protected) add("protected", H.story_protected, {actor: actor("protectors"), name: person(d.protected)});
+          if (d.redirected_to) add("prostitute", H.story_prostitute, {actor: actor("prostitutes"), name: person(d.redirected_to)});
+          if (d.blocked) add("blocked", H.story_blocked, {actor: actor("cerberus_wolves"), name: person(d.blocked)});
+          if (d.pyromaniac_action === "douse" && d.pyromaniac_doused?.length) add("pyro", H.story_pyro_douse, {actor: actor("pyromaniacs"), names: names(d.pyromaniac_doused)});
+          else if (d.pyromaniac_action === "ignite" && d.pyromaniac_ignited?.length) add("pyro", H.story_pyro_ignite, {actor: actor("pyromaniacs"), names: names(d.pyromaniac_ignited)});
+          else if (d.pyromaniac_action) add("pyro", H.story_pyro, {actor: actor("pyromaniacs"), action: H[`pyro_action_${d.pyromaniac_action}`] || d.pyromaniac_action});
+          if (d.wolves_target) add("wolves", H.story_wolves, {actor: actor("simple_wolves", "infecting_fathers", "cerberus_wolves", "black_wolves", "talkative_wolves", "blue_wolves", "white_wolves"), name: person(d.wolves_target)});
+          if (d.wolves_final_target) add("redirect", H.story_redirect, {name: person(d.wolves_final_target)});
           if (d.infection_attempted) add("infection", d.infection_succeeded ? H.story_infection_yes : H.story_infection_no, {actor: actor("infecting_fathers"), name: person(d.infection_target || d.wolves_final_target || d.wolves_target)});
+          if (d.white_wolf_target) add("white-wolf", H.story_white_wolf, {actor: actor("white_wolves"), name: person(d.white_wolf_target)});
           if (d.silenced) add("silenced", H.story_silenced, {actor: actor("black_wolves"), name: person(d.silenced)});
           if (d.talkative_target && d.talkative_word) add("talkative", H.story_talkative, {actor: actor("talkative_wolves"), name: person(d.talkative_target), word: d.talkative_word});
+          if (d.witch_saved) add("witch", H.story_witch_saved, {actor: actor("witches"), name: person(d.wolves_final_target || d.wolves_target)});
+          if (d.witch_target) add("witch", H.story_witch_killed, {actor: actor("witches"), name: person(d.witch_target)});
           if (d.ancient_resisted) add("ancient", H.story_ancient_resisted, {name: person(d.ancient_resisted)});
           if (d.seer_target && d.seer_role) add("seer", H.story_seer, {actor: actor("seers"), name: person(d.seer_target), role: roleLabels[d.seer_role] || d.seer_role});
           if (d.bear_growled !== null && d.bear_growled !== undefined) add("bear", d.bear_growled ? H.story_bear_yes : H.story_bear_no, {actor: actor("bears")});
@@ -100,15 +111,32 @@
         if (event.details.vote_outcome === "forced_transition") return H.history_day_forced;
         return event.details.eliminated ? fill(H.history_day_eliminated, {name: event.details.eliminated}) : H.history_day_skipped;
       }
+      function renderPlayerState(event) {
+        const statuses = event.details.player_statuses || [];
+        if (!statuses.length) return "";
+        const aliveCount = statuses.filter(item => item.alive).length;
+        const cards = statuses.map(item => {
+          const role = roleLabels[item.role] || item.role;
+          return `<article class="history-role-state ${item.alive ? "alive" : "dead"}">
+            <div><strong>${safe(role)}</strong><small>${safe(item.name)}</small></div>
+            <span>${item.alive ? H.role_alive_status : H.role_dead_status}</span>
+          </article>`;
+        }).join("");
+        return `<section class="history-phase-state">
+          <header><strong>${H.history_phase_state}</strong><span><b>${aliveCount}</b> ${H.roles_alive_count} · <b>${statuses.length - aliveCount}</b> ${H.roles_dead_count}</span></header>
+          <div>${cards}</div>
+        </section>`;
+      }
       function renderEvent(event, openByDefault = false) {
         const story = eventNarrative(event);
         const title = fill(event.type === "night" ? H.history_night_title : H.history_day_title, {round: event.round});
         const items = story.map(item => `<li class="history-story-step history-story-${item.key}"><strong>${safe(item.text)}</strong></li>`).join("");
+        const playerState = renderPlayerState(event);
         return `<article class="history-event ${event.type}" data-event-key="${event.type}-${event.round}">
           <div class="history-event-marker"><span>${labels[event.type]}</span><strong>${event.round}</strong></div>
           <div class="history-event-content">
             <header><div><span>${safe(title)}</span><strong>${safe(eventSummary(event))}</strong></div><time>${new Date(event.created_at).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})}</time></header>
-            <details ${openByDefault ? "open" : ""}><summary>${H.history_details}<span>+</span></summary>${items ? `<ol class="history-story">${items}</ol>` : `<p class="history-no-details">${H.history_no_details}</p>`}</details>
+            <details ${openByDefault ? "open" : ""}><summary>${H.history_details}<span>+</span></summary>${items ? `<ol class="history-story">${items}</ol>` : `<p class="history-no-details">${H.history_no_details}</p>`}${playerState}</details>
           </div>
         </article>`;
       }

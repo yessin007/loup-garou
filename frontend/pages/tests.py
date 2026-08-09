@@ -1263,6 +1263,10 @@ class RoomFlowTests(TestCase):
         night = history["events"][0]["details"]
         self.assertEqual(night["deaths"], ["Ahmed"])
         self.assertEqual(night["player_roles"], {"Ahmed": "witches", "Sarra": "villagers"})
+        self.assertEqual(night["player_statuses"], [
+            {"name": "Ahmed", "role": "witches", "alive": False},
+            {"name": "Sarra", "role": "villagers", "alive": True},
+        ])
         self.assertEqual(night["couple_members"], ["Ahmed", "Sarra"])
         self.assertEqual(night["wild_idol"], "Sarra")
         self.assertEqual(night["redirected_to"], "Sarra")
@@ -1302,13 +1306,20 @@ class RoomFlowTests(TestCase):
         history_page = self.narrator.get(reverse("room_history", args=[room.code]))
         self.assertContains(history_page, "function eventNarrative(event)")
         self.assertContains(history_page, 'class="history-story"')
+        self.assertContains(history_page, "function renderPlayerState(event)")
+        self.assertContains(history_page, 'class="history-role-state ${item.alive ? "alive" : "dead"}"')
         self.assertContains(history_page, "H.story_seer")
         self.assertContains(history_page, "event.round === 1 && d.couple_members?.length")
         self.assertContains(history_page, "H.story_sheep_returned_one")
         self.assertContains(history_page, "H.story_sheep_lost_one")
         self.assertContains(history_page, "H.story_shepherd_blocked")
         self.assertContains(history_page, "H.story_barber_hit")
-        self.assertNotContains(history_page, "H.story_prostitute")
+        self.assertContains(history_page, "H.story_protected")
+        self.assertContains(history_page, "H.story_prostitute")
+        self.assertContains(history_page, "H.story_blocked")
+        self.assertContains(history_page, "H.story_wolves")
+        self.assertContains(history_page, "H.story_witch_saved")
+        self.assertContains(history_page, "H.story_witch_killed")
         self.assertNotContains(history_page, "H.story_accused")
         self.assertNotContains(history_page, "H.story_normal_votes")
         self.assertContains(history_page, 'if (d.winner) add("winner", H.story_winner')

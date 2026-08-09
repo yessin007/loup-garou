@@ -238,9 +238,10 @@ ROOM_HISTORY_TEXT = {
         "history_night_quiet": "Le village se réveille au complet", "history_night_deaths": "{count} victime(s) pendant la nuit",
         "history_day_eliminated": "{name} a été éliminé", "history_day_tie": "Égalité : personne n'est éliminé", "history_day_skipped": "Le vote a été passé", "history_day_forced": "Journée terminée manuellement", "history_day_deaths": "{count} mort(s) pendant la journée",
         "history_details": "Voir le déroulement", "history_no_details": "Aucun autre événement à signaler", "history_nights": "nuits", "history_days": "jours",
+        "history_phase_state": "État des rôles après cette phase",
         "story_couple": "{actor} a lié {names}.", "story_wild": "{actor} a choisi {name} comme modèle.", "story_protected": "{actor} protège {name}.", "story_prostitute": "{actor} a dormi chez {name}.", "story_blocked": "{actor} a bloqué {name}.",
-        "story_pyro": "{actor} a choisi : {action}.", "story_wolves": "{actor} ont ciblé {name}.", "story_redirect": "L’attaque a été redirigée vers {name}.", "story_infection_yes": "{actor} a infecté {name}.", "story_infection_no": "La tentative d’infection de {actor} sur {name} a échoué.",
-        "story_white_wolf": "{actor} a ciblé {name}.", "story_silenced": "{actor} a réduit {name} au silence.", "story_talkative": "{actor} a donné le mot « {word} » à {name}.", "story_witch_saved": "{actor} a utilisé sa potion de vie.", "story_witch_killed": "{actor} a empoisonné {name}.",
+        "story_pyro": "{actor} a choisi : {action}.", "story_pyro_douse": "{actor} a aspergé d’huile : {names}.", "story_pyro_ignite": "{actor} a incendié : {names}.", "story_wolves": "{actor} ont ciblé {name}.", "story_redirect": "L’attaque a été redirigée vers {name}.", "story_infection_yes": "{actor} a infecté {name}.", "story_infection_no": "La tentative d’infection de {actor} sur {name} a échoué.",
+        "story_white_wolf": "{actor} a ciblé {name}.", "story_silenced": "{actor} a réduit {name} au silence.", "story_talkative": "{actor} a donné le mot « {word} » à {name}.", "story_witch_saved": "{actor} a sauvé {name} avec sa potion de vie.", "story_witch_killed": "{actor} a empoisonné {name}.",
         "story_seer": "{actor} a vu {name} : {role}.", "story_bear_yes": "{actor} a grogné.", "story_bear_no": "{actor} n’a pas grogné.", "story_sheep_returned": "Pour {actor}, les moutons sont revenus de chez : {names}.", "story_sheep_lost": "Pour {actor}, les moutons ont été perdus chez : {names}.", "story_sheep_left": "{actor} a encore {count} mouton(s).", "story_judge_same": "{actor} a comparé {first} et {second} : même clan.", "story_judge_diff": "{actor} a comparé {first} et {second} : clans différents.", "story_deaths": "Morts de la nuit : {names}.", "story_hunter": "{actor} a emporté : {names}.",
         "story_ancient_resisted": "{name} a résisté à l’attaque des Loups.", "story_shepherd_blocked": "Le résultat de {actor} a été inversé par le Cerbère.", "story_sheep_returned_one": "{actor} a envoyé un mouton chez {name} : il est revenu.", "story_sheep_lost_one": "{actor} a envoyé un mouton chez {name} : il n’est pas revenu.",
         "story_speaker": "La parole commence avec {name}.", "story_barber_hit": "{actor} a tiré sur {name} : c’était un Loup.", "story_barber_miss": "{actor} a tiré sur {name} : tir manqué.", "story_alien_yes": "La tentative de {actor} était correcte.", "story_alien_no": "La tentative de {actor} a échoué.", "story_alien_guess_yes": "{actor} a proposé {role} pour {name} : correct.", "story_alien_guess_no": "{actor} a proposé {role} pour {name} : incorrect.", "story_alien_deaths": "Victimes de l’Alien : {names}.", "story_barber_deaths": "Victimes du Barbier : {names}.", "story_accused": "Joueurs accusés : {names}.", "story_normal_votes": "Votes annoncés : {values}.", "story_cancelled_votes": "Votes annulés : {names}.", "story_secret_votes": "Votes secrets : {values}.", "story_vote_eliminated": "Le vote a éliminé {name}.", "story_vote_tie": "Le vote s’est terminé par une égalité.", "story_vote_skipped": "Le vote a été passé.", "story_day_forced": "Le narrateur a terminé manuellement la journée.", "story_vote_deaths": "Morts après le vote : {names}.", "story_powers_lost": "Pouvoirs retirés à : {names}.", "story_winner": "Vainqueur : {name}.",
@@ -252,9 +253,10 @@ ROOM_HISTORY_TEXT = {
         "history_night_quiet": "The whole village wakes up", "history_night_deaths": "{count} night victim(s)",
         "history_day_eliminated": "{name} was eliminated", "history_day_tie": "Tie: nobody was eliminated", "history_day_skipped": "The vote was skipped", "history_day_forced": "Day ended manually", "history_day_deaths": "{count} death(s) during the day",
         "history_details": "View the sequence", "history_no_details": "No other event to report", "history_nights": "nights", "history_days": "days",
+        "history_phase_state": "Role status after this phase",
         "story_couple": "{actor} linked {names}.", "story_wild": "{actor} chose {name} as a role model.", "story_protected": "{actor} protects {name}.", "story_prostitute": "{actor} stayed with {name}.", "story_blocked": "{actor} blocked {name}.",
-        "story_pyro": "{actor} chose: {action}.", "story_wolves": "{actor} targeted {name}.", "story_redirect": "The attack was redirected to {name}.", "story_infection_yes": "{actor} infected {name}.", "story_infection_no": "{actor}'s infection attempt on {name} failed.",
-        "story_white_wolf": "{actor} targeted {name}.", "story_silenced": "{actor} silenced {name}.", "story_talkative": "{actor} gave “{word}” to {name}.", "story_witch_saved": "{actor} used the life potion.", "story_witch_killed": "{actor} poisoned {name}.",
+        "story_pyro": "{actor} chose: {action}.", "story_pyro_douse": "{actor} doused: {names}.", "story_pyro_ignite": "{actor} ignited: {names}.", "story_wolves": "{actor} targeted {name}.", "story_redirect": "The attack was redirected to {name}.", "story_infection_yes": "{actor} infected {name}.", "story_infection_no": "{actor}'s infection attempt on {name} failed.",
+        "story_white_wolf": "{actor} targeted {name}.", "story_silenced": "{actor} silenced {name}.", "story_talkative": "{actor} gave “{word}” to {name}.", "story_witch_saved": "{actor} saved {name} with the life potion.", "story_witch_killed": "{actor} poisoned {name}.",
         "story_seer": "{actor} saw {name}: {role}.", "story_bear_yes": "{actor} growled.", "story_bear_no": "{actor} stayed silent.", "story_sheep_returned": "For {actor}, sheep returned from: {names}.", "story_sheep_lost": "For {actor}, sheep were lost at: {names}.", "story_sheep_left": "{actor} has {count} sheep left.", "story_judge_same": "{actor} compared {first} and {second}: same faction.", "story_judge_diff": "{actor} compared {first} and {second}: different factions.", "story_deaths": "Night deaths: {names}.", "story_hunter": "{actor} took: {names}.",
         "story_ancient_resisted": "{name} survived the Wolves’ attack.", "story_shepherd_blocked": "Cerberus reversed {actor}’s result.", "story_sheep_returned_one": "{actor} sent a sheep to {name}: it returned.", "story_sheep_lost_one": "{actor} sent a sheep to {name}: it did not return.",
         "story_speaker": "Discussion starts with {name}.", "story_barber_hit": "{actor} shot {name}: the target was a Wolf.", "story_barber_miss": "{actor} shot {name}: the shot missed.", "story_alien_yes": "{actor}'s attempt was correct.", "story_alien_no": "{actor}'s attempt failed.", "story_alien_guess_yes": "{actor} guessed {role} for {name}: correct.", "story_alien_guess_no": "{actor} guessed {role} for {name}: incorrect.", "story_alien_deaths": "Alien victims: {names}.", "story_barber_deaths": "Barber victims: {names}.", "story_accused": "Accused players: {names}.", "story_normal_votes": "Announced votes: {values}.", "story_cancelled_votes": "Cancelled votes: {names}.", "story_secret_votes": "Secret votes: {values}.", "story_vote_eliminated": "The vote eliminated {name}.", "story_vote_tie": "The vote ended in a tie.", "story_vote_skipped": "The vote was skipped.", "story_day_forced": "The narrator ended the day manually.", "story_vote_deaths": "Deaths after the vote: {names}.", "story_powers_lost": "Powers removed from: {names}.", "story_winner": "Winner: {name}.",
@@ -266,9 +268,10 @@ ROOM_HISTORY_TEXT = {
         "history_night_quiet": "El village fe9 kemel, 7ad ma met", "history_night_deaths": "{count} joueur(s) metou ellila",
         "history_day_eliminated": "{name} 5raj bel vote", "history_day_tie": "El vote égalité: 7ad ma 5raj", "history_day_skipped": "El village 3adda el vote", "history_day_forced": "El narrateur sakkar el nhar manuellement", "history_day_deaths": "{count} joueur(s) metou fel nhar",
         "history_details": "Chouf kifeh saret", "history_no_details": "Ma fama 7atta 7aja o5ra tet9al", "history_nights": "lilet", "history_days": "nharat",
+        "history_phase_state": "Etat mta3 les roles ba3d el phase",
         "story_couple": "{actor} rabat {names}.", "story_wild": "{actor} e5tar {name} modèle mte3ou.", "story_protected": "{actor} 7ma {name}.", "story_prostitute": "{actor} r9adet 3and {name}.", "story_blocked": "{actor} blocka {name}.",
-        "story_pyro": "{actor} e5tar: {action}.", "story_wolves": "{actor} e5tarou {name}.", "story_redirect": "Attaque t7awlet l {name}.", "story_infection_yes": "{actor} infecta {name}.", "story_infection_no": "Tentative infection mta3 {actor} 3la {name} fachelet.",
-        "story_white_wolf": "{actor} e5tar {name}.", "story_silenced": "{actor} sakket {name}.", "story_talkative": "{actor} 3ta kelmet « {word} » l {name}.", "story_witch_saved": "{actor} sta3mlet potion de vie.", "story_witch_killed": "{actor} sammet {name}.",
+        "story_pyro": "{actor} e5tar: {action}.", "story_pyro_douse": "{actor} rach zit 3la: {names}.", "story_pyro_ignite": "{actor} cha3el fi: {names}.", "story_wolves": "{actor} e5tarou {name}.", "story_redirect": "Attaque t7awlet l {name}.", "story_infection_yes": "{actor} infecta {name}.", "story_infection_no": "Tentative infection mta3 {actor} 3la {name} fachelet.",
+        "story_white_wolf": "{actor} e5tar {name}.", "story_silenced": "{actor} sakket {name}.", "story_talkative": "{actor} 3ta kelmet « {word} » l {name}.", "story_witch_saved": "{actor} najjet {name} b potion de vie.", "story_witch_killed": "{actor} sammet {name}.",
         "story_seer": "{actor} chefet {name}: {role}.", "story_bear_yes": "{actor} garger.", "story_bear_no": "{actor} ma gargerch.", "story_sheep_returned": "Mta3 {actor}, 3lelech raj3ou men 3and: {names}.", "story_sheep_lost": "Mta3 {actor}, 3lelech dha3ou 3and: {names}.", "story_sheep_left": "{actor} ba9awlouch {count} 3lelech.", "story_judge_same": "{actor} 9aren {first} w {second}: nafs el clan.", "story_judge_diff": "{actor} 9aren {first} w {second}: clans mo5talfin.", "story_deaths": "Eli metou ellila: {names}.", "story_hunter": "{actor} hezz m3ah: {names}.",
         "story_ancient_resisted": "{name} st7amel attaque mta3 el loups.", "story_shepherd_blocked": "Cerbere 9leb resultat mta3 {actor}.", "story_sheep_returned_one": "{actor} b3ath 3alouch l {name}: rja3.", "story_sheep_lost_one": "{actor} b3ath 3alouch l {name}: ma rja3ch.",
         "story_speaker": "El klem yabda m3a {name}.", "story_barber_hit": "{actor} dharab {name}: tla3 Loup.", "story_barber_miss": "{actor} dharab {name}: tir 8alet.", "story_alien_yes": "Tentative {actor} tla3et s7i7a.", "story_alien_no": "Tentative {actor} fachelet.", "story_alien_guess_yes": "{actor} 9al {name} role mte3ou {role}: s7i7.", "story_alien_guess_no": "{actor} 9al {name} role mte3ou {role}: 8alet.", "story_alien_deaths": "Eli metou fi joret Alien: {names}.", "story_barber_deaths": "Eli metou b Barbier: {names}.", "story_accused": "Eli tetwejhetelhom accusation: {names}.", "story_normal_votes": "El votes: {values}.", "story_cancelled_votes": "Votes eli tna77aw: {names}.", "story_secret_votes": "Votes m5obyin: {values}.", "story_vote_eliminated": "El vote 5arrej {name}.", "story_vote_tie": "El vote wfa egalite.", "story_vote_skipped": "El vote t3adda.", "story_day_forced": "El narrateur sakkar el nhar manuellement.", "story_vote_deaths": "Eli metou ba3d el vote: {names}.", "story_powers_lost": "Pouvoirs tna77aw l: {names}.", "story_winner": "Eli rba7: {name}.",
@@ -391,6 +394,15 @@ def public_event_details(state, event_type):
         for item in state.get("players", [])
         if item.get("name") and item.get("role") in ROLE_KEYS
     }
+    player_statuses = [
+        {
+            "name": item.get("name"),
+            "role": item.get("role"),
+            "alive": bool(item.get("alive", True)),
+        }
+        for item in state.get("players", [])
+        if item.get("name") and item.get("role") in ROLE_KEYS
+    ]
     hunter_records = state.get("hunterShotRecords", [])
     night_hunter_ids = [
         death_id
@@ -431,6 +443,7 @@ def public_event_details(state, event_type):
         has_shepherd = bool(shepherd_results) or any(item.get("role") == "shepherds" for item in state.get("players", []))
         return {
             "player_roles": player_roles,
+            "player_statuses": player_statuses,
             "couple_members": [name for name in (player_label(state, item) for item in state.get("coupleIds", [])) if name],
             "wild_child": player_label(state, state.get("wildChildId")),
             "wild_idol": player_label(state, state.get("wildIdolId")),
@@ -477,6 +490,7 @@ def public_event_details(state, event_type):
     ] or vote_lines(vote_breakdown.get("normal", []))
     return {
         "player_roles": player_roles,
+        "player_statuses": player_statuses,
         "speaker": player_label(state, state.get("speakerId")),
         "accused": [name for name in (player_label(state, item) for item in state.get("qualifiers", [])) if name],
         "eliminated": player_label(state, state.get("lastVote")),
@@ -1423,6 +1437,7 @@ def room_history_api(request, code):
     room_events = list(room.events.all())
     final_winner = (room.game_state or {}).get("winner") if room.status == GameRoom.Status.FINISHED else None
     events = []
+    known_dead_players = set()
     for index, event in enumerate(room_events):
         details = dict(event.details or {})
         if current_player_roles and not details.get("player_roles"):
@@ -1434,6 +1449,19 @@ def room_history_api(request, code):
             if not details.get("alien_deaths"):
                 details["alien_guesses"] = []
                 details["alien_correct"] = None
+        phase_deaths = details.get("deaths", []) if event.event_type == "night" else [
+            *details.get("vote_deaths", []),
+            *details.get("alien_deaths", []),
+            *details.get("barber_deaths", []),
+            *details.get("hunter_deaths", []),
+        ]
+        known_dead_players.update(name for name in phase_deaths if name)
+        if not details.get("player_statuses"):
+            details["player_statuses"] = [
+                {"name": name, "role": role, "alive": name not in known_dead_players}
+                for name, role in details.get("player_roles", {}).items()
+                if role in ROLE_KEYS
+            ]
         if final_winner and index == len(room_events) - 1:
             details["winner"] = final_winner
         events.append({

@@ -1212,10 +1212,8 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .history-detail-deaths, .history-detail-vote_deaths, .history-detail-eliminated { border-left: 2px solid #a84e45; }
 .history-detail-bear_growled, .history-detail-judge_same_clan, .history-detail-seer_target { border-left: 2px solid #568eaa; }
 .history-event .history-story { display: grid; grid-template-columns: 1fr; gap: 1px; margin: 0; padding: 1px; list-style: none; counter-reset: history-step; background: rgba(255,255,255,.06); }
-.history-event .history-story-step { display: grid; grid-template-columns: 38px minmax(0, 1fr); align-items: center; gap: 12px; min-height: 52px; padding: 11px 15px; }
-.history-event .history-story-step > span { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid rgba(104,168,204,.25); border-radius: 50%; color: #75a9c4; font: 700 .58rem "Cinzel", serif; }
-.history-event.day .history-story-step > span { border-color: rgba(199,139,69,.3); color: var(--ember-light); }
-.history-event .history-story-step > strong { margin: 0; color: #d1d8da; font-size: .75rem; line-height: 1.55; }
+.history-event .history-story-step { min-height: 44px; padding: 11px 18px; }
+.history-event .history-story-step > strong { margin: 0; color: #d1d8da; font-size: .75rem; font-weight: 500; line-height: 1.5; }
 .history-event .history-story-deaths, .history-event .history-story-hunter, .history-event.day .history-story-vote-deaths, .history-event.day .history-story-alien-deaths, .history-event.day .history-story-barber-deaths { border-left: 2px solid #a84e45; }
 .history-event .history-story-seer, .history-event .history-story-bear, .history-event .history-story-judge { border-left: 2px solid #568eaa; }
 .history-event.day .history-story-winner { border-left: 2px solid var(--ember); }

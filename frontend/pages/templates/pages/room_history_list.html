@@ -15,7 +15,7 @@
           <article class="history-room-entry{% if game_room.status == 'active' %} active{% endif %}">
             <a class="history-room-link" href="{% url 'room_history' game_room.code %}">
               <span class="history-room-code">{{ game_room.code|slice:":2" }}</span>
-              <span><strong>{{ room.room_label }} {{ game_room.code }}</strong><small>{% if game_room.status == "active" %}{{ room.history_live }} · {% endif %}{{ game_room.event_count }} {{ room.events }} · {{ game_room.updated_at|date:"d/m/Y H:i" }}</small></span>
+              <span><strong>{{ room.room_label }} {{ game_room.code }}{% if not player_history %} ({% if game_room.narrator_id == request.user.id %}{{ room.narrated_by_you }}{% elif game_room.narrator %}{{ room.narrated_by }} {{ game_room.narrator.username }}{% else %}{{ room.narrator_unknown }}{% endif %}){% endif %}</strong><small>{% if game_room.status == "active" %}{{ room.history_live }} · {% endif %}{{ game_room.event_count }} {{ room.events }} · {{ game_room.updated_at|date:"d/m/Y H:i" }}</small></span>
               <span class="history-room-arrow">→</span>
             </a>
             {% if game_room.status == "active" and can_delete_history %}

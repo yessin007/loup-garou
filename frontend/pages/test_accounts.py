@@ -135,6 +135,34 @@ class AccountFlowTests(TestCase):
         self.assertNotContains(finished_history, other.code)
         self.assertEqual(client.get(reverse("room_history", args=[room.code])).status_code, 200)
 
+    def test_super_admin_history_identifies_each_game_narrator(self):
+        own_room = GameRoom.objects.create(
+            player_count=8,
+            composition={},
+            narrator=self.super_admin,
+            status=GameRoom.Status.ACTIVE,
+        )
+        other_room = GameRoom.objects.create(
+            player_count=8,
+            composition={},
+            narrator=self.narrator,
+            status=GameRoom.Status.FINISHED,
+        )
+        legacy_room = GameRoom.objects.create(
+            player_count=8,
+            composition={},
+            status=GameRoom.Status.FINISHED,
+        )
+        client = Client()
+        client.force_login(self.super_admin)
+        client.post(reverse("set_language"), {"language": "fr", "next": reverse("room_history_list")})
+
+        response = client.get(reverse("room_history_list"))
+
+        self.assertContains(response, f"Partie {own_room.code} (narrée par toi)")
+        self.assertContains(response, f"Partie {other_room.code} (narrée par nour)")
+        self.assertContains(response, f"Partie {legacy_room.code} (narrateur non renseigné)")
+
     def test_logged_in_player_join_is_linked_to_account(self):
         room = GameRoom.objects.create(player_count=8, composition={})
         client = Client()

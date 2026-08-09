@@ -821,7 +821,11 @@ class RoomFlowTests(TestCase):
         eliminated_page = eliminated.get(reverse("room_player", args=[room.code]))
         self.assertContains(eliminated_page, 'id="eliminated-history-link"')
         self.assertContains(eliminated_page, "Voir le bilan de la partie en temps réel")
-        self.assertContains(eliminated_page, "data.player_alive !== false")
+        self.assertContains(eliminated_page, 'aria-disabled="true"')
+        self.assertContains(eliminated_page, 'tabindex="-1"')
+        self.assertContains(eliminated_page, "updateHistoryLink(data.player_alive)")
+        self.assertContains(eliminated_page, "if (enabled) link.href = link.dataset.historyUrl")
+        self.assertContains(eliminated_page, 'link.removeAttribute("href")')
 
         history_url = reverse("room_history", args=[room.code])
         history_api_url = reverse("room_history_api", args=[room.code])
@@ -1239,6 +1243,9 @@ class RoomFlowTests(TestCase):
         self.assertContains(history_page, 'if (d.winner) add("winner", H.story_winner')
         self.assertContains(history_page, 'actor: actor("protectors")')
         self.assertContains(history_page, "`${roleLabels[role] || role} (${name})`")
+        self.assertContains(history_page, "let renderedEventKeys = new Set()")
+        self.assertContains(history_page, '.querySelectorAll(".history-event details[open]")')
+        self.assertContains(history_page, "openEventKeys.has(eventKey) || isNewLatestEvent")
 
         self.assertRedirects(Client().get(reverse("room_history_list")), reverse("home"), fetch_redirect_response=False)
 

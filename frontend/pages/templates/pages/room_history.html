@@ -38,6 +38,7 @@
       function safe(value) { const node = document.createElement("span"); node.textContent = value; return node.innerHTML; }
       function fill(text, values = {}) { return Object.entries(values).reduce((result, [key, value]) => result.replaceAll(`{${key}}`, value), text); }
       let historyTimer = null;
+      let renderedEventKeys = new Set();
       const meaningfulFalse = new Set(["bear_growled", "judge_same_clan", "barber_hit", "alien_correct"]);
       function shouldShow(key, value) {
         if (key === "player_roles") return false;
@@ -139,7 +140,7 @@
         const story = eventNarrative(event);
         const title = fill(event.type === "night" ? H.history_night_title : H.history_day_title, {round: event.round});
         const items = story.map((item, index) => `<li class="history-story-step history-story-${item.key}"><span>${String(index + 1).padStart(2, "0")}</span><strong>${safe(item.text)}</strong></li>`).join("");
-        return `<article class="history-event ${event.type}">
+        return `<article class="history-event ${event.type}" data-event-key="${event.type}-${event.round}">
           <div class="history-event-marker"><span>${labels[event.type]}</span><strong>${event.round}</strong></div>
           <div class="history-event-content">
             <header><div><span>${safe(title)}</span><strong>${safe(eventSummary(event))}</strong></div><time>${new Date(event.created_at).toLocaleTimeString([], {hour: "2-digit", minute: "2-digit"})}</time></header>
@@ -160,7 +161,14 @@
           overview.innerHTML = `<div><strong>${nightCount}</strong><span>${H.history_nights}</span></div><div><strong>${dayCount}</strong><span>${H.history_days}</span></div><p>${H.history_updated}</p>`;
           statusBadge.classList.toggle("finished", data.status === "finished");
           statusBadge.querySelector("span").textContent = data.status === "finished" ? H.history_finished : H.history_live;
-          timeline.innerHTML = data.events.length ? [...data.events].reverse().map((event, index) => renderEvent(event, index === 0)).join("") : `<p class="history-empty">${H.history_empty}</p>`;
+          const openEventKeys = new Set([...timeline.querySelectorAll(".history-event details[open]")].map(details => details.closest(".history-event").dataset.eventKey));
+          const nextEvents = [...data.events].reverse();
+          timeline.innerHTML = nextEvents.length ? nextEvents.map((event, index) => {
+            const eventKey = `${event.type}-${event.round}`;
+            const isNewLatestEvent = index === 0 && !renderedEventKeys.has(eventKey);
+            return renderEvent(event, openEventKeys.has(eventKey) || isNewLatestEvent);
+          }).join("") : `<p class="history-empty">${H.history_empty}</p>`;
+          renderedEventKeys = new Set(data.events.map(event => `${event.type}-${event.round}`));
           if (data.status !== "finished") scheduleHistory();
         } catch (error) { scheduleHistory(); }
       }

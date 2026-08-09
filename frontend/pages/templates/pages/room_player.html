@@ -17,7 +17,7 @@
         <h2>{{ room.waiting }}</h2><p>{{ room.waiting_help }}</p>
         <small id="room-count">{{ game_room.room_players.count }} / {{ game_room.player_count }} {{ room.players_joined }}</small>
       </section>
-      <a id="eliminated-history-link" class="history-home-link eliminated-history-link" href="{% url 'room_history' game_room.code %}" hidden><span aria-hidden="true">☾</span>{{ room.eliminated_summary }} <span aria-hidden="true">→</span></a>
+      <a id="eliminated-history-link" class="history-home-link eliminated-history-link disabled" data-history-url="{% url 'room_history' game_room.code %}" aria-disabled="true" tabindex="-1"><span aria-hidden="true">☾</span>{{ room.eliminated_summary }} <span aria-hidden="true">→</span></a>
     </main>
     <script>
       const card = document.getElementById("player-room-card");
@@ -127,6 +127,15 @@
           ? roles.map(role => `<article class="${role.alive ? "alive" : "dead"}"><strong>${safe(role.name)}</strong><span>${role.alive ? "{{ room.role_alive_status|escapejs }}" : "{{ room.role_dead_status|escapejs }}"}</span></article>`).join("")
           : `<p>{{ room.roles_alive_empty|escapejs }}</p>`;
       }
+      function updateHistoryLink(playerAlive) {
+        const link = document.getElementById("eliminated-history-link");
+        const enabled = playerAlive === false;
+        link.classList.toggle("disabled", !enabled);
+        link.setAttribute("aria-disabled", String(!enabled));
+        link.tabIndex = enabled ? 0 : -1;
+        if (enabled) link.href = link.dataset.historyUrl;
+        else link.removeAttribute("href");
+      }
       async function refreshRoom() {
         clearTimeout(roomTimer);
         if (document.hidden) { scheduleRoom(); return; }
@@ -135,7 +144,7 @@
           if (!response.ok) throw new Error("room unavailable");
           const data = await response.json();
           document.getElementById("room-count")?.replaceChildren(`${data.joined_count} / ${data.player_count} {{ room.players_joined|escapejs }}`);
-          document.getElementById("eliminated-history-link").hidden = data.player_alive !== false;
+          updateHistoryLink(data.player_alive);
           if (data.role) {
             revealRole(data.role);
             renderRoleRoster(data.role_roster || [], data.alive_count || 0, data.dead_count || 0);
@@ -146,6 +155,9 @@
           if (data.status !== "finished") scheduleRoom();
         } catch (error) { scheduleRoom(); }
       }
+      document.getElementById("eliminated-history-link").addEventListener("click", event => {
+        if (event.currentTarget.getAttribute("aria-disabled") === "true") event.preventDefault();
+      });
       document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshRoom(); });
       refreshRoom();
     </script>

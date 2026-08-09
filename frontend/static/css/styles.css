@@ -1174,6 +1174,8 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .history-home-link:hover { border-color: rgba(199,139,69,.65); background: rgba(199,139,69,.14); }
 .eliminated-history-link { width: min(100%, 460px); margin-top: 24px; border-color: rgba(197,74,65,.45); color: #f0c0b9; background: rgba(145,45,39,.13); }
 .eliminated-history-link:hover { border-color: rgba(220,91,80,.7); background: rgba(159,48,41,.22); }
+.eliminated-history-link.disabled { border-color: rgba(255,255,255,.1); color: #626d72; background: rgba(255,255,255,.025); cursor: not-allowed; opacity: .58; pointer-events: none; }
+.eliminated-history-link.disabled span { color: #626d72; }
 .history-delete-button:hover { border-color: rgba(220,91,80,.62); background: rgba(159,48,41,.2); }
 .history-delete-button span { font-size: 1.25rem; line-height: 1; }
 .history-delete-button strong { font-size: .68rem; }

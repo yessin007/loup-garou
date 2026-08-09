@@ -219,6 +219,7 @@
       let state;
       try { state = resumeRequested ? (serverGameState?.stage ? serverGameState : freshState()) : (JSON.parse(localStorage.getItem(storageKey)) || freshState()); }
       catch { state = freshState(); }
+      state.players.forEach(item => { if (!item.initialRole) item.initialRole = item.role; });
       if (state.infectionAvailable === undefined) state.infectionAvailable = true;
       if (!state.ancientWolfHits) state.ancientWolfHits = {};
       if (state.sheepRemaining === undefined) state.sheepRemaining = 3;
@@ -730,6 +731,7 @@
         return target || null;
       }
       function isWolfPlayer(item) { return Boolean(item && (roleMeta[item.role].faction === "wolf" || item.infected || item.wildTurned)); }
+      function isInitialWolfPlayer(item) { return Boolean(item && roleMeta[item.initialRole || item.role]?.faction === "wolf"); }
       function wolves() { return alive().filter(isWolfPlayer); }
       function aliens() { return alive().filter(item => roleMeta[item.role].faction === "alien"); }
       function redHoodProtectionActive(item) {
@@ -800,10 +802,10 @@
           state.wildChildTurned = true;
         }
       }
-      function killPlayersWithLovers(ids) {
+      function killPlayersWithLovers(ids, includeLovers = true) {
         const expanded = new Set((ids || []).map(Number).filter(Boolean));
         const lovers = coupleMembers();
-        if (lovers.some(item => expanded.has(item.id))) lovers.forEach(item => expanded.add(item.id));
+        if (includeLovers && lovers.some(item => expanded.has(item.id))) lovers.forEach(item => expanded.add(item.id));
         const killed = [...expanded].map(player).filter(item => item?.alive);
         killed.forEach(item => { item.alive = false; });
         if (killed.some(item => item.id === state.wildIdolId)) state.wildIdolDeathTriggered = true;
@@ -818,6 +820,17 @@
           }
         }
         return killed;
+      }
+      function killVotedPlayer(id) {
+        const servant = livingServant();
+        const loverIds = state.coupleIds || [];
+        const servantCanTakeCouple = Boolean(
+          servant
+          && servant.id !== Number(id)
+          && loverIds.includes(Number(id))
+          && !loverIds.includes(servant.id)
+        );
+        return killPlayersWithLovers([id], !servantCanTakeCouple);
       }
       function bearStatus() {
         const bear = livingBear();
@@ -1039,7 +1052,7 @@
                 if (selectedRoleIndex >= 0 && targetRoleIndex < state.roleDeck.length) {
                   [state.roleDeck[targetRoleIndex], state.roleDeck[selectedRoleIndex]] = [state.roleDeck[selectedRoleIndex], state.roleDeck[targetRoleIndex]];
                 }
-                state.players.push({id: ++nextId, roomPlayerId: item.id, name: item.name, role: item.role, alive: true});
+                state.players.push({id: ++nextId, roomPlayerId: item.id, name: item.name, role: item.role, initialRole: item.role, alive: true});
               });
               state.seatingOrderIds = normalizedSeatingOrder();
               save({recordUndo: false});
@@ -1078,7 +1091,7 @@
         if (!response.ok) { button.disabled = false; return; }
         const data = await response.json();
         state.pendingManualPlayerNames = data.manual_players || state.pendingManualPlayerNames || [];
-        state.players = data.assignments.map((item, index) => ({id: index + 1, roomPlayerId: item.room_player_id, name: item.name, role: item.role, alive: true}));
+        state.players = data.assignments.map((item, index) => ({id: index + 1, roomPlayerId: item.room_player_id, name: item.name, role: item.role, initialRole: item.role, alive: true}));
         state.seatingOrderIds = state.players.map(item => item.id);
         state.roleDeck = [...data.assignments.map(item => item.role), ...data.remaining_roles];
         state.roomStarted = true;
@@ -1093,7 +1106,7 @@
           let name = state.pendingManualPlayerNames[0] || `Test ${String(id).padStart(2, "0")}`;
           let suffix = 2;
           while (state.players.some(item => item.name.toLowerCase() === name.toLowerCase())) name = `Test ${String(id).padStart(2, "0")}-${suffix++}`;
-          state.players.push({id, name, role: state.roleDeck[id - 1], alive: true});
+          state.players.push({id, name, role: state.roleDeck[id - 1], initialRole: state.roleDeck[id - 1], alive: true});
           if (state.pendingManualPlayerNames[0] === name) state.pendingManualPlayerNames.shift();
           state.seatingOrderIds = normalizedSeatingOrder();
         }
@@ -1812,7 +1825,9 @@
         setHeading(t("day", {n: state.round}), L.servant);
         const details = `<div class="verdict-card"><strong>#${String(eliminated.id).padStart(2, "0")} · ${escapeHtml(eliminated.name)}</strong><small>${roleMeta[eliminated.role].name}</small></div>`;
         const buttons = `${actionButton(L.servant_take_role, "servant-accept")}${actionButton(L.servant_keep_role, "servant-refuse", false, true)}`;
-        scene.innerHTML = nightFrame(L.servant_secret, wakeTitle(L.servant_wake, [servant]), t("servant_choice_help", {name: escapeHtml(servant.name)}), details, buttons);
+        const inheritsCouple = (state.coupleIds || []).includes(eliminated.id);
+        const help = t(inheritsCouple ? "servant_couple_choice_help" : "servant_choice_help", {name: escapeHtml(servant.name)});
+        scene.innerHTML = nightFrame(L.servant_secret, wakeTitle(L.servant_wake, [servant]), help, details, buttons);
       }
 
       function renderDayEnd() {
@@ -2069,7 +2084,7 @@
             state.roleDeck = shuffle(roles);
           }
           const id = state.players.length + 1;
-          state.players.push({ id, name, role: state.roleDeck[id - 1], alive: true });
+          state.players.push({ id, name, role: state.roleDeck[id - 1], initialRole: state.roleDeck[id - 1], alive: true });
           if (state.pendingManualPlayerNames[0] === name) state.pendingManualPlayerNames.shift();
           state.seatingOrderIds = normalizedSeatingOrder();
           state.revealVisible = false;
@@ -2282,7 +2297,7 @@
           state.barberPlayerId = barber.id;
           state.barberTargetId = target.id;
           state.barberShotAvailable = false;
-          state.barberHit = isWolfPlayer(target);
+          state.barberHit = isInitialWolfPlayer(target);
           const barberDeaths = killPlayersWithLovers(state.barberHit ? [target.id] : [barber.id, target.id]);
           state.barberDeathIds = [...new Set([...(state.barberDeathIds || []), ...barberDeaths.map(item => item.id)])];
           barberDeaths.forEach(item => activateAnkouGhost(item, state.round));
@@ -2374,7 +2389,7 @@
           state.voteRevealedRole = player(state.lastVote)?.role || null;
           state.servantAccepted = null;
           spendAnkouVotingDay();
-          state.voteDeathIds = killPlayersWithLovers([state.lastVote]).map(item => item.id);
+          state.voteDeathIds = killVotedPlayer(state.lastVote).map(item => item.id);
           const majorityPlayer = player(state.lastVote);
           const angelWonFirstDay = state.round === 1 && majorityPlayer?.role === "angels" && competitionFaction(majorityPlayer) === "angel";
           if (angelWonFirstDay) {
@@ -2396,7 +2411,7 @@
           const singleCandidateHasMajority = livingQualifierCount !== 1 || max > alive().length / 2;
           state.lastVote = winners.length === 1 && singleCandidateHasMajority ? winners[0].id : null;
           state.voteOutcome = winners.length !== 1 ? "tie" : singleCandidateHasMajority ? "eliminated" : "insufficient_majority";
-          state.voteDeathIds = state.lastVote ? killPlayersWithLovers([state.lastVote]).map(item => item.id) : [];
+          state.voteDeathIds = state.lastVote ? killVotedPlayer(state.lastVote).map(item => item.id) : [];
           state.voteRevealedRole = state.lastVote ? player(state.lastVote).role : null;
           state.servantAccepted = null;
           const votedPlayer = player(state.lastVote);
@@ -2413,6 +2428,9 @@
           const eliminated = player(state.lastVote);
           if (!servant || !eliminated) return;
           servant.role = eliminated.role;
+          if ((state.coupleIds || []).includes(eliminated.id)) {
+            state.coupleIds = state.coupleIds.map(id => id === eliminated.id ? servant.id : id);
+          }
           if (servant.role === "ancients") state.ancientWolfHits[servant.id] = state.ancientWolfHits[eliminated.id] || 0;
           if (servant.role === "wild_children") {
             state.wildChildId = servant.id;
@@ -2424,6 +2442,8 @@
           finalizeVoteDeath();
         } else if (action === "servant-refuse") {
           state.servantAccepted = false;
+          const loverDeaths = killPlayersWithLovers([state.lastVote]);
+          state.voteDeathIds = [...new Set([...(state.voteDeathIds || []), ...loverDeaths.map(item => item.id)])];
           finalizeVoteDeath();
         } else if (action === "confirm-hunter-shot") {
           const hunter = player(state.pendingHunterId);

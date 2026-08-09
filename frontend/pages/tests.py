@@ -245,6 +245,11 @@ class RoomFlowTests(TestCase):
         self.assertContains(game, 'confirm(L.accusation_majority_confirm)')
         self.assertContains(game, 'state.stage = "servant_choice"')
         self.assertContains(game, 'finalizeVoteDeath()')
+        self.assertContains(game, "function killVotedPlayer(id)")
+        self.assertContains(game, "return killPlayersWithLovers([id], !servantCanTakeCouple)")
+        self.assertContains(game, "state.coupleIds = state.coupleIds.map(id => id === eliminated.id ? servant.id : id)")
+        self.assertContains(game, "const loverDeaths = killPlayersWithLovers([state.lastVote])")
+        self.assertContains(game, 'inheritsCouple ? "servant_couple_choice_help" : "servant_choice_help"')
 
     def test_barber_kills_only_a_wolf_or_dies_with_a_non_wolf_target(self):
         self.create_room()
@@ -272,15 +277,17 @@ class RoomFlowTests(TestCase):
             "state.qualifiers.map(player).filter(item => item?.alive)",
         )
         self.assertContains(game, "state.stage = daySpecialReturnStage()")
-        self.assertContains(game, "state.barberHit = isWolfPlayer(target)")
+        self.assertContains(game, "state.barberHit = isInitialWolfPlayer(target)")
         self.assertContains(
             game,
             "killPlayersWithLovers(state.barberHit ? [target.id] : [barber.id, target.id])",
         )
         self.assertContains(
             game,
-            'roleMeta[item.role].faction === "wolf" || item.infected || item.wildTurned',
+            'roleMeta[item.initialRole || item.role]?.faction === "wolf"',
         )
+        self.assertContains(game, "if (!item.initialRole) item.initialRole = item.role")
+        self.assertContains(game, "initialRole: item.role")
 
     def test_red_riding_hood_is_protected_by_a_living_hunter_unless_cerberus_blocks_it(self):
         self.composition.update({"red_riding_hoods": 1, "villagers": 5})

@@ -2427,7 +2427,9 @@
           const servant = livingServant();
           const eliminated = player(state.lastVote);
           if (!servant || !eliminated) return;
-          servant.role = eliminated.role;
+          const inheritedRole = eliminated.role;
+          eliminated.role = servant.role;
+          servant.role = inheritedRole;
           if ((state.coupleIds || []).includes(eliminated.id)) {
             state.coupleIds = state.coupleIds.map(id => id === eliminated.id ? servant.id : id);
           }
@@ -2439,6 +2441,7 @@
           state.servantAccepted = true;
           state.voteRevealedRole = "servants";
           updateWildChildFromIdolDeath();
+          publishAliveRoleCounts();
           finalizeVoteDeath();
         } else if (action === "servant-refuse") {
           state.servantAccepted = false;

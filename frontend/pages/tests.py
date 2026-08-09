@@ -507,11 +507,70 @@ class RoomFlowTests(TestCase):
             'livingServant() && !isRoleBlocked("servants")',
         )
         self.assertNotContains(game, 'isRoleBlocked("servants")) return')
+        self.assertContains(game, "const inheritedRole = eliminated.role")
+        self.assertContains(game, "eliminated.role = servant.role")
+        self.assertContains(game, "servant.role = inheritedRole")
+        self.assertContains(
+            game,
+            'state.voteRevealedRole = "servants";\n          updateWildChildFromIdolDeath();\n          publishAliveRoleCounts();',
+        )
 
         guide = self.visitor_client().get(reverse("roles_guide"))
         self.assertContains(guide, "Normalement, la Servante est immunisée")
         self.assertContains(guide, "son immunité nocturne disparaît")
         self.assertContains(guide, "garde son choix")
+
+    def test_servant_inheritance_replaces_the_dead_role_in_player_rosters(self):
+        self.composition.update({
+            "simple_wolves": 0,
+            "villagers": 6,
+            "infecting_fathers": 1,
+            "servants": 1,
+        })
+        room = self.create_room()
+        servant_client = self.player_client("Servante connectée")
+        servant_client.post(
+            reverse("room_portal"),
+            {"action": "join", "room_code": room.code, "player_name": "Servante connectée"},
+        )
+        assignment = self.narrator.post(reverse("room_start_api", args=[room.code])).json()["assignments"][0]
+        inherited_state = {
+            "stage": "day_end",
+            "round": 1,
+            "publicAliveRoleCounts": {"infecting_fathers": 1},
+            "players": [
+                {
+                    "id": 1,
+                    "roomPlayerId": assignment["room_player_id"],
+                    "name": assignment["name"],
+                    "initialRole": "servants",
+                    "role": "infecting_fathers",
+                    "alive": True,
+                },
+                {
+                    "id": 2,
+                    "name": "Loup-Père éliminé",
+                    "initialRole": "infecting_fathers",
+                    "role": "servants",
+                    "alive": False,
+                },
+            ],
+        }
+        response = self.narrator.post(
+            reverse("room_sync_api", args=[room.code]),
+            json.dumps(inherited_state),
+            content_type="application/json",
+        )
+        self.assertEqual(response.status_code, 200)
+
+        private_state = servant_client.get(reverse("room_player_api", args=[room.code])).json()
+        self.assertEqual(private_state["role"]["code"], "infecting_fathers")
+        self.assertEqual(private_state["alive_count"], 1)
+        self.assertEqual(private_state["dead_count"], 1)
+        self.assertEqual(
+            [(item["code"], item["alive"]) for item in private_state["role_roster"]],
+            [("infecting_fathers", True), ("servants", False)],
+        )
 
     def test_alien_resists_pack_and_infection_but_dies_from_witch_poison(self):
         self.create_room()

@@ -991,8 +991,8 @@
         const disabled = new Set(disabledIds.map(Number));
         return `<option value="">${placeholder}</option>${players.map(item => `<option value="${item.id}" ${disabled.has(item.id) ? "disabled" : ""}>#${String(item.id).padStart(2, "0")} — ${escapeHtml(item.name)}${disabled.has(item.id) ? ` — ${disabledLabel}` : ""}</option>`).join("")}`;
       }
-      function actionButton(label, action, disabled = false, secondary = false, compact = false, extraClass = "") {
-        return `<button class="scene-action ${secondary ? "secondary" : ""} ${compact ? "test-action" : ""} ${extraClass}" type="button" data-action="${action}" ${disabled ? "disabled" : ""}>${label}<span>→</span></button>`;
+      function actionButton(label, action, disabled = false, secondary = false, compact = false, extraClass = "", hidden = false) {
+        return `<button class="scene-action ${secondary ? "secondary" : ""} ${compact ? "test-action" : ""} ${extraClass}" type="button" data-action="${action}" ${disabled ? "disabled" : ""} ${hidden ? "hidden" : ""}>${label}<span>→</span></button>`;
       }
 
       function setHeading(cycle, phase) {
@@ -1020,7 +1020,7 @@
         const number = state.players.length + 1;
         setHeading(L.distribution, t("player", {n: String(number).padStart(2, "0")}));
         if (!state.roomStarted) {
-          scene.innerHTML = `<div class="scene-kicker">Room · ${roomCode}</div><h1>Lobby joueurs</h1><p class="scene-lead">{{ room.qr_help|escapejs }}</p><div class="lobby-share"><img src="${websiteQrUrl}" alt="QR code du site" width="220" height="220"><div><span>{{ room.scan_qr|escapejs }}</span><strong>${roomCode}</strong><small>{{ room.room_code|escapejs }}</small></div></div><section class="lobby-roster"><header><span>{{ room.lobby_players|escapejs }}</span><strong id="lobby-player-count">0 / ${setup.player_count}</strong></header><div id="online-player-list" class="online-player-list"><p>Chargement…</p></div></section><section id="special-distribution-editor" class="special-distribution-editor" hidden></section><div class="scene-actions">${actionButton(L.launch_normal_game, "start-room-normal", true)}${actionButton(L.launch_special_game, "open-special-distribution", true, true)}${testMode ? actionButton(L.auto_distribution_test, "auto-distribute-test", false, true, true) : ""}</div>`;
+          scene.innerHTML = `<div class="scene-kicker">Room · ${roomCode}</div><h1>Lobby joueurs</h1><p class="scene-lead">{{ room.qr_help|escapejs }}</p><div class="lobby-share"><img src="${websiteQrUrl}" alt="QR code du site" width="220" height="220"><div><span>{{ room.scan_qr|escapejs }}</span><strong>${roomCode}</strong><small>{{ room.room_code|escapejs }}</small></div></div><section class="lobby-roster"><header><span>{{ room.lobby_players|escapejs }}</span><strong id="lobby-player-count">0 / ${setup.player_count}</strong></header><div id="online-player-list" class="online-player-list"><p>Chargement…</p></div></section><section id="special-distribution-editor" class="special-distribution-editor" hidden></section><div class="scene-actions">${actionButton(L.launch_normal_game, "start-room-normal", true, false, false, "", true)}${actionButton(L.launch_special_game, "open-special-distribution", true, true, false, "", true)}${testMode ? actionButton(L.auto_distribution_test, "auto-distribute-test", false, true, true) : ""}</div>`;
           refreshLobby();
           return;
         }
@@ -1069,7 +1069,12 @@
           document.getElementById("lobby-player-count")?.replaceChildren(`${registeredCount} / ${data.player_count}`);
           if (list) list.innerHTML = connectedRows.length || manualRows.length ? [...connectedRows, ...manualRows].join("") : `<p>{{ room.empty_lobby|escapejs }}</p>`;
           const allPlayersReady = registeredCount === Number(data.player_count);
-          document.querySelectorAll('[data-action="start-room-normal"], [data-action="open-special-distribution"]').forEach(button => { button.disabled = !allPlayersReady; });
+          document.querySelectorAll('[data-action="start-room-normal"], [data-action="open-special-distribution"]').forEach(button => {
+            button.disabled = !allPlayersReady;
+            button.hidden = !allPlayersReady;
+          });
+          const automaticTestButton = document.querySelector('[data-action="auto-distribute-test"]');
+          if (automaticTestButton) automaticTestButton.hidden = allPlayersReady;
           if (!allPlayersReady) {
             const specialEditor = document.getElementById("special-distribution-editor");
             if (specialEditor) specialEditor.hidden = true;

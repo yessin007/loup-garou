@@ -1258,6 +1258,7 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .special-player-role select { min-width: 0; min-height: 40px; padding: 8px 9px; font-size: .68rem; }
 .special-distribution-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 18px; }
 .special-distribution-actions .scene-action { width: auto; margin: 0; }
+.scene-action[hidden] { display: none; }
 .lobby-share { display: flex; align-items: center; gap: clamp(20px, 5vw, 45px); width: min(100%, 620px); margin: 28px 0; padding: clamp(18px, 4vw, 30px); border: 1px solid rgba(199,139,69,.24); background: rgba(199,139,69,.045); }
 .lobby-share img { flex: 0 0 auto; width: min(42vw, 220px); padding: 8px; background: #fff; }
 .lobby-share span, .lobby-share small { display: block; color: #7f8c92; font-size: .64rem; letter-spacing: .12em; text-transform: uppercase; }

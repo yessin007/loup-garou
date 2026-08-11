@@ -213,6 +213,8 @@ class RoomFlowTests(TestCase):
         self.assertContains(game, 'data-action="start-room-normal"')
         self.assertContains(game, 'data-action="open-special-distribution"')
         self.assertContains(game, "fixed_role_assignments")
+        self.assertContains(game, "button.hidden = !allPlayersReady")
+        self.assertContains(game, "automaticTestButton.hidden = allPlayersReady")
 
     def test_night_summary_sections_and_single_candidate_majority_rule_are_present(self):
         self.create_room()

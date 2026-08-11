@@ -45,34 +45,19 @@ DAY_STAGES = {
     "dawn", "accusation", "barber_shot", "barber_result", "alien_guess",
     "alien_result", "final_vote", "servant_choice", "hunter_shot", "day_end",
 }
-MARMOUR_USERNAME = "marmour"
-MARMOUR_WOLF_CHANCE = 0.9
-
-
-def shuffle_roles_for_players(roles, player_aliases, random_source=None):
-    """Shuffle roles, giving Marmour an exact 90% chance of a wolf role."""
+def shuffle_roles_for_players(roles, fixed_role_assignments=None, random_source=None):
+    """Shuffle roles while preserving narrator-selected assignments by index."""
     random_source = random_source or secrets.SystemRandom()
     random_source.shuffle(roles)
-
-    marmour_index = next(
-        (
+    locked_indexes = set()
+    for player_index, selected_role in sorted((fixed_role_assignments or {}).items()):
+        role_index = next(
             index
-            for index, aliases in enumerate(player_aliases)
-            if any(str(alias).strip().casefold() == MARMOUR_USERNAME for alias in aliases if alias)
-        ),
-        None,
-    )
-    if marmour_index is None:
-        return
-
-    should_be_wolf = random_source.random() < MARMOUR_WOLF_CHANCE
-    eligible_indexes = [
-        index
-        for index, role in enumerate(roles)
-        if (role in WOLF_ROLE_KEYS) == should_be_wolf
-    ]
-    selected_index = random_source.choice(eligible_indexes)
-    roles[marmour_index], roles[selected_index] = roles[selected_index], roles[marmour_index]
+            for index, role in enumerate(roles)
+            if role == selected_role and index not in locked_indexes
+        )
+        roles[player_index], roles[role_index] = roles[role_index], roles[player_index]
+        locked_indexes.add(player_index)
 
 
 def is_narrator(user):
@@ -1092,7 +1077,8 @@ def room_lobby_api(request, code):
         return JsonResponse({"error": "forbidden"}, status=403)
     effective_status = room.status if room_distribution_started(room) else GameRoom.Status.WAITING
     manual_players = (room.game_state or {}).get("pendingManualPlayerNames", [])
-    players = [{"id": item.id, "name": item.name, "role": item.role} for item in room.room_players.all()]
+    joined = list(room.room_players.all())
+    players = [{"id": item.id, "name": item.name, "role": item.role} for item in joined]
     return JsonResponse({
         "code": room.code,
         "status": effective_status,
@@ -1100,6 +1086,7 @@ def room_lobby_api(request, code):
         "registered_count": len(players) + len(manual_players),
         "players": players,
         "manual_players": manual_players,
+        "composition": room.composition,
     })
 
 
@@ -1163,14 +1150,59 @@ def room_start_api(request, code):
         return JsonResponse({"error": "already_started"}, status=409)
     joined = list(room.room_players.select_for_update())
     manual_players = (room.game_state or {}).get("pendingManualPlayerNames", [])
+    try:
+        payload = (
+            json.loads(request.body)
+            if request.content_type == "application/json" and request.body
+            else {}
+        )
+    except json.JSONDecodeError:
+        return JsonResponse({"error": "invalid_json"}, status=400)
+    if not isinstance(payload, dict):
+        return JsonResponse({"error": "invalid_json"}, status=400)
+    explicit_mode = "distribution_mode" in payload
+    distribution_mode = payload.get("distribution_mode", "normal")
+    if distribution_mode not in {"normal", "special"}:
+        return JsonResponse({"error": "invalid_distribution_mode"}, status=400)
+    requested_assignments = payload.get("fixed_role_assignments", [])
+    if not isinstance(requested_assignments, list):
+        return JsonResponse({"error": "invalid_role_assignments"}, status=400)
+    if distribution_mode == "normal" and requested_assignments:
+        return JsonResponse({"error": "normal_mode_has_assignments"}, status=400)
     roles = [role for role, count in room.composition.items() for _ in range(count)]
-    if len(joined) + len(manual_players) > len(roles):
+    roster_count = len(joined) + len(manual_players)
+    if roster_count > len(roles):
         return JsonResponse({"error": "too_many_players"}, status=409)
-    player_aliases = [
-        (joined_player.name, joined_player.user.username if joined_player.user else None)
-        for joined_player in joined
-    ] + [(name,) for name in manual_players]
-    shuffle_roles_for_players(roles, player_aliases)
+    if explicit_mode and roster_count != len(roles):
+        return JsonResponse({"error": "waiting_for_all_players"}, status=409)
+
+    fixed_role_assignments = {}
+    assigned_role_counts = {}
+    try:
+        for assignment in requested_assignments:
+            if not isinstance(assignment, dict):
+                raise TypeError
+            player_index = assignment.get("player_index")
+            selected_role = assignment.get("role")
+            if (
+                isinstance(player_index, bool)
+                or not isinstance(player_index, int)
+                or not 0 <= player_index < roster_count
+                or selected_role not in ROLE_KEYS
+                or player_index in fixed_role_assignments
+            ):
+                raise ValueError
+            fixed_role_assignments[player_index] = selected_role
+            assigned_role_counts[selected_role] = assigned_role_counts.get(selected_role, 0) + 1
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "invalid_role_assignments"}, status=400)
+    if any(
+        count > room.composition.get(role, 0)
+        for role, count in assigned_role_counts.items()
+    ):
+        return JsonResponse({"error": "role_assignment_exceeds_composition"}, status=400)
+
+    shuffle_roles_for_players(roles, fixed_role_assignments)
     assignments = []
     for index, joined_player in enumerate(joined):
         joined_player.role = roles[index]
@@ -1178,6 +1210,11 @@ def room_start_api(request, code):
         assignments.append({"room_player_id": joined_player.id, "name": joined_player.name, "role": joined_player.role})
     game_state = room.game_state or {}
     game_state["distributionStarted"] = True
+    game_state["distributionMode"] = distribution_mode
+    game_state["fixedRoleAssignments"] = [
+        {"playerIndex": index, "role": role}
+        for index, role in sorted(fixed_role_assignments.items())
+    ]
     room.game_state = game_state
     room.status = GameRoom.Status.ACTIVE
     room.save(update_fields=["game_state", "status", "updated_at"])

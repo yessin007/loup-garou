@@ -1020,8 +1020,7 @@
         const number = state.players.length + 1;
         setHeading(L.distribution, t("player", {n: String(number).padStart(2, "0")}));
         if (!state.roomStarted) {
-          const startLabel = state.redistributionMode ? L.redistribute_roles : "Lancer la distribution";
-          scene.innerHTML = `<div class="scene-kicker">Room · ${roomCode}</div><h1>Lobby joueurs</h1><p class="scene-lead">{{ room.qr_help|escapejs }}</p><div class="lobby-share"><img src="${websiteQrUrl}" alt="QR code du site" width="220" height="220"><div><span>{{ room.scan_qr|escapejs }}</span><strong>${roomCode}</strong><small>{{ room.room_code|escapejs }}</small></div></div><section class="lobby-roster"><header><span>{{ room.lobby_players|escapejs }}</span><strong id="lobby-player-count">0 / ${setup.player_count}</strong></header><div id="online-player-list" class="online-player-list"><p>Chargement…</p></div></section><div class="scene-actions">${actionButton(startLabel, "start-room")}${testMode ? actionButton(L.auto_distribution_test, "auto-distribute-test", false, true, true) : ""}</div>`;
+          scene.innerHTML = `<div class="scene-kicker">Room · ${roomCode}</div><h1>Lobby joueurs</h1><p class="scene-lead">{{ room.qr_help|escapejs }}</p><div class="lobby-share"><img src="${websiteQrUrl}" alt="QR code du site" width="220" height="220"><div><span>{{ room.scan_qr|escapejs }}</span><strong>${roomCode}</strong><small>{{ room.room_code|escapejs }}</small></div></div><section class="lobby-roster"><header><span>{{ room.lobby_players|escapejs }}</span><strong id="lobby-player-count">0 / ${setup.player_count}</strong></header><div id="online-player-list" class="online-player-list"><p>Chargement…</p></div></section><section id="special-distribution-editor" class="special-distribution-editor" hidden></section><div class="scene-actions">${actionButton(L.launch_normal_game, "start-room-normal", true)}${actionButton(L.launch_special_game, "open-special-distribution", true, true)}${testMode ? actionButton(L.auto_distribution_test, "auto-distribute-test", false, true, true) : ""}</div>`;
           refreshLobby();
           return;
         }
@@ -1033,6 +1032,7 @@
       }
 
       let lobbyRefreshTimer = null;
+      let latestLobbyData = null;
       async function refreshLobby() {
         clearTimeout(lobbyRefreshTimer);
         if (!["roster", "player_reveal", "roles"].includes(state.stage)) return;
@@ -1040,6 +1040,7 @@
           const response = await fetch(`/api/rooms/${roomCode}/lobby/`, {cache: "no-store"});
           if (!response.ok) return;
           const data = await response.json();
+          latestLobbyData = data;
           const list = document.getElementById("online-player-list");
           const manualPlayers = data.manual_players || [];
           state.pendingManualPlayerNames = manualPlayers;
@@ -1067,6 +1068,12 @@
           const registeredCount = Number(data.registered_count ?? connectedRows.length + manualRows.length);
           document.getElementById("lobby-player-count")?.replaceChildren(`${registeredCount} / ${data.player_count}`);
           if (list) list.innerHTML = connectedRows.length || manualRows.length ? [...connectedRows, ...manualRows].join("") : `<p>{{ room.empty_lobby|escapejs }}</p>`;
+          const allPlayersReady = registeredCount === Number(data.player_count);
+          document.querySelectorAll('[data-action="start-room-normal"], [data-action="open-special-distribution"]').forEach(button => { button.disabled = !allPlayersReady; });
+          if (!allPlayersReady) {
+            const specialEditor = document.getElementById("special-distribution-editor");
+            if (specialEditor) specialEditor.hidden = true;
+          }
         } finally {
           clearTimeout(lobbyRefreshTimer);
           if (["roster", "player_reveal", "roles"].includes(state.stage)) lobbyRefreshTimer = setTimeout(refreshLobby, 2000);
@@ -1087,9 +1094,43 @@
         await refreshLobby();
       }
 
-      async function startRoomDistribution(button) {
+      function openSpecialDistribution() {
+        const editor = document.getElementById("special-distribution-editor");
+        if (!editor || !latestLobbyData || Number(latestLobbyData.registered_count) !== Number(latestLobbyData.player_count)) return;
+        const participants = [
+          ...latestLobbyData.players.map(item => item.name),
+          ...(latestLobbyData.manual_players || []),
+        ];
+        const composition = latestLobbyData.composition || setup.composition;
+        const roleOptions = Object.entries(composition)
+          .filter(([, count]) => Number(count) > 0)
+          .map(([role, count]) => `<option value="${role}">${escapeHtml(setup.role_labels[role])} (${count})</option>`)
+          .join("");
+        const rows = participants.map((name, index) => `<label class="special-player-role"><span><b>${String(index + 1).padStart(2, "0")}</b><strong>${escapeHtml(name)}</strong></span><select data-special-player-index="${index}"><option value="">${L.special_random_role}</option>${roleOptions}</select></label>`).join("");
+        editor.innerHTML = `<header><div><strong>${L.special_distribution_title}</strong><p>${L.special_distribution_help}</p></div></header><div class="special-player-role-list">${rows}</div><div class="special-distribution-actions">${actionButton(L.launch_special_game, "start-room-special")}${actionButton(L.special_cancel, "cancel-special-distribution", false, true)}</div>`;
+        editor.hidden = false;
+        editor.scrollIntoView({behavior: "smooth", block: "start"});
+      }
+
+      function selectedSpecialRoleAssignments() {
+        const assignments = [...document.querySelectorAll("[data-special-player-index]")]
+          .filter(select => select.value)
+          .map(select => ({player_index: Number(select.dataset.specialPlayerIndex), role: select.value}));
+        const composition = latestLobbyData?.composition || setup.composition;
+        const counts = assignments.reduce((result, item) => ({...result, [item.role]: (result[item.role] || 0) + 1}), {});
+        return Object.entries(counts).some(([role, count]) => count > Number(composition[role] || 0)) ? null : assignments;
+      }
+
+      async function startRoomDistribution(button, distributionMode = null, fixedRoleAssignments = []) {
         button.disabled = true;
-        const response = await csrfFetch(`/api/rooms/${roomCode}/start/`, {method: "POST"});
+        const requestOptions = {method: "POST"};
+        if (distributionMode) {
+          requestOptions.headers = {"Content-Type": "application/json"};
+          requestOptions.body = JSON.stringify({distribution_mode: distributionMode, fixed_role_assignments: fixedRoleAssignments});
+        }
+        const response = await csrfFetch(`/api/rooms/${roomCode}/start/`, {
+          ...requestOptions,
+        });
         if (!response.ok) { button.disabled = false; return; }
         const data = await response.json();
         state.pendingManualPlayerNames = data.manual_players || state.pendingManualPlayerNames || [];
@@ -2055,8 +2096,21 @@
         const button = event.target.closest("[data-action]");
         if (!button) return;
         const action = button.dataset.action;
-        if (action === "start-room") {
-          startRoomDistribution(button); return;
+        if (action === "start-room-normal") {
+          startRoomDistribution(button, "normal"); return;
+        } else if (action === "open-special-distribution") {
+          openSpecialDistribution(); return;
+        } else if (action === "cancel-special-distribution") {
+          const editor = document.getElementById("special-distribution-editor");
+          if (editor) editor.hidden = true;
+          return;
+        } else if (action === "start-room-special") {
+          const assignments = selectedSpecialRoleAssignments();
+          if (assignments === null) {
+            alert(L.special_assignment_invalid);
+            return;
+          }
+          startRoomDistribution(button, "special", assignments); return;
         } else if (action === "remove-lobby-player") {
           removeLobbyPlayer(button); return;
         } else if (action === "edit-distribution") {

@@ -284,6 +284,13 @@ GAME = {
 }
 
 GAME["fr"].update({
+    "launch_normal_game": "Lancer une partie normale",
+    "launch_special_game": "Lancer une partie spéciale",
+    "special_distribution_title": "Attribution spéciale des rôles",
+    "special_distribution_help": "Choisis les rôles que tu veux fixer. Les joueurs laissés sur Aléatoire recevront un rôle parmi ceux qui restent.",
+    "special_random_role": "Aléatoire — rôle restant",
+    "special_assignment_invalid": "Un rôle a été attribué plus de fois que prévu dans la composition.",
+    "special_cancel": "Annuler",
     "died_due_to_barber_player_role": "{name} · {role} (joué par le Barbier)",
     "died_due_to_hunter_player_role": "{name} · {role} (joué par le Chasseur)",
     "died_due_to_alien_player_role": "{name} · {role} (joué par l’Alien)",
@@ -379,6 +386,13 @@ GAME["fr"].update({
     "majority_missing_help": "Le seul candidat n'a pas reçu plus de la moitié des voix des joueurs en vie.",
 })
 GAME["en"].update({
+    "launch_normal_game": "Start a normal game",
+    "launch_special_game": "Start a special game",
+    "special_distribution_title": "Special role assignment",
+    "special_distribution_help": "Choose any roles you want to fix. Players left on Random receive one of the remaining roles.",
+    "special_random_role": "Random — remaining role",
+    "special_assignment_invalid": "A role was assigned more times than allowed by the composition.",
+    "special_cancel": "Cancel",
     "died_due_to_barber_player_role": "{name} · {role} (played by the Barber)",
     "died_due_to_hunter_player_role": "{name} · {role} (played by the Hunter)",
     "died_due_to_alien_player_role": "{name} · {role} (played by the Alien)",
@@ -474,6 +488,13 @@ GAME["en"].update({
     "majority_missing_help": "The only candidate did not receive more than half the votes of all living players.",
 })
 GAME["tn"].update({
+    "launch_normal_game": "Abda game normale",
+    "launch_special_game": "Abda game speciale",
+    "special_distribution_title": "Distribution speciale mta3 les roles",
+    "special_distribution_help": "E5tar role l ay joueur t7eb. Eli t5allih Aléatoire ya5ou role men les roles eli ba9aw.",
+    "special_random_role": "Aléatoire — role men eli ba9aw",
+    "special_assignment_invalid": "Role t3adda akther men 3addou fel composition.",
+    "special_cancel": "Annuler",
     "died_due_to_barber_player_role": "{name} · {role} (fi joret Barbier)",
     "died_due_to_hunter_player_role": "{name} · {role} (fi joret Chasseur)",
     "died_due_to_alien_player_role": "{name} · {role} (fi joret Alien)",

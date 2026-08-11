@@ -10,7 +10,7 @@ from django.urls import reverse
 from .models import GameRoom, RoomEvent
 from .role_guides import ROLE_GUIDES
 from .translations import ROLES
-from .views import WOLF_ROLE_KEYS, shuffle_roles_for_players
+from .views import shuffle_roles_for_players
 
 
 @override_settings(
@@ -73,44 +73,102 @@ class RoomFlowTests(TestCase):
         self.assertContains(home, "latestCsrfCookie")
         self.assertContains(home, 'input[name="csrfmiddlewaretoken"]')
 
-    def test_marmour_has_a_ninety_percent_wolf_distribution_bias(self):
-        roles = ["villagers", "cerberus_wolves", "seers"]
+    def test_normal_distribution_only_shuffles_roles(self):
+        roles = ["villagers", "simple_wolves", "seers"]
         random_source = Mock()
-        random_source.random.return_value = 0.89
-        random_source.choice.side_effect = lambda indexes: indexes[0]
+        random_source.shuffle.side_effect = lambda items: items.reverse()
+
+        shuffle_roles_for_players(roles, random_source=random_source)
+
+        self.assertEqual(roles, ["seers", "simple_wolves", "villagers"])
+        random_source.shuffle.assert_called_once_with(roles)
+
+    def test_special_distribution_preserves_selected_roles_and_shuffles_the_rest(self):
+        roles = ["villagers", "simple_wolves", "seers"]
+        random_source = Mock()
 
         shuffle_roles_for_players(
             roles,
-            [("Display name", "MaRmOuR"), ("Sarra",), ("Ali",)],
+            {0: "seers", 1: "villagers"},
             random_source,
         )
 
-        self.assertIn(roles[0], WOLF_ROLE_KEYS)
+        self.assertEqual(roles, ["seers", "villagers", "simple_wolves"])
         random_source.shuffle.assert_called_once_with(roles)
 
-    def test_marmour_gets_a_non_wolf_role_on_the_ten_percent_branch(self):
-        roles = ["black_wolves", "villagers", "seers"]
-        random_source = Mock()
-        random_source.random.return_value = 0.9
-        random_source.choice.side_effect = lambda indexes: indexes[-1]
+    def test_narrator_can_assign_selected_roles_and_randomize_the_rest(self):
+        composition = {role: 0 for role in ROLES["fr"]}
+        composition.update({"simple_wolves": 2, "seers": 1, "villagers": 5})
+        room = self.create_room()
+        room.composition = composition
+        room.save(update_fields=["composition"])
+        session = self.narrator.session
+        setup = session["game_setup"]
+        setup["composition"] = composition
+        session["game_setup"] = setup
+        session.save()
+        for index in range(8):
+            room.room_players.create(name=f"Player {index + 1}")
 
-        shuffle_roles_for_players(
-            roles,
-            [("MARMOUR",), ("Sarra",), ("Ali",)],
-            random_source,
+        lobby = self.narrator.get(reverse("room_lobby_api", args=[room.code])).json()
+        self.assertEqual(lobby["registered_count"], 8)
+        self.assertEqual(lobby["composition"]["seers"], 1)
+
+        started = self.narrator.post(
+            reverse("room_start_api", args=[room.code]),
+            json.dumps({
+                "distribution_mode": "special",
+                "fixed_role_assignments": [
+                    {"player_index": 0, "role": "seers"},
+                    {"player_index": 1, "role": "simple_wolves"},
+                ],
+            }),
+            content_type="application/json",
         )
 
-        self.assertNotIn(roles[0], WOLF_ROLE_KEYS)
+        self.assertEqual(started.status_code, 200)
+        self.assertEqual(started.json()["assignments"][0]["role"], "seers")
+        self.assertEqual(started.json()["assignments"][1]["role"], "simple_wolves")
+        self.assertCountEqual(
+            [item["role"] for item in started.json()["assignments"]],
+            ["seers", "simple_wolves", "simple_wolves", *(["villagers"] * 5)],
+        )
+        room.refresh_from_db()
+        self.assertEqual(room.game_state["distributionMode"], "special")
+        self.assertEqual(len(room.game_state["fixedRoleAssignments"]), 2)
 
-    def test_distribution_stays_fully_random_when_marmour_is_absent(self):
-        roles = ["simple_wolves", "villagers"]
-        random_source = Mock()
+    def test_explicit_modes_wait_until_every_player_has_joined(self):
+        room = self.create_room()
 
-        shuffle_roles_for_players(roles, [("Sarra",), ("Ali",)], random_source)
+        response = self.narrator.post(
+            reverse("room_start_api", args=[room.code]),
+            json.dumps({"distribution_mode": "normal", "fixed_role_assignments": []}),
+            content_type="application/json",
+        )
 
-        random_source.shuffle.assert_called_once_with(roles)
-        random_source.random.assert_not_called()
-        random_source.choice.assert_not_called()
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json()["error"], "waiting_for_all_players")
+
+    def test_special_distribution_rejects_roles_beyond_composition(self):
+        room = self.create_room()
+        for index in range(8):
+            room.room_players.create(name=f"Player {index + 1}")
+
+        response = self.narrator.post(
+            reverse("room_start_api", args=[room.code]),
+            json.dumps({
+                "distribution_mode": "special",
+                "fixed_role_assignments": [
+                    {"player_index": 0, "role": "simple_wolves"},
+                    {"player_index": 1, "role": "simple_wolves"},
+                    {"player_index": 2, "role": "simple_wolves"},
+                ],
+            }),
+            content_type="application/json",
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()["error"], "role_assignment_exceeds_composition")
 
     def test_narrator_dashboard_routes_each_admin_action(self):
         dashboard = self.narrator.get(reverse("welcome"))
@@ -151,6 +209,10 @@ class RoomFlowTests(TestCase):
         self.assertContains(game, 'id="test-mode" type="application/json">true</script>')
         self.assertContains(game, '"auto-distribute-test"')
         self.assertContains(game, "autoDistributeTestPlayers")
+        self.assertContains(game, 'id="special-distribution-editor"')
+        self.assertContains(game, 'data-action="start-room-normal"')
+        self.assertContains(game, 'data-action="open-special-distribution"')
+        self.assertContains(game, "fixed_role_assignments")
 
     def test_night_summary_sections_and_single_candidate_majority_rule_are_present(self):
         self.create_room()

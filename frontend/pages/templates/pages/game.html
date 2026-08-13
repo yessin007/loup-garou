@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#080d12" />
     {% include "pages/_pwa_head.html" %}
+    {% include "pages/_theme_head.html" %}
     <title>{{ ui.game_title }} | Loup Garou</title>
     <link rel="icon" href="{% static 'images/favicon-wolf.png' %}" type="image/png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -39,6 +40,7 @@
             </div>
           </details>
           {% include "pages/_language_selector.html" %}
+          {% include "pages/_theme_toggle.html" %}
         </div>
         <nav class="header-navigation-group" aria-label="{{ ui.game_title }}">
           <a class="header-action history-header-link" href="{% url 'room_history' room_code %}" target="_blank"><span aria-hidden="true">◷</span><strong>{{ room.history }}</strong></a>

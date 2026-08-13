@@ -6,12 +6,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#080d12" />
     {% include "pages/_pwa_head.html" %}
+    {% include "pages/_theme_head.html" %}
     <title>Créer un compte | Loup Garou</title>
     <link rel="icon" href="{% static 'images/favicon-wolf.png' %}" type="image/png" />
     <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
   </head>
   <body class="login-page">
-    <div class="floating-language">{% include "pages/_language_selector.html" %}</div>
+    <div class="floating-language floating-utilities">{% include "pages/_language_selector.html" %}{% include "pages/_theme_toggle.html" %}</div>
     <main class="login-shell">
       <section class="login-content" aria-labelledby="register-title">
         <p class="eyebrow">Nouveau joueur</p>

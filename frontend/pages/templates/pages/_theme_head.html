@@ -1,0 +1,22 @@
+{% load static %}
+<script>
+  (() => {
+    const storageKey = "loup-garou-theme";
+    const allowed = new Set(["dynamic", "dark", "light"]);
+    let preference = "dynamic";
+    try {
+      const stored = localStorage.getItem(storageKey);
+      if (allowed.has(stored)) preference = stored;
+    } catch (_) {}
+    const resolved = preference === "dynamic"
+      ? (window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark")
+      : preference;
+    document.documentElement.dataset.theme = preference;
+    document.documentElement.dataset.themeResolved = resolved;
+    document.documentElement.style.colorScheme = resolved;
+    document.querySelectorAll('meta[name="theme-color"]').forEach(meta => {
+      meta.content = resolved === "light" ? "#f4eee2" : "#080d12";
+    });
+  })();
+</script>
+<script defer src="{% static 'js/theme.js' %}"></script>

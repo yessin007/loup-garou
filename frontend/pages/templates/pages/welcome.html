@@ -6,6 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <meta name="theme-color" content="#080d12" />
     {% include "pages/_pwa_head.html" %}
+    {% include "pages/_theme_head.html" %}
     <title>{{ ui.setup_title }} | Loup Garou</title>
     <link rel="icon" href="{% static 'images/favicon-wolf.png' %}" type="image/png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -16,12 +17,13 @@
   <body class="setup-page">
     <header class="setup-header">
       <a class="brand" href="{% url 'welcome' %}">Loup <span>Garou</span></a>
-      <div>
+      <div class="setup-header-actions">
         {% include "pages/_language_selector.html" %}
+        {% include "pages/_theme_toggle.html" %}
         <span class="account-username"><span aria-hidden="true">●</span>{{ request.user.username }}</span>
         <span class="narrator-badge">{{ ui.narrator_mode }}</span>
-        {% if dashboard_mode != "dashboard" %}<a class="text-link home-navigation" href="{% url 'welcome' %}">← {{ ui.back_home }}</a>{% endif %}
-        <a class="text-link" href="{% url 'logout' %}">{{ ui.logout }}</a>
+        {% if dashboard_mode != "dashboard" %}<a class="text-link home-navigation" href="{% url 'welcome' %}"><span aria-hidden="true">⌂</span><strong>{{ ui.back_home }}</strong></a>{% endif %}
+        <a class="text-link setup-header-link header-logout-action" href="{% url 'logout' %}"><span aria-hidden="true">↪</span><strong>{{ ui.logout }}</strong></a>
       </div>
     </header>
 
@@ -98,7 +100,6 @@
         <p class="eyebrow">{{ ui.new_game }}</p>
         <h1>{{ ui.compose|safe }}</h1>
         <p>{{ ui.compose_help }}</p>
-        <a class="secondary-link dashboard-back-link" href="{% url 'welcome' %}">← {{ ui.back_dashboard }}</a>
       </section>
 
       <section class="setup-panel">

@@ -1861,7 +1861,8 @@ class PwaTests(TestCase):
         worker = self.client.get(reverse("service_worker"))
         self.assertEqual(worker.status_code, 200)
         self.assertEqual(worker["Service-Worker-Allowed"], "/")
-        self.assertContains(worker, "loup-garou-shell-v10")
+        self.assertContains(worker, "loup-garou-shell-v11")
+        self.assertContains(worker, '"/static/js/theme.js"')
         self.assertContains(worker, 'event.request.method !== "GET"')
         self.assertContains(worker, '!url.pathname.startsWith("/static/")')
 

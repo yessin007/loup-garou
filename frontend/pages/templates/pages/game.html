@@ -23,24 +23,28 @@
       <a class="brand" href="{% url 'welcome' %}">Loup <span>Garou</span></a>
       <div class="phase-indicator"><span id="cycle-label">{{ ui.preparation }}</span><strong id="phase-label">{{ ui.players }}</strong></div>
       <div class="narrator-actions">
-        <span class="account-username"><span aria-hidden="true">●</span>{{ request.user.username }}</span>
         <button id="village-state-open" class="header-action village-state-trigger" type="button" disabled>
           <span aria-hidden="true">⚙</span><strong>{{ game_text.village_state_button }}</strong>
         </button>
-        <details class="room-share">
-          <summary class="room-code-chip" title="{{ room.scan_qr }}"><span aria-hidden="true">▦</span>{{ room_code }}</summary>
-          <div class="room-share-popover">
-            <span>{{ room.scan_qr }}</span>
-            <img src="{% url 'general_room_qr' %}" alt="QR code du site" width="210" height="210" />
-            <strong>{{ room_code }}</strong>
-            <p>{{ room.qr_help }}</p>
-            <a href="{% url 'room_history' room_code %}" target="_blank">{{ room.open_history }} →</a>
-          </div>
-        </details>
-        <a class="header-action history-header-link" href="{% url 'room_history' room_code %}" target="_blank">{{ room.history }}</a>
-        {% include "pages/_language_selector.html" %}
-        <a class="header-action home-navigation" href="{% url 'welcome' %}">← {{ ui.back_home }}</a>
-        <button id="reset-game" class="header-action" type="button">{{ ui.restart }}</button>
+        <div class="header-session-group">
+          <span class="account-username"><span aria-hidden="true">●</span>{{ request.user.username }}</span>
+          <details class="room-share">
+            <summary class="room-code-chip" title="{{ room.scan_qr }}"><span aria-hidden="true">▦</span>{{ room_code }}</summary>
+            <div class="room-share-popover">
+              <span>{{ room.scan_qr }}</span>
+              <img src="{% url 'general_room_qr' %}" alt="QR code du site" width="210" height="210" />
+              <strong>{{ room_code }}</strong>
+              <p>{{ room.qr_help }}</p>
+              <a href="{% url 'room_history' room_code %}" target="_blank">{{ room.open_history }} →</a>
+            </div>
+          </details>
+          {% include "pages/_language_selector.html" %}
+        </div>
+        <nav class="header-navigation-group" aria-label="{{ ui.game_title }}">
+          <a class="header-action history-header-link" href="{% url 'room_history' room_code %}" target="_blank"><span aria-hidden="true">◷</span><strong>{{ room.history }}</strong></a>
+          <a class="header-action home-navigation" href="{% url 'welcome' %}"><span aria-hidden="true">⌂</span><strong>{{ ui.back_home }}</strong></a>
+          <button id="reset-game" class="header-action" type="button"><span aria-hidden="true">↻</span><strong>{{ ui.restart }}</strong></button>
+        </nav>
       </div>
     </header>
 
@@ -1110,6 +1114,7 @@
         phaseLabel.textContent = phase;
       }
 
+      let phoneRosterExpanded = false;
       function renderSidebar() {
         if (state.stage === "roster" || state.stage === "player_reveal") {
           sidebar.innerHTML = `<div class="sidebar-empty"><span>${state.players.length}<small>/ ${setup.player_count}</small></span><p>${L.registered}</p></div>`;
@@ -1118,12 +1123,13 @@
         const concealedStages = ["cupid", "couple_reveal", "wild_child", "protector", "prostitute", "wolves", "cerberus", "pyromaniac", "infection", "infection_result", "white_wolf", "bear", "shepherd", "shepherd_result", "judge", "judge_result", "black_wolf", "talkative_wolf", "talkative_reveal", "barber_signal", "alien_signal", "witch", "seer", "barber_shot", "alien_guess", "servant_choice"];
         const concealRoles = concealedStages.includes(state.stage);
         const loverIds = new Set(state.coupleIds || []);
-        sidebar.innerHTML = `<div class="sidebar-title"><span>${L.village}</span><strong>${t("alive_count", {n: alive().length})}</strong></div><div class="player-stack">${state.players.map(item => `
+        const deadCount = state.players.length - alive().length;
+        sidebar.innerHTML = `<details class="player-roster" ${phoneRosterExpanded ? "open" : ""}><summary class="roster-summary"><span class="roster-summary-title">${L.village}</span><span class="roster-count alive"><strong>${alive().length}</strong><small>${L.alive}</small></span><span class="roster-count dead"><strong>${deadCount}</strong><small>${L.eliminated}</small></span><i aria-hidden="true"></i></summary><div class="sidebar-title"><span>${L.village}</span><strong>${t("alive_count", {n: alive().length})}</strong></div><div class="player-stack">${state.players.map(item => `
           <article class="player-chip ${item.alive ? "" : "dead"} ${!concealRoles && isWolfPlayer(item) ? "is-wolf" : ""} ${!concealRoles && item.role === "red_riding_hoods" && isRoleBlocked("red_riding_hoods") ? "passive-blocked" : ""}">
             <span class="role-token">${String(item.id).padStart(2, "0")}</span>
             <div><strong>#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)}</strong><small>${concealRoles ? "" : `${setup.role_labels[item.role]} · ${roleMeta[item.role].short}${item.infected ? ` · ${L.infected_status}` : ""}${item.wildTurned ? ` · ${L.wild_wolf_status}` : ""}${item.id === state.wildIdolId ? ` · ${L.wild_idol_status}` : ""}${isAngelVillageAligned(item) ? ` · ${L.angel_village_status}` : ""}${state.ankouGhost?.playerId === item.id && state.ankouGhost.votesRemaining > 0 ? ` · ${t("ankou_votes_left", {count: state.ankouGhost.votesRemaining})}` : ""}${loverIds.has(item.id) ? ` · ${L.couple_status}` : ""}${item.role === "red_riding_hoods" && isRoleBlocked("red_riding_hoods") ? ` · ${L.red_hood_protection_blocked}` : ""}`}</small></div>
             <i>${item.alive ? L.alive : L.eliminated}</i>
-          </article>`).join("")}</div>`;
+          </article>`).join("")}</div></details>`;
       }
 
       function renderRoster() {
@@ -1942,7 +1948,8 @@
       function renderFinalVote() {
         setHeading(t("day", {n: state.round}), L.final_vote);
         const candidates = state.qualifiers.map(player).filter(item => item?.alive);
-        scene.innerHTML = `<div class="scene-kicker">${L.last_decision}</div><h1>${L.village_vote}</h1><p class="scene-lead">${L.final_help}</p>${dayConstraints()}${voteBoard(candidates)}<div class="scene-actions">${actionButton(L.verdict, "finish-final-vote")}${actionButton(L.skip_vote, "skip-vote", false, true)}</div>`;
+        const canConfirm = candidates.length > 0;
+        scene.innerHTML = `<div class="scene-kicker">${L.last_decision}</div><h1>${L.village_vote}</h1><p class="scene-lead">${L.final_help}</p>${dayConstraints()}<label class="single-name final-vote-choice"><span>${L.choose_vote_target}</span><select id="final-vote-target">${options(candidates, L.choose_vote_target, false)}</select></label><div class="scene-actions">${actionButton(L.verdict, "finish-final-vote", !canConfirm)}${actionButton(L.skip_vote, "skip-vote", false, true)}</div>`;
       }
 
       function renderServantChoice() {
@@ -2535,17 +2542,13 @@
             finalizeVoteDeath();
           }
         } else if (action === "finish-final-vote") {
-          const voteBreakdown = readVotes();
-          const votes = voteBreakdown.totals; const max = Math.max(...votes.map(item => item.votes));
-          if (activeAnkouGhost() && voteBreakdown.secret.length === 0) { alert(L.ankou_vote_required); return; }
-          if (max === 0) { alert(L.vote_required); return; }
-          state.voteBreakdown = voteBreakdown;
-          spendAnkouVotingDay();
-          const winners = votes.filter(item => item.votes === max);
-          const livingQualifierCount = state.qualifiers.filter(id => player(id)?.alive).length;
-          const singleCandidateHasMajority = livingQualifierCount !== 1 || max > alive().length / 2;
-          state.lastVote = winners.length === 1 && singleCandidateHasMajority ? winners[0].id : null;
-          state.voteOutcome = winners.length !== 1 ? "tie" : singleCandidateHasMajority ? "eliminated" : "insufficient_majority";
+          const selectedId = Number(document.querySelector("#final-vote-target")?.value || 0);
+          if (!selectedId) { alert(L.final_target_required); return; }
+          const selected = player(selectedId);
+          if (!selected?.alive || !state.qualifiers.includes(selectedId)) { alert(L.final_target_required); return; }
+          state.voteBreakdown = {normal: [], cancelled: [], secret: [], totals: []};
+          state.lastVote = selectedId;
+          state.voteOutcome = "eliminated";
           state.voteDeathIds = state.lastVote ? killVotedPlayer(state.lastVote).map(item => item.id) : [];
           state.voteRevealedRole = state.lastVote ? player(state.lastVote).role : null;
           state.servantAccepted = null;
@@ -2654,6 +2657,9 @@
       document.getElementById("reset-game").addEventListener("click", () => {
         if (confirm(L.restart_confirm)) window.location.href = "{% url 'welcome' %}";
       });
+      sidebar.addEventListener("toggle", event => {
+        if (event.target.matches(".player-roster")) phoneRosterExpanded = event.target.open;
+      }, true);
       villageStateOpenButton.addEventListener("click", openVillageStateDialog);
       villageStateModeButtons.forEach(button => button.addEventListener("click", () => setVillageStateMode(button.dataset.villageStateMode)));
       villageStatePlayerSelect.addEventListener("change", () => updateVillageStateForm(true));

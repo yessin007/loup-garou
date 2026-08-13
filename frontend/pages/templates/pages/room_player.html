@@ -17,10 +17,16 @@
         <h2>{{ room.waiting }}</h2><p>{{ room.waiting_help }}</p>
         <small id="room-count">{{ game_room.room_players.count }} / {{ game_room.player_count }} {{ room.players_joined }}</small>
       </section>
+      <div class="player-room-refresh-bar">
+        <button id="player-room-refresh" type="button"><span aria-hidden="true">↻</span>{{ room.refresh_role }}</button>
+        <output id="player-room-refresh-status" aria-live="polite"></output>
+      </div>
       <a id="eliminated-history-link" class="history-home-link eliminated-history-link disabled" data-history-url="{% url 'room_history' game_room.code %}" aria-disabled="true" tabindex="-1"><span aria-hidden="true">☾</span>{{ room.eliminated_summary }} <span aria-hidden="true">→</span></a>
     </main>
     <script>
       const card = document.getElementById("player-room-card");
+      const refreshButton = document.getElementById("player-room-refresh");
+      const refreshStatus = document.getElementById("player-room-refresh-status");
       const csrfToken = "{{ csrf_token }}";
       function currentCsrfToken() {
         const cookie = document.cookie.split("; ").find(item => item.startsWith("csrftoken="));
@@ -42,6 +48,7 @@
       let roomTimer = null;
       let notesSaveTimer = null;
       let notesLoaded = false;
+      let displayedRoleCode = null;
       function safe(value) { const node = document.createElement("span"); node.textContent = value; return node.innerHTML; }
       function scheduleRoom() {
         clearTimeout(roomTimer);
@@ -63,6 +70,17 @@
         document.getElementById("player-role-name").textContent = role.name;
         document.getElementById("player-role-description").textContent = role.description;
         document.getElementById("player-role-rules").innerHTML = (role.rules || []).map(rule => `<li>${safe(rule)}</li>`).join("");
+        displayedRoleCode = role.code;
+      }
+      function renderWaitingRoom(data) {
+        if (!card.classList.contains("waiting")) {
+          clearTimeout(notesSaveTimer);
+          notesLoaded = false;
+          displayedRoleCode = null;
+          card.className = "player-secret-card waiting";
+          card.innerHTML = `<p class="eyebrow">{{ room.joined|escapejs }}</p><h1>{{ joined_player.name|escapejs }}</h1><div class="waiting-orbit"><span>…</span></div><h2>{{ room.waiting|escapejs }}</h2><p>{{ room.waiting_help|escapejs }}</p><small id="room-count"></small>`;
+        }
+        document.getElementById("room-count")?.replaceChildren(`${data.joined_count} / ${data.player_count} {{ room.players_joined|escapejs }}`);
       }
       function renderPrivateNotes(notes) {
         const input = document.getElementById("private-notes-input");
@@ -136,28 +154,45 @@
         if (enabled) link.href = link.dataset.historyUrl;
         else link.removeAttribute("href");
       }
-      async function refreshRoom() {
+      async function refreshRoom(manual = false) {
         clearTimeout(roomTimer);
-        if (document.hidden) { scheduleRoom(); return; }
+        if (document.hidden && !manual) { scheduleRoom(); return; }
+        if (manual) {
+          refreshButton.disabled = true;
+          refreshButton.classList.add("refreshing");
+          refreshStatus.textContent = "{{ room.refreshing_role|escapejs }}";
+        }
         try {
-          const response = await fetch("{% url 'room_player_api' game_room.code %}", {cache: "no-store"});
+          const response = await fetch(`{% url 'room_player_api' game_room.code %}?refresh=${Date.now()}`, {cache: "no-store"});
           if (!response.ok) throw new Error("room unavailable");
           const data = await response.json();
-          document.getElementById("room-count")?.replaceChildren(`${data.joined_count} / ${data.player_count} {{ room.players_joined|escapejs }}`);
           updateHistoryLink(data.player_alive);
           if (data.role) {
+            const roleChanged = Boolean(displayedRoleCode && displayedRoleCode !== data.role.code);
             revealRole(data.role);
             renderRoleRoster(data.role_roster || [], data.alive_count || 0, data.dead_count || 0);
             renderPrivateNotes(data.private_notes || "");
+            if (manual) refreshStatus.textContent = roleChanged ? "{{ room.role_refreshed|escapejs }}" : "{{ room.room_refreshed|escapejs }}";
             if (data.status !== "finished") scheduleRoom();
             return;
           }
+          renderWaitingRoom(data);
+          if (manual) refreshStatus.textContent = "{{ room.waiting_refreshed|escapejs }}";
           if (data.status !== "finished") scheduleRoom();
-        } catch (error) { scheduleRoom(); }
+        } catch (error) {
+          if (manual) refreshStatus.textContent = "{{ room.refresh_role_error|escapejs }}";
+          scheduleRoom();
+        } finally {
+          if (manual) {
+            refreshButton.disabled = false;
+            refreshButton.classList.remove("refreshing");
+          }
+        }
       }
       document.getElementById("eliminated-history-link").addEventListener("click", event => {
         if (event.currentTarget.getAttribute("aria-disabled") === "true") event.preventDefault();
       });
+      refreshButton.addEventListener("click", () => refreshRoom(true));
       document.addEventListener("visibilitychange", () => { if (!document.hidden) refreshRoom(); });
       refreshRoom();
     </script>

@@ -83,92 +83,31 @@ class RoomFlowTests(TestCase):
         self.assertEqual(roles, ["seers", "simple_wolves", "villagers"])
         random_source.shuffle.assert_called_once_with(roles)
 
-    def test_special_distribution_preserves_selected_roles_and_shuffles_the_rest(self):
-        roles = ["villagers", "simple_wolves", "seers"]
-        random_source = Mock()
-
-        shuffle_roles_for_players(
-            roles,
-            {0: "seers", 1: "villagers"},
-            random_source,
-        )
-
-        self.assertEqual(roles, ["seers", "villagers", "simple_wolves"])
-        random_source.shuffle.assert_called_once_with(roles)
-
-    def test_narrator_can_assign_selected_roles_and_randomize_the_rest(self):
-        composition = {role: 0 for role in ROLES["fr"]}
-        composition.update({"simple_wolves": 2, "seers": 1, "villagers": 5})
-        room = self.create_room()
-        room.composition = composition
-        room.save(update_fields=["composition"])
-        session = self.narrator.session
-        setup = session["game_setup"]
-        setup["composition"] = composition
-        session["game_setup"] = setup
-        session.save()
-        for index in range(8):
-            room.room_players.create(name=f"Player {index + 1}")
-
-        lobby = self.narrator.get(reverse("room_lobby_api", args=[room.code])).json()
-        self.assertEqual(lobby["registered_count"], 8)
-        self.assertEqual(lobby["composition"]["seers"], 1)
-
-        started = self.narrator.post(
-            reverse("room_start_api", args=[room.code]),
-            json.dumps({
-                "distribution_mode": "special",
-                "fixed_role_assignments": [
-                    {"player_index": 0, "role": "seers"},
-                    {"player_index": 1, "role": "simple_wolves"},
-                ],
-            }),
-            content_type="application/json",
-        )
-
-        self.assertEqual(started.status_code, 200)
-        self.assertEqual(started.json()["assignments"][0]["role"], "seers")
-        self.assertEqual(started.json()["assignments"][1]["role"], "simple_wolves")
-        self.assertCountEqual(
-            [item["role"] for item in started.json()["assignments"]],
-            ["seers", "simple_wolves", "simple_wolves", *(["villagers"] * 5)],
-        )
-        room.refresh_from_db()
-        self.assertEqual(room.game_state["distributionMode"], "special")
-        self.assertEqual(len(room.game_state["fixedRoleAssignments"]), 2)
-
-    def test_explicit_modes_wait_until_every_player_has_joined(self):
+    def test_normal_mode_waits_until_every_player_has_joined(self):
         room = self.create_room()
 
         response = self.narrator.post(
             reverse("room_start_api", args=[room.code]),
-            json.dumps({"distribution_mode": "normal", "fixed_role_assignments": []}),
+            json.dumps({"distribution_mode": "normal"}),
             content_type="application/json",
         )
 
         self.assertEqual(response.status_code, 409)
         self.assertEqual(response.json()["error"], "waiting_for_all_players")
 
-    def test_special_distribution_rejects_roles_beyond_composition(self):
+    def test_special_distribution_is_rejected(self):
         room = self.create_room()
         for index in range(8):
             room.room_players.create(name=f"Player {index + 1}")
 
         response = self.narrator.post(
             reverse("room_start_api", args=[room.code]),
-            json.dumps({
-                "distribution_mode": "special",
-                "fixed_role_assignments": [
-                    {"player_index": 0, "role": "simple_wolves"},
-                    {"player_index": 1, "role": "simple_wolves"},
-                    {"player_index": 2, "role": "simple_wolves"},
-                ],
-            }),
+            json.dumps({"distribution_mode": "special"}),
             content_type="application/json",
         )
 
         self.assertEqual(response.status_code, 400)
-        self.assertEqual(response.json()["error"], "role_assignment_exceeds_composition")
+        self.assertEqual(response.json()["error"], "invalid_distribution_mode")
 
     def test_narrator_dashboard_routes_each_admin_action(self):
         dashboard = self.narrator.get(reverse("welcome"))
@@ -209,10 +148,8 @@ class RoomFlowTests(TestCase):
         self.assertContains(game, 'id="test-mode" type="application/json">true</script>')
         self.assertContains(game, '"auto-distribute-test"')
         self.assertContains(game, "autoDistributeTestPlayers")
-        self.assertContains(game, 'id="special-distribution-editor"')
         self.assertContains(game, 'data-action="start-room-normal"')
-        self.assertContains(game, 'data-action="open-special-distribution"')
-        self.assertContains(game, "fixed_role_assignments")
+        self.assertNotContains(game, 'data-action="open-special-distribution"')
         self.assertContains(game, "button.hidden = !allPlayersReady")
         self.assertContains(game, "automaticTestButton.hidden = allPlayersReady")
 
@@ -236,6 +173,19 @@ class RoomFlowTests(TestCase):
         self.assertContains(game, 'action === "revive"')
         self.assertContains(game, 'action === "change_role"')
         self.assertContains(game, "changeVillagePlayerRole")
+        self.assertContains(game, 'value="change_wild_idol"')
+        self.assertContains(game, 'id="village-state-wild-idol"')
+        self.assertContains(game, 'subject.role !== "wild_children"')
+        self.assertContains(game, "changeVillageWildIdol")
+        self.assertContains(game, "const shouldTurn = !idol.alive")
+        self.assertContains(game, "state.wildIdolDeathTriggered = shouldTurn")
+        self.assertContains(game, "subject.wildTurned = shouldTurn")
+        self.assertContains(game, 'value="change_pyromaniac_oil"')
+        self.assertContains(game, 'id="village-state-pyromaniac-players"')
+        self.assertContains(game, 'id="village-state-pyromaniac-ignite"')
+        self.assertContains(game, "changeVillagePyromaniacOil")
+        self.assertContains(game, "const deaths = killPlayersWithLovers(selectedIds)")
+        self.assertContains(game, 'state.pyromaniacAction = "ignite"')
         self.assertContains(
             game,
             "${escapeHtml(roleMeta[item.role]?.name || item.role)} · ${item.alive ? L.alive : L.eliminated}",
@@ -486,6 +436,19 @@ class RoomFlowTests(TestCase):
 
         guide = self.visitor_client().get(reverse("roles_guide"))
         self.assertContains(guide, "stock initial de un à dix moutons")
+
+    def test_wolves_can_skip_their_attack_without_skipping_later_night_roles(self):
+        self.composition.update({"infecting_fathers": 1, "villagers": 5})
+        self.create_room()
+        game = self.narrator.get(reverse("game"))
+
+        self.assertContains(game, '"skip-wolves"')
+        self.assertContains(game, "L.wolves_skip_attack")
+        self.assertContains(game, 'action === "skip-wolves"')
+        self.assertContains(game, "state.wolfTargetId = null")
+        self.assertContains(game, 'nextNightStage("wolves")')
+        self.assertContains(game, 'if (stage === "infection") return hasAliveRole("infecting_fathers")')
+        self.assertContains(game, "L.infection_no_target_help")
 
     def test_pyromaniac_douses_or_ignites_once_per_night_and_can_be_blocked(self):
         self.composition.update({"pyromaniacs": 1, "villagers": 5})
@@ -834,6 +797,12 @@ class RoomFlowTests(TestCase):
         self.assertContains(player_page, "Afficher mon rôle")
         self.assertNotContains(player_page, "Garde cet écran secret")
         self.assertContains(player_page, 'if (data.status !== "finished") scheduleRoom()')
+        self.assertContains(player_page, 'id="player-room-refresh"')
+        self.assertContains(player_page, 'id="player-room-refresh-status"')
+        self.assertContains(player_page, "refreshRoom(true)")
+        self.assertContains(player_page, "renderWaitingRoom(data)")
+        self.assertContains(player_page, "displayedRoleCode = role.code")
+        self.assertContains(player_page, "?refresh=${Date.now()}")
 
         role_code = private_state["role"]["code"]
         player.post(
@@ -1241,6 +1210,11 @@ class RoomFlowTests(TestCase):
         new_private_role = sarra.get(reverse("room_player_api", args=[room.code])).json()["role"]["code"]
         self.assertIn(new_private_role, {"simple_wolves", "villagers"})
         self.assertNotEqual(new_private_role, "seers")
+
+        player_page = sarra.get(reverse("room_player", args=[room.code]))
+        self.assertContains(player_page, 'id="player-room-refresh"')
+        self.assertContains(player_page, "renderWaitingRoom")
+        self.assertContains(player_page, "Nouveau rôle reçu")
 
         game = self.narrator.get(reverse("game"))
         self.assertContains(game, "modify_distribution")

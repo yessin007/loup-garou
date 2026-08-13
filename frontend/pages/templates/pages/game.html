@@ -112,12 +112,26 @@
               <option value="disqualify">{{ game_text.village_state_disqualify }}</option>
               <option value="revive">{{ game_text.village_state_revive }}</option>
               <option value="change_role">{{ game_text.village_state_change_role }}</option>
+              <option value="change_wild_idol">{{ game_text.village_state_change_wild_idol }}</option>
+              <option value="change_pyromaniac_oil">{{ game_text.village_state_change_pyromaniac_oil }}</option>
             </select>
           </label>
           <label id="village-state-role-field" hidden>
             <span>{{ game_text.village_state_new_role }}</span>
             <select id="village-state-role"></select>
           </label>
+          <label id="village-state-wild-idol-field" hidden>
+            <span>{{ game_text.village_state_new_wild_idol }}</span>
+            <select id="village-state-wild-idol"></select>
+          </label>
+          <section id="village-state-pyromaniac-field" class="village-state-pyromaniac-field" hidden>
+            <span>{{ game_text.village_state_pyromaniac_players }}</span>
+            <div id="village-state-pyromaniac-players" class="village-state-check-list"></div>
+            <label class="village-state-ignite-toggle">
+              <input id="village-state-pyromaniac-ignite" type="checkbox">
+              <span><strong>{{ game_text.village_state_pyromaniac_ignite }}</strong><small>{{ game_text.village_state_pyromaniac_ignite_help }}</small></span>
+            </label>
+          </section>
           <p class="village-state-warning">{{ game_text.village_state_warning }}</p>
         </div>
         <div class="village-state-actions">
@@ -295,6 +309,11 @@
       const villageStateActionSelect = document.getElementById("village-state-action");
       const villageStateRoleField = document.getElementById("village-state-role-field");
       const villageStateRoleSelect = document.getElementById("village-state-role");
+      const villageStateWildIdolField = document.getElementById("village-state-wild-idol-field");
+      const villageStateWildIdolSelect = document.getElementById("village-state-wild-idol");
+      const villageStatePyromaniacField = document.getElementById("village-state-pyromaniac-field");
+      const villageStatePyromaniacPlayers = document.getElementById("village-state-pyromaniac-players");
+      const villageStatePyromaniacIgnite = document.getElementById("village-state-pyromaniac-ignite");
       const villageStateCurrent = document.getElementById("village-state-current");
       const villageStateApplyButton = document.getElementById("village-state-apply");
       const villageStateToast = document.getElementById("village-state-toast");
@@ -398,7 +417,25 @@
         const wanted = player(selectedId) || state.players[0];
         if (wanted) villageStatePlayerSelect.value = String(wanted.id);
       }
-      function updateVillageStateForm(resetAction = false) {
+      function populateVillageStateWildIdols(subject) {
+        const targets = state.players.filter(item => item.id !== subject.id);
+        villageStateWildIdolSelect.innerHTML = `<option value="">${L.village_state_choose_wild_idol}</option>${targets
+          .map(item => `<option value="${item.id}">#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)} · ${escapeHtml(roleMeta[item.role]?.name || item.role)} · ${item.alive ? L.alive : L.eliminated}</option>`)
+          .join("")}`;
+        if (targets.some(item => item.id === state.wildIdolId)) villageStateWildIdolSelect.value = String(state.wildIdolId);
+      }
+      function populateVillageStatePyromaniacPlayers(subject) {
+        const oiledIds = new Set((state.pyromaniacOiledIds || []).map(Number));
+        const targets = state.players.filter(item => item.alive && item.id !== subject.id);
+        villageStatePyromaniacPlayers.innerHTML = targets.length
+          ? targets.map(item => `<label><input class="village-state-pyromaniac-player" type="checkbox" value="${item.id}" ${oiledIds.has(item.id) ? "checked" : ""}><span>#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)} · ${escapeHtml(roleMeta[item.role]?.name || item.role)}</span></label>`).join("")
+          : `<p>${L.village_state_pyromaniac_empty}</p>`;
+        villageStatePyromaniacIgnite.checked = false;
+      }
+      function selectedVillageStatePyromaniacIds() {
+        return [...villageStatePyromaniacPlayers.querySelectorAll(".village-state-pyromaniac-player:checked")].map(input => Number(input.value));
+      }
+      function updateVillageStateForm(resetAction = false, refreshSpecialFields = true) {
         const subject = player(villageStatePlayerSelect.value);
         if (!subject) {
           villageStateCurrent.innerHTML = "";
@@ -407,15 +444,42 @@
         }
         const disqualifyOption = villageStateActionSelect.querySelector('option[value="disqualify"]');
         const reviveOption = villageStateActionSelect.querySelector('option[value="revive"]');
+        const wildIdolOption = villageStateActionSelect.querySelector('option[value="change_wild_idol"]');
+        const pyromaniacOption = villageStateActionSelect.querySelector('option[value="change_pyromaniac_oil"]');
         disqualifyOption.disabled = !subject.alive;
         reviveOption.disabled = subject.alive;
+        wildIdolOption.disabled = subject.role !== "wild_children" || !state.players.some(item => item.id !== subject.id);
+        pyromaniacOption.disabled = subject.role !== "pyromaniacs";
         if (resetAction || villageStateActionSelect.selectedOptions[0]?.disabled) {
           villageStateActionSelect.value = subject.alive ? "disqualify" : "revive";
         }
         if (resetAction) villageStateRoleSelect.value = subject.role;
         villageStateRoleField.hidden = villageStateActionSelect.value !== "change_role";
+        villageStateWildIdolField.hidden = villageStateActionSelect.value !== "change_wild_idol";
+        villageStatePyromaniacField.hidden = villageStateActionSelect.value !== "change_pyromaniac_oil";
+        if (villageStateActionSelect.value === "change_wild_idol" && refreshSpecialFields) populateVillageStateWildIdols(subject);
+        if (villageStateActionSelect.value === "change_pyromaniac_oil" && refreshSpecialFields) populateVillageStatePyromaniacPlayers(subject);
         villageStateCurrent.innerHTML = `<strong>#${String(subject.id).padStart(2, "0")} · ${escapeHtml(subject.name)}</strong><small>${escapeHtml(roleMeta[subject.role]?.name || subject.role)} · ${subject.alive ? L.alive : L.eliminated}</small>`;
-        villageStateApplyButton.disabled = villageStateActionSelect.value === "change_role" && villageStateRoleSelect.value === subject.role;
+        const unchangedRole = villageStateActionSelect.value === "change_role" && villageStateRoleSelect.value === subject.role;
+        const selectedIdolId = Number(villageStateWildIdolSelect.value);
+        const selectedIdol = player(selectedIdolId);
+        const unchangedIdol = villageStateActionSelect.value === "change_wild_idol" && (
+          !selectedIdolId || (
+            state.wildChildLinked
+            && state.wildChildId === subject.id
+            && state.wildIdolId === selectedIdolId
+            && Boolean(state.wildChildTurned) === !selectedIdol?.alive
+            && Boolean(subject.wildTurned) === !selectedIdol?.alive
+          )
+        );
+        const selectedPyromaniacIds = selectedVillageStatePyromaniacIds();
+        const currentOiledIds = (state.pyromaniacOiledIds || []).map(Number).filter(id => player(id)?.alive).sort((a, b) => a - b);
+        const nextOiledIds = [...selectedPyromaniacIds].sort((a, b) => a - b);
+        const unchangedPyromaniacOil = villageStateActionSelect.value === "change_pyromaniac_oil"
+          && (villageStatePyromaniacIgnite.checked
+            ? selectedPyromaniacIds.length === 0
+            : JSON.stringify(currentOiledIds) === JSON.stringify(nextOiledIds));
+        villageStateApplyButton.disabled = unchangedRole || unchangedIdol || unchangedPyromaniacOil;
       }
       function openVillageStateDialog() {
         if (!state.players.length) return;
@@ -542,6 +606,48 @@
         if (newRole === "cupids" && !state.coupleIds.length) state.cupidLinked = false;
         return true;
       }
+      function changeVillageWildIdol(subject, idolId) {
+        const idol = player(idolId);
+        if (subject.role !== "wild_children" || !idol || idol.id === subject.id) return false;
+        const shouldTurn = !idol.alive;
+        const changed = !state.wildChildLinked
+          || state.wildChildId !== subject.id
+          || state.wildIdolId !== idol.id
+          || Boolean(state.wildIdolDeathTriggered) !== shouldTurn
+          || Boolean(state.wildChildTurned) !== shouldTurn
+          || Boolean(subject.wildTurned) !== shouldTurn;
+        if (!changed) return false;
+        state.wildChildId = subject.id;
+        state.wildIdolId = idol.id;
+        state.wildChildLinked = true;
+        state.wildIdolDeathTriggered = shouldTurn;
+        state.wildChildTurned = shouldTurn;
+        subject.wildTurned = shouldTurn;
+        return true;
+      }
+      function changeVillagePyromaniacOil(subject) {
+        if (subject.role !== "pyromaniacs") return false;
+        const selectedIds = selectedVillageStatePyromaniacIds()
+          .filter(id => id !== subject.id && player(id)?.alive);
+        const igniteNow = villageStatePyromaniacIgnite.checked;
+        if (igniteNow) {
+          if (!selectedIds.length) return false;
+          const deaths = killPlayersWithLovers(selectedIds);
+          deaths.forEach(item => activateAnkouGhost(item, currentVillagePhase() === "day" ? state.round + 1 : state.round));
+          state.deaths = [...new Set([...(state.deaths || []), ...deaths.map(item => item.id)])];
+          state.pyromaniacAction = "ignite";
+          state.pyromaniacDousedIds = [];
+          state.pyromaniacIgnitedIds = selectedIds;
+          state.pyromaniacOiledIds = [];
+          return true;
+        }
+        const currentIds = (state.pyromaniacOiledIds || []).map(Number).filter(id => player(id)?.alive).sort((a, b) => a - b);
+        const nextIds = [...new Set(selectedIds)].sort((a, b) => a - b);
+        if (JSON.stringify(currentIds) === JSON.stringify(nextIds)) return false;
+        state.pyromaniacOiledIds = nextIds;
+        state.pyromaniacDousedIds = (state.pyromaniacDousedIds || []).filter(id => nextIds.includes(Number(id)));
+        return true;
+      }
       function resetStateForManualPhase(incrementRound = false) {
         if (incrementRound) state.round += 1;
         state.eventRound = null;
@@ -632,6 +738,10 @@
           changed = true;
         } else if (action === "change_role") {
           changed = changeVillagePlayerRole(subject, villageStateRoleSelect.value);
+        } else if (action === "change_wild_idol") {
+          changed = changeVillageWildIdol(subject, Number(villageStateWildIdolSelect.value));
+        } else if (action === "change_pyromaniac_oil") {
+          changed = changeVillagePyromaniacOil(subject);
         }
         if (!changed) return;
 
@@ -1020,7 +1130,7 @@
         const number = state.players.length + 1;
         setHeading(L.distribution, t("player", {n: String(number).padStart(2, "0")}));
         if (!state.roomStarted) {
-          scene.innerHTML = `<div class="scene-kicker">Room · ${roomCode}</div><h1>Lobby joueurs</h1><p class="scene-lead">{{ room.qr_help|escapejs }}</p><div class="lobby-share"><img src="${websiteQrUrl}" alt="QR code du site" width="220" height="220"><div><span>{{ room.scan_qr|escapejs }}</span><strong>${roomCode}</strong><small>{{ room.room_code|escapejs }}</small></div></div><section class="lobby-roster"><header><span>{{ room.lobby_players|escapejs }}</span><strong id="lobby-player-count">0 / ${setup.player_count}</strong></header><div id="online-player-list" class="online-player-list"><p>Chargement…</p></div></section><section id="special-distribution-editor" class="special-distribution-editor" hidden></section><div class="scene-actions">${actionButton(L.launch_normal_game, "start-room-normal", true, false, false, "", true)}${actionButton(L.launch_special_game, "open-special-distribution", true, true, false, "", true)}${testMode ? actionButton(L.auto_distribution_test, "auto-distribute-test", false, true, true) : ""}</div>`;
+          scene.innerHTML = `<div class="scene-kicker">Room · ${roomCode}</div><h1>Lobby joueurs</h1><p class="scene-lead">{{ room.qr_help|escapejs }}</p><div class="lobby-share"><img src="${websiteQrUrl}" alt="QR code du site" width="220" height="220"><div><span>{{ room.scan_qr|escapejs }}</span><strong>${roomCode}</strong><small>{{ room.room_code|escapejs }}</small></div></div><section class="lobby-roster"><header><span>{{ room.lobby_players|escapejs }}</span><strong id="lobby-player-count">0 / ${setup.player_count}</strong></header><div id="online-player-list" class="online-player-list"><p>Chargement…</p></div></section><div class="scene-actions">${actionButton(L.launch_normal_game, "start-room-normal", true, false, false, "", true)}${testMode ? actionButton(L.auto_distribution_test, "auto-distribute-test", false, true, true) : ""}</div>`;
           refreshLobby();
           return;
         }
@@ -1032,7 +1142,6 @@
       }
 
       let lobbyRefreshTimer = null;
-      let latestLobbyData = null;
       async function refreshLobby() {
         clearTimeout(lobbyRefreshTimer);
         if (!["roster", "player_reveal", "roles"].includes(state.stage)) return;
@@ -1040,7 +1149,6 @@
           const response = await fetch(`/api/rooms/${roomCode}/lobby/`, {cache: "no-store"});
           if (!response.ok) return;
           const data = await response.json();
-          latestLobbyData = data;
           const list = document.getElementById("online-player-list");
           const manualPlayers = data.manual_players || [];
           state.pendingManualPlayerNames = manualPlayers;
@@ -1069,16 +1177,12 @@
           document.getElementById("lobby-player-count")?.replaceChildren(`${registeredCount} / ${data.player_count}`);
           if (list) list.innerHTML = connectedRows.length || manualRows.length ? [...connectedRows, ...manualRows].join("") : `<p>{{ room.empty_lobby|escapejs }}</p>`;
           const allPlayersReady = registeredCount === Number(data.player_count);
-          document.querySelectorAll('[data-action="start-room-normal"], [data-action="open-special-distribution"]').forEach(button => {
+          document.querySelectorAll('[data-action="start-room-normal"]').forEach(button => {
             button.disabled = !allPlayersReady;
             button.hidden = !allPlayersReady;
           });
           const automaticTestButton = document.querySelector('[data-action="auto-distribute-test"]');
           if (automaticTestButton) automaticTestButton.hidden = allPlayersReady;
-          if (!allPlayersReady) {
-            const specialEditor = document.getElementById("special-distribution-editor");
-            if (specialEditor) specialEditor.hidden = true;
-          }
         } finally {
           clearTimeout(lobbyRefreshTimer);
           if (["roster", "player_reveal", "roles"].includes(state.stage)) lobbyRefreshTimer = setTimeout(refreshLobby, 2000);
@@ -1099,39 +1203,12 @@
         await refreshLobby();
       }
 
-      function openSpecialDistribution() {
-        const editor = document.getElementById("special-distribution-editor");
-        if (!editor || !latestLobbyData || Number(latestLobbyData.registered_count) !== Number(latestLobbyData.player_count)) return;
-        const participants = [
-          ...latestLobbyData.players.map(item => item.name),
-          ...(latestLobbyData.manual_players || []),
-        ];
-        const composition = latestLobbyData.composition || setup.composition;
-        const roleOptions = Object.entries(composition)
-          .filter(([, count]) => Number(count) > 0)
-          .map(([role, count]) => `<option value="${role}">${escapeHtml(setup.role_labels[role])} (${count})</option>`)
-          .join("");
-        const rows = participants.map((name, index) => `<label class="special-player-role"><span><b>${String(index + 1).padStart(2, "0")}</b><strong>${escapeHtml(name)}</strong></span><select data-special-player-index="${index}"><option value="">${L.special_random_role}</option>${roleOptions}</select></label>`).join("");
-        editor.innerHTML = `<header><div><strong>${L.special_distribution_title}</strong><p>${L.special_distribution_help}</p></div></header><div class="special-player-role-list">${rows}</div><div class="special-distribution-actions">${actionButton(L.launch_special_game, "start-room-special")}${actionButton(L.special_cancel, "cancel-special-distribution", false, true)}</div>`;
-        editor.hidden = false;
-        editor.scrollIntoView({behavior: "smooth", block: "start"});
-      }
-
-      function selectedSpecialRoleAssignments() {
-        const assignments = [...document.querySelectorAll("[data-special-player-index]")]
-          .filter(select => select.value)
-          .map(select => ({player_index: Number(select.dataset.specialPlayerIndex), role: select.value}));
-        const composition = latestLobbyData?.composition || setup.composition;
-        const counts = assignments.reduce((result, item) => ({...result, [item.role]: (result[item.role] || 0) + 1}), {});
-        return Object.entries(counts).some(([role, count]) => count > Number(composition[role] || 0)) ? null : assignments;
-      }
-
-      async function startRoomDistribution(button, distributionMode = null, fixedRoleAssignments = []) {
+      async function startRoomDistribution(button, distributionMode = null) {
         button.disabled = true;
         const requestOptions = {method: "POST"};
         if (distributionMode) {
           requestOptions.headers = {"Content-Type": "application/json"};
-          requestOptions.body = JSON.stringify({distribution_mode: distributionMode, fixed_role_assignments: fixedRoleAssignments});
+          requestOptions.body = JSON.stringify({distribution_mode: distributionMode});
         }
         const response = await csrfFetch(`/api/rooms/${roomCode}/start/`, {
           ...requestOptions,
@@ -1422,7 +1499,8 @@
       function renderWolves() {
         setHeading(t("night", {n: state.round}), L.pack);
         const targets = alive().filter(item => !isWolfPlayer(item));
-        scene.innerHTML = nightFrame(L.shadows, wakeTitle(L.wolves_wake, wolves()), L.wolves_q, `<div class="active-role-list">${wolves().map(item => `<span>${playerIdentity(item)} · ${L.pack_member}</span>`).join("")}</div><label class="single-name"><span>${L.choose_victim}</span><select id="wolf-target">${options(targets, L.choose_victim, false)}</select></label>`, actionButton(L.wolves_sleep, "confirm-wolves", true));
+        const actions = `${actionButton(L.wolves_sleep, "confirm-wolves", true)}${actionButton(L.wolves_skip_attack, "skip-wolves", false, true)}`;
+        scene.innerHTML = nightFrame(L.shadows, wakeTitle(L.wolves_wake, wolves()), L.wolves_q, `<div class="active-role-list">${wolves().map(item => `<span>${playerIdentity(item)} · ${L.pack_member}</span>`).join("")}</div><label class="single-name"><span>${L.choose_victim}</span><select id="wolf-target">${options(targets, L.choose_victim, false)}</select></label>`, actions);
       }
 
       function renderCerberus() {
@@ -2103,19 +2181,6 @@
         const action = button.dataset.action;
         if (action === "start-room-normal") {
           startRoomDistribution(button, "normal"); return;
-        } else if (action === "open-special-distribution") {
-          openSpecialDistribution(); return;
-        } else if (action === "cancel-special-distribution") {
-          const editor = document.getElementById("special-distribution-editor");
-          if (editor) editor.hidden = true;
-          return;
-        } else if (action === "start-room-special") {
-          const assignments = selectedSpecialRoleAssignments();
-          if (assignments === null) {
-            alert(L.special_assignment_invalid);
-            return;
-          }
-          startRoomDistribution(button, "special", assignments); return;
         } else if (action === "remove-lobby-player") {
           removeLobbyPlayer(button); return;
         } else if (action === "edit-distribution") {
@@ -2205,6 +2270,12 @@
           if (!targetId) return;
           state.wolfTargetId = targetId;
           state.wolfResolvedTargetId = packVictimIdBeforeInfection();
+          nextNightStage("wolves"); return;
+        } else if (action === "skip-wolves") {
+          state.wolfTargetId = null;
+          state.wolfInitialTargetId = null;
+          state.wolfResolvedTargetId = null;
+          state.wolfTargetChanged = false;
           nextNightStage("wolves"); return;
         } else if (action === "confirm-cerberus") {
           const targetId = Number(document.getElementById("night-select").value);
@@ -2588,6 +2659,9 @@
       villageStatePlayerSelect.addEventListener("change", () => updateVillageStateForm(true));
       villageStateActionSelect.addEventListener("change", () => updateVillageStateForm(false));
       villageStateRoleSelect.addEventListener("change", () => updateVillageStateForm(false));
+      villageStateWildIdolSelect.addEventListener("change", () => updateVillageStateForm(false, false));
+      villageStatePyromaniacPlayers.addEventListener("change", () => updateVillageStateForm(false, false));
+      villageStatePyromaniacIgnite.addEventListener("change", () => updateVillageStateForm(false, false));
       villageStateApplyButton.addEventListener("click", applyVillageStateModification);
       undoButton.addEventListener("click", () => {
         if (!undoStack.length) return;

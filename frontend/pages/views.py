@@ -45,19 +45,10 @@ DAY_STAGES = {
     "dawn", "accusation", "barber_shot", "barber_result", "alien_guess",
     "alien_result", "final_vote", "servant_choice", "hunter_shot", "day_end",
 }
-def shuffle_roles_for_players(roles, fixed_role_assignments=None, random_source=None):
-    """Shuffle roles while preserving narrator-selected assignments by index."""
+def shuffle_roles_for_players(roles, random_source=None):
+    """Shuffle roles for normal distribution."""
     random_source = random_source or secrets.SystemRandom()
     random_source.shuffle(roles)
-    locked_indexes = set()
-    for player_index, selected_role in sorted((fixed_role_assignments or {}).items()):
-        role_index = next(
-            index
-            for index, role in enumerate(roles)
-            if role == selected_role and index not in locked_indexes
-        )
-        roles[player_index], roles[role_index] = roles[role_index], roles[player_index]
-        locked_indexes.add(player_index)
 
 
 def is_narrator(user):
@@ -135,15 +126,15 @@ def remaining_room_roles(room, state):
 ROOM_TEXT = {
     "fr": {
         "delete_history": "Supprimer", "delete_history_confirm": "Supprimer définitivement cette partie et tout son historique ?", "finish_game": "Terminer la partie", "finish_game_confirm": "Confirmer que cette partie est terminée ? Elle pourra ensuite être supprimée.",
-        "room_title": "Rejoindre une partie", "room_intro": "Entre le code affiché sur le téléphone du narrateur. Ton nom de joueur sera ton nom d’utilisateur.", "room_code": "Code de la room", "player_name": "Ton prénom", "join": "Rejoindre", "general_qr": "QR du site", "general_qr_help": "Ce QR unique ouvre le site pour se connecter ou créer un compte. Ensuite, le joueur saisit le code de la room.", "history": "Historique", "all_histories": "Tous les historiques", "history_intro": "Consulte les parties précédentes sans saisir de code.", "open_history": "Voir l'historique", "scan_qr": "Scanner pour ouvrir le site", "qr_help": "Scanne le QR général, connecte-toi puis saisis ce code de room.", "waiting": "En attente du narrateur", "waiting_help": "Ton rôle apparaîtra ici quand le narrateur lancera la distribution.", "your_role": "Ton rôle secret", "keep_secret": "Garde cet écran secret.", "roles_alive": "Rôles encore en vie", "roles_alive_count": "joueur(s) en vie", "roles_alive_empty": "Aucun rôle encore en vie.", "joined": "Tu as rejoint la room", "players_joined": "joueur(s) connecté(s)", "events": "événement(s)", "yes": "Oui", "no": "Non", "invalid_room": "Room introuvable.", "invalid_code": "Le code doit contenir exactement 6 chiffres.", "room_started": "Cette partie a déjà commencé.", "name_used": "Ce nom d’utilisateur est déjà utilisé dans cette room.", "room_full": "La room est complète.", "history_empty": "Aucun jour ou aucune nuit terminé pour le moment.", "night": "Nuit", "day": "Jour", "back": "Retour", "back_home": "Retour à la page d’accueil", "continue_game": "Continuer la partie", "refreshing": "Mise à jour automatique", "room_access": "Rejoindre une room / historique",
+        "room_title": "Rejoindre une partie", "room_intro": "Entre le code affiché sur le téléphone du narrateur. Ton nom de joueur sera ton nom d’utilisateur.", "room_code": "Code de la room", "player_name": "Ton prénom", "join": "Rejoindre", "general_qr": "QR du site", "general_qr_help": "Ce QR unique ouvre le site pour se connecter ou créer un compte. Ensuite, le joueur saisit le code de la room.", "history": "Historique", "all_histories": "Tous les historiques", "history_intro": "Consulte les parties précédentes sans saisir de code.", "open_history": "Voir l'historique", "scan_qr": "Scanner pour ouvrir le site", "qr_help": "Scanne le QR général, connecte-toi puis saisis ce code de room.", "waiting": "En attente du narrateur", "waiting_help": "Ton rôle apparaîtra ici quand le narrateur lancera la distribution.", "your_role": "Ton rôle secret", "keep_secret": "Garde cet écran secret.", "roles_alive": "Rôles encore en vie", "roles_alive_count": "joueur(s) en vie", "roles_alive_empty": "Aucun rôle encore en vie.", "joined": "Tu as rejoint la room", "players_joined": "joueur(s) connecté(s)", "events": "événement(s)", "yes": "Oui", "no": "Non", "invalid_room": "Room introuvable.", "invalid_code": "Le code doit contenir exactement 6 chiffres.", "room_started": "Cette partie a déjà commencé.", "name_used": "Ce nom d’utilisateur est déjà utilisé dans cette room.", "room_full": "La room est complète.", "history_empty": "Aucun jour ou aucune nuit terminé pour le moment.", "night": "Nuit", "day": "Jour", "back": "Retour", "back_home": "Retour à la page d’accueil", "continue_game": "Continuer la partie", "refreshing": "Mise à jour automatique", "refresh_role": "Actualiser mon rôle", "refreshing_role": "Actualisation…", "role_refreshed": "Nouveau rôle reçu.", "room_refreshed": "Rôle à jour.", "waiting_refreshed": "Distribution en attente.", "refresh_role_error": "Actualisation impossible. Réessaie.", "room_access": "Rejoindre une room / historique",
     },
     "en": {
         "delete_history": "Delete", "delete_history_confirm": "Permanently delete this game and its entire history?", "finish_game": "Finish the game", "finish_game_confirm": "Confirm that this game is finished? It can then be deleted.",
-        "room_title": "Join a game", "room_intro": "Enter the code displayed by the narrator. Your player name will be your username.", "room_code": "Room code", "player_name": "Your name", "join": "Join", "general_qr": "Website QR code", "general_qr_help": "This single QR code opens the website to sign in or create an account. Then enter the room code.", "history": "History", "all_histories": "All histories", "history_intro": "View previous games without entering a code.", "open_history": "View history", "scan_qr": "Scan to open the website", "qr_help": "Scan the general QR code, sign in, then enter this room code.", "waiting": "Waiting for the narrator", "waiting_help": "Your role will appear here when the narrator starts distribution.", "your_role": "Your secret role", "keep_secret": "Keep this screen private.", "roles_alive": "Roles still alive", "roles_alive_count": "player(s) alive", "roles_alive_empty": "No roles are still alive.", "joined": "You joined the room", "players_joined": "connected player(s)", "events": "event(s)", "yes": "Yes", "no": "No", "invalid_room": "Room not found.", "invalid_code": "The code must contain exactly 6 digits.", "room_started": "This game has already started.", "name_used": "This username is already used in this room.", "room_full": "The room is full.", "history_empty": "No completed day or night yet.", "night": "Night", "day": "Day", "back": "Back", "back_home": "Back to home page", "continue_game": "Continue game", "refreshing": "Updates automatically", "room_access": "Join a room / history",
+        "room_title": "Join a game", "room_intro": "Enter the code displayed by the narrator. Your player name will be your username.", "room_code": "Room code", "player_name": "Your name", "join": "Join", "general_qr": "Website QR code", "general_qr_help": "This single QR code opens the website to sign in or create an account. Then enter the room code.", "history": "History", "all_histories": "All histories", "history_intro": "View previous games without entering a code.", "open_history": "View history", "scan_qr": "Scan to open the website", "qr_help": "Scan the general QR code, sign in, then enter this room code.", "waiting": "Waiting for the narrator", "waiting_help": "Your role will appear here when the narrator starts distribution.", "your_role": "Your secret role", "keep_secret": "Keep this screen private.", "roles_alive": "Roles still alive", "roles_alive_count": "player(s) alive", "roles_alive_empty": "No roles are still alive.", "joined": "You joined the room", "players_joined": "connected player(s)", "events": "event(s)", "yes": "Yes", "no": "No", "invalid_room": "Room not found.", "invalid_code": "The code must contain exactly 6 digits.", "room_started": "This game has already started.", "name_used": "This username is already used in this room.", "room_full": "The room is full.", "history_empty": "No completed day or night yet.", "night": "Night", "day": "Day", "back": "Back", "back_home": "Back to home page", "continue_game": "Continue game", "refreshing": "Updates automatically", "refresh_role": "Refresh my role", "refreshing_role": "Refreshing…", "role_refreshed": "New role received.", "room_refreshed": "Role is up to date.", "waiting_refreshed": "Waiting for distribution.", "refresh_role_error": "Could not refresh. Try again.", "room_access": "Join a room / history",
     },
     "tn": {
         "delete_history": "Fasa5", "delete_history_confirm": "Met2aked t7eb tfasa5 el game hedhi w historique mte3ha lkol définitivement ?", "finish_game": "Finish the game", "finish_game_confirm": "Met2aked elli el game hedhi kemlet? Ba3d tnajem tfasa5ha.",
-        "room_title": "Od5ol lel game", "room_intro": "Da5el code el room. Esmek fel game houwa username mte3ek.", "room_code": "Code mta3 el room", "player_name": "Esmek", "join": "Od5ol", "general_qr": "QR mta3 el site", "general_qr_help": "Fama QR wa7ed bark y7el el site bech tconnecti wala tasna3 compte. Ba3d da5el code el room.", "history": "Bilan w historique", "all_histories": "Archive mta3 les games", "history_intro": "", "open_history": "7ell el bilan direct", "scan_qr": "Scanni bch t7el el site", "qr_help": "Scanni el QR general, connecti w da5el code el room hedha.", "waiting": "Nestannew fel narrateur", "waiting_help": "Role mte3ek yodhher houni ki narrateur yabda el distribution.", "your_role": "Role mte3ek m5obi", "keep_secret": "Ma twarrich el ecran l 7ad.", "roles_alive": "Les roles eli mazelou 3aychin", "roles_alive_count": "joueur(s) mazelou 3aychin", "roles_alive_empty": "Ma fama 7atta role mezel 3ayech.", "joined": "D5alt lel room", "players_joined": "joueur(s) connectes", "events": "bilan(s)", "yes": "Ey", "no": "Le", "invalid_room": "El room mawjoudach.", "invalid_code": "El code lezem ykoun 6 ar9am bark.", "room_started": "El game hedhi bdet deja.", "name_used": "El username hedha mesta3mel fel room.", "room_full": "El room kemlet.", "history_empty": "Mezel ma fama 7atta bilan: kammel awel lil wala awel nhar.", "night": "Lil", "day": "Nhar", "back": "Erja3", "back_home": "Arja3 page d’accueil", "continue_game": "Kammel el game", "refreshing": "El bilan yetjadded wa7dou", "room_access": "Od5ol room / chouf el bilan",
+        "room_title": "Od5ol lel game", "room_intro": "Da5el code el room. Esmek fel game houwa username mte3ek.", "room_code": "Code mta3 el room", "player_name": "Esmek", "join": "Od5ol", "general_qr": "QR mta3 el site", "general_qr_help": "Fama QR wa7ed bark y7el el site bech tconnecti wala tasna3 compte. Ba3d da5el code el room.", "history": "Bilan w historique", "all_histories": "Archive mta3 les games", "history_intro": "", "open_history": "7ell el bilan direct", "scan_qr": "Scanni bch t7el el site", "qr_help": "Scanni el QR general, connecti w da5el code el room hedha.", "waiting": "Nestannew fel narrateur", "waiting_help": "Role mte3ek yodhher houni ki narrateur yabda el distribution.", "your_role": "Role mte3ek m5obi", "keep_secret": "Ma twarrich el ecran l 7ad.", "roles_alive": "Les roles eli mazelou 3aychin", "roles_alive_count": "joueur(s) mazelou 3aychin", "roles_alive_empty": "Ma fama 7atta role mezel 3ayech.", "joined": "D5alt lel room", "players_joined": "joueur(s) connectes", "events": "bilan(s)", "yes": "Ey", "no": "Le", "invalid_room": "El room mawjoudach.", "invalid_code": "El code lezem ykoun 6 ar9am bark.", "room_started": "El game hedhi bdet deja.", "name_used": "El username hedha mesta3mel fel room.", "room_full": "El room kemlet.", "history_empty": "Mezel ma fama 7atta bilan: kammel awel lil wala awel nhar.", "night": "Lil", "day": "Nhar", "back": "Erja3", "back_home": "Arja3 page d’accueil", "continue_game": "Kammel el game", "refreshing": "El bilan yetjadded wa7dou", "refresh_role": "Refresh role mte3i", "refreshing_role": "Na3mel refresh…", "role_refreshed": "Jek role jdid.", "room_refreshed": "Role mte3ek à jour.", "waiting_refreshed": "Nestannew distribution.", "refresh_role_error": "Refresh ma nej7ech. 3awed jareb.", "room_access": "Od5ol room / chouf el bilan",
     },
 }
 ROOM_TEXT["fr"].update({
@@ -1162,12 +1153,12 @@ def room_start_api(request, code):
         return JsonResponse({"error": "invalid_json"}, status=400)
     explicit_mode = "distribution_mode" in payload
     distribution_mode = payload.get("distribution_mode", "normal")
-    if distribution_mode not in {"normal", "special"}:
+    if distribution_mode != "normal":
         return JsonResponse({"error": "invalid_distribution_mode"}, status=400)
     requested_assignments = payload.get("fixed_role_assignments", [])
     if not isinstance(requested_assignments, list):
         return JsonResponse({"error": "invalid_role_assignments"}, status=400)
-    if distribution_mode == "normal" and requested_assignments:
+    if requested_assignments:
         return JsonResponse({"error": "normal_mode_has_assignments"}, status=400)
     roles = [role for role, count in room.composition.items() for _ in range(count)]
     roster_count = len(joined) + len(manual_players)
@@ -1176,33 +1167,7 @@ def room_start_api(request, code):
     if explicit_mode and roster_count != len(roles):
         return JsonResponse({"error": "waiting_for_all_players"}, status=409)
 
-    fixed_role_assignments = {}
-    assigned_role_counts = {}
-    try:
-        for assignment in requested_assignments:
-            if not isinstance(assignment, dict):
-                raise TypeError
-            player_index = assignment.get("player_index")
-            selected_role = assignment.get("role")
-            if (
-                isinstance(player_index, bool)
-                or not isinstance(player_index, int)
-                or not 0 <= player_index < roster_count
-                or selected_role not in ROLE_KEYS
-                or player_index in fixed_role_assignments
-            ):
-                raise ValueError
-            fixed_role_assignments[player_index] = selected_role
-            assigned_role_counts[selected_role] = assigned_role_counts.get(selected_role, 0) + 1
-    except (TypeError, ValueError):
-        return JsonResponse({"error": "invalid_role_assignments"}, status=400)
-    if any(
-        count > room.composition.get(role, 0)
-        for role, count in assigned_role_counts.items()
-    ):
-        return JsonResponse({"error": "role_assignment_exceeds_composition"}, status=400)
-
-    shuffle_roles_for_players(roles, fixed_role_assignments)
+    shuffle_roles_for_players(roles)
     assignments = []
     for index, joined_player in enumerate(joined):
         joined_player.role = roles[index]
@@ -1210,11 +1175,7 @@ def room_start_api(request, code):
         assignments.append({"room_player_id": joined_player.id, "name": joined_player.name, "role": joined_player.role})
     game_state = room.game_state or {}
     game_state["distributionStarted"] = True
-    game_state["distributionMode"] = distribution_mode
-    game_state["fixedRoleAssignments"] = [
-        {"playerIndex": index, "role": role}
-        for index, role in sorted(fixed_role_assignments.items())
-    ]
+    game_state["distributionMode"] = "normal"
     room.game_state = game_state
     room.status = GameRoom.Status.ACTIVE
     room.save(update_fields=["game_state", "status", "updated_at"])

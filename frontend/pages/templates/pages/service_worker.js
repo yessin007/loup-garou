@@ -1,4 +1,4 @@
-const CACHE_NAME = "loup-garou-shell-v11";
+const CACHE_NAME = "loup-garou-shell-v15";
 const STATIC_ASSETS = [
   "/static/css/styles.css",
   "/static/js/theme.js",
@@ -30,6 +30,11 @@ self.addEventListener("fetch", event => {
     }
     return response;
   });
+  const alwaysFresh = event.request.destination === "style" || event.request.destination === "script";
   event.waitUntil(networkUpdate.catch(() => undefined));
+  if (alwaysFresh) {
+    event.respondWith(networkUpdate.catch(() => caches.match(event.request)));
+    return;
+  }
   event.respondWith(caches.match(event.request).then(cached => cached || networkUpdate));
 });

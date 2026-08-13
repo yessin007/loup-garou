@@ -537,6 +537,17 @@ button.scene-action.danger-action { border-color: rgba(194,77,61,.48); color: #e
 button.scene-action.test-action { width: 100%; min-width: 0; padding: 10px 13px; font-size: .68rem; }
 button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 #undo-game { grid-column: 1 / -1; justify-self: end; width: min(240px, 100%); }
+.infection-actions {
+  grid-template-columns: minmax(0, 560px);
+  width: min(100%, 560px);
+}
+.infection-actions > button.scene-action,
+.infection-actions > #undo-game {
+  grid-column: 1;
+  justify-self: stretch;
+  width: 100%;
+  max-width: none;
+}
 .wake-player-names { display: inline; color: var(--ember-light); font-size: .42em; white-space: normal; }
 
 .name-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; margin: 32px 0; }
@@ -2812,4 +2823,437 @@ html[data-theme-resolved="dark"] .day-mode .scene-actions { background: linear-g
     background: rgba(244,238,226,.95);
     box-shadow: 0 18px 55px rgba(73,54,32,.2);
   }
+}
+
+/* Compact archive list for phones. */
+@media (max-width: 760px) {
+  .history-list-page .guide-header {
+    display: grid;
+    grid-template-areas:
+      "brand user user"
+      "language theme back";
+    grid-template-columns: minmax(0, 1.15fr) minmax(104px, .9fr) minmax(82px, .65fr);
+    align-items: center;
+    gap: 9px 7px;
+    min-height: 0;
+    padding: max(12px, var(--safe-top)) max(12px, var(--safe-right)) 12px max(12px, var(--safe-left));
+  }
+  .history-list-page .guide-header > .brand {
+    grid-area: brand;
+    align-self: center;
+    font-size: .82rem;
+    line-height: 1.25;
+  }
+  .history-list-page .guide-header-actions { display: contents; }
+  .history-list-page .guide-header-actions .account-username {
+    grid-area: user;
+    justify-self: end;
+    min-height: 42px;
+    max-width: min(100%, 180px);
+    border-radius: 9px;
+  }
+  .history-list-page .guide-header-actions .language-selector { grid-area: language; width: 100%; }
+  .history-list-page .guide-header-actions .language-selector select {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    min-height: 46px;
+    padding: 9px 27px 9px 10px;
+    border-radius: 9px;
+    font-size: .7rem;
+  }
+  .history-list-page .guide-header-actions .theme-toggle {
+    grid-area: theme;
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+    padding: 8px;
+  }
+  .history-list-page .guide-header-actions .guide-back {
+    grid-area: back;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+    padding: 8px;
+    overflow: hidden;
+    border-radius: 9px;
+    white-space: nowrap;
+  }
+  .history-list-page .guide-header-actions .guide-back > span { color: var(--ember-light); font-size: 1rem; }
+  .history-list-page .guide-header-actions .guide-back > strong {
+    min-width: 0;
+    overflow: hidden;
+    font-size: .66rem;
+    text-overflow: ellipsis;
+  }
+
+  .history-list-page .room-shell {
+    width: min(100% - 24px, 960px);
+    padding-top: 28px;
+    padding-bottom: max(44px, calc(var(--safe-bottom) + 28px));
+  }
+  .history-list-page .history-hero { margin-bottom: 26px; }
+  .history-list-page .history-hero h1 {
+    max-width: 100%;
+    margin-top: 12px;
+    font-size: clamp(2.35rem, 10.5vw, 3.45rem);
+    line-height: 1.02;
+    letter-spacing: -.035em;
+    overflow-wrap: normal;
+  }
+  .history-list-page .history-room-list { gap: 9px; }
+  .history-list-page .history-room-entry:not(.active) {
+    position: relative;
+    display: block;
+    min-width: 0;
+  }
+  .history-list-page .history-room-link {
+    grid-template-columns: 48px minmax(0, 1fr) 22px;
+    gap: 12px;
+    min-height: 84px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: linear-gradient(110deg, rgba(199,139,69,.055), rgba(255,255,255,.018));
+  }
+  .history-list-page .history-room-entry:not(.active):has(> form) .history-room-link { padding-right: 67px; }
+  .history-list-page .history-room-code { width: 46px; height: 46px; font-size: .66rem; }
+  .history-list-page .history-room-link strong { font-size: .84rem; line-height: 1.35; }
+  .history-list-page .history-room-link small { margin-top: 4px; font-size: .62rem; line-height: 1.4; }
+  .history-list-page .history-room-arrow { font-size: 1.15rem; text-align: center; }
+  .history-list-page .history-room-entry:not(.active) > form {
+    position: absolute;
+    z-index: 2;
+    top: 50%;
+    right: 10px;
+    display: block;
+    width: 46px;
+    height: 46px;
+    transform: translateY(-50%);
+  }
+  .history-list-page .history-room-entry:not(.active) > form .history-delete-button {
+    width: 46px;
+    min-width: 46px;
+    min-height: 46px;
+    height: 46px;
+    padding: 0;
+    border-radius: 9px;
+  }
+  .history-list-page .history-room-entry:not(.active) > form .history-delete-button span { font-size: 1.35rem; }
+  .history-list-page .history-active-actions { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .history-list-page .history-active-actions button {
+    min-width: 0;
+    min-height: 50px;
+    padding: 8px 6px;
+    border-radius: 9px;
+  }
+  .history-list-page .history-active-actions button strong { font-size: .58rem; line-height: 1.25; }
+
+  html[data-theme-resolved="light"] .history-list-page .history-room-link {
+    border-color: rgba(65,49,31,.14);
+    background: linear-gradient(110deg, rgba(199,139,69,.1), rgba(255,255,255,.45));
+  }
+}
+
+@media (max-width: 370px) {
+  .history-list-page .guide-header {
+    grid-template-areas:
+      "brand user"
+      "language theme"
+      "back back";
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .history-list-page .guide-header-actions .guide-back { min-height: 42px; }
+  .history-list-page .history-hero h1 { font-size: clamp(2.15rem, 10vw, 2.75rem); }
+}
+
+/* Compact controls and content rhythm on the room history detail page. */
+.history-header-refresh {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #8f9ca2;
+  font-size: .68rem;
+  white-space: nowrap;
+}
+.history-header-refresh i {
+  flex: 0 0 auto;
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #65bd83;
+  box-shadow: 0 0 0 4px rgba(101,189,131,.1);
+}
+
+@media (max-width: 760px) {
+  .history-detail-page .guide-header {
+    display: grid;
+    grid-template-areas:
+      "brand user user"
+      "refresh refresh code"
+      "language theme back";
+    grid-template-columns: minmax(0, 1.15fr) minmax(104px, .9fr) minmax(82px, .65fr);
+    align-items: center;
+    gap: 8px 7px;
+    min-height: 0;
+    padding: max(12px, var(--safe-top)) max(12px, var(--safe-right)) 12px max(12px, var(--safe-left));
+  }
+  .history-detail-page .guide-header > .brand {
+    grid-area: brand;
+    align-self: center;
+    font-size: .82rem;
+    line-height: 1.25;
+  }
+  .history-detail-page .guide-header-actions { display: contents; }
+  .history-detail-page .guide-header-actions .account-username {
+    grid-area: user;
+    justify-self: end;
+    min-height: 42px;
+    max-width: min(100%, 180px);
+    border-radius: 9px;
+  }
+  .history-detail-page .history-header-refresh {
+    grid-area: refresh;
+    width: 100%;
+    min-height: 44px;
+    padding: 9px 12px;
+    overflow: hidden;
+    border: 1px solid rgba(94,180,129,.2);
+    border-radius: 9px;
+    color: #a5b1b6;
+    background: rgba(72,151,103,.06);
+    text-overflow: ellipsis;
+  }
+  .history-detail-page .guide-header-actions .room-code-chip {
+    grid-area: code;
+    width: 100%;
+    min-width: 0;
+    min-height: 44px;
+    padding: 8px;
+    border-radius: 9px;
+    font-size: .66rem;
+  }
+  .history-detail-page .guide-header-actions .language-selector { grid-area: language; width: 100%; }
+  .history-detail-page .guide-header-actions .language-selector select {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    min-height: 46px;
+    padding: 9px 27px 9px 10px;
+    border-radius: 9px;
+    font-size: .7rem;
+  }
+  .history-detail-page .guide-header-actions .theme-toggle {
+    grid-area: theme;
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+    padding: 8px;
+  }
+  .history-detail-page .guide-header-actions .guide-back {
+    grid-area: back;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+    padding: 8px;
+    overflow: hidden;
+    border-radius: 9px;
+    white-space: nowrap;
+  }
+  .history-detail-page .guide-header-actions .guide-back > span {
+    flex: 0 0 auto;
+    color: var(--ember-light);
+    font-size: 1rem;
+  }
+  .history-detail-page .guide-header-actions .guide-back > strong {
+    min-width: 0;
+    overflow: hidden;
+    font-size: .66rem;
+    text-overflow: ellipsis;
+  }
+  .history-detail-page .room-shell {
+    width: min(100% - 24px, 960px);
+    padding-top: 28px;
+  }
+  .history-detail-page .history-hero { gap: 18px; margin-bottom: 24px; }
+  .history-detail-page .history-hero h1 {
+    margin-top: 11px;
+    font-size: clamp(2.45rem, 11vw, 3.55rem);
+    line-height: 1;
+    letter-spacing: -.035em;
+  }
+  .history-detail-page .history-overview { margin: 22px 0 28px; }
+
+  html[data-theme-resolved="light"] .history-detail-page .history-header-refresh {
+    border-color: rgba(56,128,83,.2);
+    color: #59665e;
+    background: rgba(56,128,83,.07);
+  }
+}
+
+@media (max-width: 370px) {
+  .history-detail-page .guide-header {
+    grid-template-areas:
+      "brand user"
+      "refresh refresh"
+      "code back"
+      "language theme";
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .history-detail-page .guide-header-actions .guide-back,
+  .history-detail-page .guide-header-actions .room-code-chip { min-height: 42px; }
+}
+
+/* Player room: the manual role refresh stays prominent and all phone controls align. */
+.player-room-page .guide-header .player-room-refresh-bar {
+  margin: 0;
+}
+.player-room-page .guide-header .player-room-refresh-bar button {
+  white-space: nowrap;
+}
+.player-room-page .guide-header .player-room-refresh-bar button strong {
+  overflow: hidden;
+  font: inherit;
+  text-overflow: ellipsis;
+}
+.player-room-page .guide-header .player-room-refresh-bar output:empty { display: none; }
+
+@media (max-width: 760px) {
+  .player-room-page .guide-header {
+    display: grid;
+    grid-template-areas:
+      "brand user user"
+      "refresh refresh refresh"
+      "code language theme"
+      "home home logout";
+    grid-template-columns: minmax(78px, .65fr) minmax(0, 1fr) minmax(104px, .85fr);
+    align-items: center;
+    gap: 8px 7px;
+    min-height: 0;
+    padding: max(12px, var(--safe-top)) max(12px, var(--safe-right)) 12px max(12px, var(--safe-left));
+  }
+  .player-room-page .guide-header > .brand {
+    grid-area: brand;
+    align-self: center;
+    font-size: .82rem;
+    line-height: 1.25;
+  }
+  .player-room-page .guide-header-actions { display: contents; }
+  .player-room-page .guide-header-actions .account-username {
+    grid-area: user;
+    justify-self: end;
+    min-height: 42px;
+    max-width: min(100%, 210px);
+    border-radius: 9px;
+  }
+  .player-room-page .guide-header-actions .player-room-refresh-bar {
+    grid-area: refresh;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 5px;
+    width: 100%;
+    min-width: 0;
+  }
+  .player-room-page .guide-header-actions .player-room-refresh-bar button {
+    width: 100%;
+    min-height: 52px;
+    padding: 11px 16px;
+    border-radius: 9px;
+    font-size: .76rem;
+    letter-spacing: .01em;
+  }
+  .player-room-page .guide-header-actions .player-room-refresh-bar button span { font-size: 1.2rem; }
+  .player-room-page .guide-header-actions .player-room-refresh-bar output {
+    min-height: 0;
+    padding: 2px 8px 0;
+    text-align: center;
+  }
+  .player-room-page .guide-header-actions .room-code-chip {
+    grid-area: code;
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+    padding: 8px;
+    border-radius: 9px;
+    font-size: .65rem;
+  }
+  .player-room-page .guide-header-actions .language-selector { grid-area: language; width: 100%; }
+  .player-room-page .guide-header-actions .language-selector select {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    min-height: 46px;
+    padding: 9px 27px 9px 10px;
+    border-radius: 9px;
+    font-size: .7rem;
+  }
+  .player-room-page .guide-header-actions .theme-toggle {
+    grid-area: theme;
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+    padding: 8px;
+  }
+  .player-room-page .guide-header-actions .home-navigation { grid-area: home; }
+  .player-room-page .guide-header-actions .guide-back:not(.home-navigation) { grid-area: logout; }
+  .player-room-page .guide-header-actions .guide-back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+    padding: 8px 10px;
+    overflow: hidden;
+    border-radius: 9px;
+    white-space: nowrap;
+  }
+  .player-room-page .guide-header-actions .guide-back > span {
+    flex: 0 0 auto;
+    color: var(--ember-light);
+    font-size: .95rem;
+  }
+  .player-room-page .guide-header-actions .guide-back > strong {
+    min-width: 0;
+    overflow: hidden;
+    font-size: .66rem;
+    text-overflow: ellipsis;
+  }
+  .player-room-page .room-shell {
+    width: min(100% - 24px, 620px);
+    padding-top: 24px;
+  }
+  .player-room-page .connection-success-banner {
+    width: 100%;
+    margin-bottom: 12px;
+    border-radius: 9px;
+  }
+  .player-room-page .player-secret-card.waiting { padding: 30px 20px; }
+  .player-room-page .player-secret-card.waiting h1 {
+    margin-bottom: 18px;
+    font-size: clamp(2.35rem, 12vw, 3.7rem);
+    line-height: 1;
+  }
+  .player-room-page .waiting-orbit { width: 82px; height: 82px; margin: 24px auto; }
+}
+
+@media (max-width: 370px) {
+  .player-room-page .guide-header {
+    grid-template-areas:
+      "brand user"
+      "refresh refresh"
+      "code code"
+      "language theme"
+      "home logout";
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .player-room-page .guide-header-actions .player-room-refresh-bar button { min-height: 48px; }
 }

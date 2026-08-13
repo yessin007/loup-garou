@@ -20,7 +20,10 @@
   }
 
   function resolve(preference) {
-    return preference === "dynamic" ? (media.matches ? "light" : "dark") : preference;
+    if (preference !== "dynamic") return preference;
+    const narrator = document.body?.classList.contains("narrator-page");
+    if (narrator) return document.body.classList.contains("day-mode") ? "light" : "dark";
+    return media.matches ? "light" : "dark";
   }
 
   function renderControls(preference) {
@@ -49,7 +52,12 @@
   }
 
   document.addEventListener("DOMContentLoaded", () => {
-    renderControls(currentPreference());
+    apply(currentPreference(), false);
+    if (document.body.classList.contains("narrator-page")) {
+      new MutationObserver(() => {
+        if (currentPreference() === "dynamic") apply("dynamic", false);
+      }).observe(document.body, {attributes: true, attributeFilter: ["class"]});
+    }
     document.addEventListener("click", event => {
       const button = event.target.closest(".theme-toggle");
       if (!button) return;

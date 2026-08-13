@@ -8,8 +8,8 @@
     <title>{{ joined_player.name }} | {{ game_room.code }}</title>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
   </head>
-  <body class="room-page">
-    <header class="guide-header"><a class="brand" href="{% url 'dashboard' %}">Loup <span>Garou</span></a><div class="guide-header-actions"><span class="account-username"><span aria-hidden="true">●</span>{{ request.user.username }}</span><strong class="room-code-chip">{{ game_room.code }}</strong>{% include "pages/_language_selector.html" %}{% include "pages/_theme_toggle.html" %}<a class="guide-back home-navigation" href="{% url 'dashboard' %}">← {{ ui.back_home }}</a><a class="guide-back" href="{% url 'logout' %}">{{ ui.logout }}</a></div></header>
+  <body class="room-page player-room-page">
+    <header class="guide-header"><a class="brand" href="{% url 'dashboard' %}">Loup <span>Garou</span></a><div class="guide-header-actions"><span class="account-username"><span aria-hidden="true">●</span>{{ request.user.username }}</span><div class="player-room-refresh-bar"><button id="player-room-refresh" type="button"><span aria-hidden="true">↻</span><strong>{{ room.refresh_role }}</strong></button><output id="player-room-refresh-status" aria-live="polite"></output></div><strong class="room-code-chip">{{ game_room.code }}</strong>{% include "pages/_language_selector.html" %}{% include "pages/_theme_toggle.html" %}<a class="guide-back home-navigation" href="{% url 'dashboard' %}"><span aria-hidden="true">←</span><strong>{{ room.back }}</strong></a><a class="guide-back" href="{% url 'logout' %}"><span aria-hidden="true">↪</span><strong>{{ ui.logout }}</strong></a></div></header>
     <main class="room-shell compact-room-shell">
       <aside class="connection-success-banner" role="status"><span aria-hidden="true">✓</span>{{ room.connected_as }} <strong>{{ request.user.username }}</strong></aside>
       <section id="player-room-card" class="player-secret-card waiting">
@@ -18,10 +18,6 @@
         <h2>{{ room.waiting }}</h2><p>{{ room.waiting_help }}</p>
         <small id="room-count">{{ game_room.room_players.count }} / {{ game_room.player_count }} {{ room.players_joined }}</small>
       </section>
-      <div class="player-room-refresh-bar">
-        <button id="player-room-refresh" type="button"><span aria-hidden="true">↻</span>{{ room.refresh_role }}</button>
-        <output id="player-room-refresh-status" aria-live="polite"></output>
-      </div>
       <a id="eliminated-history-link" class="history-home-link eliminated-history-link disabled" data-history-url="{% url 'room_history' game_room.code %}" aria-disabled="true" tabindex="-1"><span aria-hidden="true">☾</span>{{ room.eliminated_summary }} <span aria-hidden="true">→</span></a>
     </main>
     <script>

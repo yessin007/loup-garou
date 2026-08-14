@@ -1552,10 +1552,11 @@
           false,
           blocked ? "cerberus-blocked-action" : "",
         );
-        const continueButton = blocked ? actionButton(L.pyro_blocked_continue, "finish-pyromaniac-blocked", false, true) : "";
+        const passButton = actionButton(L.pyro_pass, blocked ? "finish-pyromaniac-blocked" : "skip-pyromaniac", false, true);
         const blockedNotice = blocked ? `<div class="pyro-blocked-notice"><strong>${L.pyro_blocked}</strong><p>${L.pyro_blocked_help}</p></div>` : "";
         const content = `${blockedNotice}<section class="pyro-section"><span>${L.pyro_oiled_title}</span>${oiledList}</section><section class="pyro-section"><div class="pyro-toolbar"><span>${L.pyro_douse}</span><strong id="pyro-selected-count">${t("pyro_selected_count", {count: 0})}</strong></div>${targetCards}</section>`;
-        scene.innerHTML = nightFrame(L.pyro_night, roleWakeTitle(L.pyro_wake, "pyromaniacs"), L.pyro_help, content, `${douseButton}${igniteButton}${continueButton}`);
+        scene.innerHTML = nightFrame(L.pyro_night, roleWakeTitle(L.pyro_wake, "pyromaniacs"), L.pyro_help, content, `${douseButton}${igniteButton}${passButton}`);
+        scene.querySelector(".scene-actions")?.classList.add("pyromaniac-actions");
       }
 
       function renderInfection() {
@@ -2332,6 +2333,12 @@
           state.pyromaniacDousedIds = [];
           state.pyromaniacIgnitedIds = targetIds;
           state.pyromaniacOiledIds = [];
+          nextNightStage("pyromaniac"); return;
+        } else if (action === "skip-pyromaniac") {
+          if (isRoleBlocked("pyromaniacs")) return;
+          state.pyromaniacAction = "skipped";
+          state.pyromaniacDousedIds = [];
+          state.pyromaniacIgnitedIds = [];
           nextNightStage("pyromaniac"); return;
         } else if (action === "finish-pyromaniac-blocked") {
           if (!isRoleBlocked("pyromaniacs")) return;

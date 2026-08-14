@@ -1,4 +1,4 @@
-const CACHE_NAME = "loup-garou-shell-v15";
+const CACHE_NAME = "loup-garou-shell-v18";
 const STATIC_ASSETS = [
   "/static/css/styles.css",
   "/static/js/theme.js",

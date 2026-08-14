@@ -548,6 +548,17 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
   width: 100%;
   max-width: none;
 }
+.pyromaniac-actions {
+  grid-template-columns: minmax(0, 560px);
+  width: min(100%, 560px);
+}
+.pyromaniac-actions > button.scene-action,
+.pyromaniac-actions > #undo-game {
+  grid-column: 1 !important;
+  justify-self: stretch;
+  width: 100%;
+  max-width: none;
+}
 .wake-player-names { display: inline; color: var(--ember-light); font-size: .42em; white-space: normal; }
 
 .name-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 9px; margin: 32px 0; }
@@ -3111,26 +3122,51 @@ html[data-theme-resolved="dark"] .day-mode .scene-actions { background: linear-g
   .history-detail-page .guide-header-actions .room-code-chip { min-height: 42px; }
 }
 
-/* Player room: the manual role refresh stays prominent and all phone controls align. */
-.player-room-page .guide-header .player-room-refresh-bar {
-  margin: 0;
-}
-.player-room-page .guide-header .player-room-refresh-bar button {
+/* Player room: the manual role refresh sits with the private role controls. */
+.player-room-page .player-room-refresh-bar button {
   white-space: nowrap;
 }
-.player-room-page .guide-header .player-room-refresh-bar button strong {
+.player-room-page .player-room-refresh-bar button strong {
   overflow: hidden;
   font: inherit;
   text-overflow: ellipsis;
 }
-.player-room-page .guide-header .player-room-refresh-bar output:empty { display: none; }
+.player-room-page .player-room-refresh-bar output:empty { display: none; }
+.player-room-page .player-room-content > p:not(.eyebrow) { color: #91a0a7; line-height: 1.7; }
+.player-room-page .player-secret-card.waiting > .player-room-refresh-bar {
+  width: 100%;
+  margin: 24px 0 0;
+}
+.player-room-page .player-secret-card.waiting > .player-room-refresh-bar button { width: 100%; min-height: 52px; }
+.player-room-page .player-secret-card.revealed { display: grid; }
+.player-room-page .player-secret-card.revealed > .player-room-content { display: contents; }
+.player-room-page .player-secret-card.revealed .personal-role-panel { order: 1; }
+.player-room-page .player-secret-card.revealed > .player-room-refresh-bar {
+  order: 2;
+  display: grid;
+  gap: 7px;
+  width: 100%;
+  margin: 0;
+  padding: 0 clamp(24px, 5vw, 38px) 30px;
+}
+.player-room-page .player-secret-card.revealed > .player-room-refresh-bar button {
+  width: 100%;
+  min-height: 52px;
+  border-radius: 9px;
+  font-size: .76rem;
+}
+.player-room-page .player-secret-card.revealed > .player-room-refresh-bar output {
+  min-height: 0;
+  text-align: center;
+}
+.player-room-page .player-secret-card.revealed .alive-role-roster { order: 3; }
+html[data-theme-resolved="light"] .player-room-page .player-room-content > p:not(.eyebrow) { color: #6f6b63; }
 
 @media (max-width: 760px) {
   .player-room-page .guide-header {
     display: grid;
     grid-template-areas:
       "brand user user"
-      "refresh refresh refresh"
       "code language theme"
       "home home logout";
     grid-template-columns: minmax(78px, .65fr) minmax(0, 1fr) minmax(104px, .85fr);
@@ -3152,28 +3188,6 @@ html[data-theme-resolved="dark"] .day-mode .scene-actions { background: linear-g
     min-height: 42px;
     max-width: min(100%, 210px);
     border-radius: 9px;
-  }
-  .player-room-page .guide-header-actions .player-room-refresh-bar {
-    grid-area: refresh;
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 5px;
-    width: 100%;
-    min-width: 0;
-  }
-  .player-room-page .guide-header-actions .player-room-refresh-bar button {
-    width: 100%;
-    min-height: 52px;
-    padding: 11px 16px;
-    border-radius: 9px;
-    font-size: .76rem;
-    letter-spacing: .01em;
-  }
-  .player-room-page .guide-header-actions .player-room-refresh-bar button span { font-size: 1.2rem; }
-  .player-room-page .guide-header-actions .player-room-refresh-bar output {
-    min-height: 0;
-    padding: 2px 8px 0;
-    text-align: center;
   }
   .player-room-page .guide-header-actions .room-code-chip {
     grid-area: code;
@@ -3242,6 +3256,7 @@ html[data-theme-resolved="dark"] .day-mode .scene-actions { background: linear-g
     font-size: clamp(2.35rem, 12vw, 3.7rem);
     line-height: 1;
   }
+  .player-room-page .player-room-refresh-bar button span { font-size: 1.2rem; }
   .player-room-page .waiting-orbit { width: 82px; height: 82px; margin: 24px auto; }
 }
 
@@ -3249,11 +3264,121 @@ html[data-theme-resolved="dark"] .day-mode .scene-actions { background: linear-g
   .player-room-page .guide-header {
     grid-template-areas:
       "brand user"
-      "refresh refresh"
       "code code"
       "language theme"
       "home logout";
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .player-room-page .guide-header-actions .player-room-refresh-bar button { min-height: 48px; }
+  .player-room-page .player-room-refresh-bar button { min-height: 48px; }
+}
+
+/* Room entry: compact account controls and stronger phone actions. */
+@media (max-width: 760px) {
+  .room-portal-page .guide-header {
+    display: grid;
+    grid-template-areas:
+      "brand user"
+      "language theme"
+      "home logout";
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: center;
+    gap: 8px;
+    min-height: 0;
+    padding: max(12px, var(--safe-top)) max(12px, var(--safe-right)) 12px max(12px, var(--safe-left));
+  }
+  .room-portal-page .guide-header > .brand {
+    grid-area: brand;
+    align-self: center;
+    font-size: .82rem;
+    line-height: 1.25;
+  }
+  .room-portal-page .guide-header-actions { display: contents; }
+  .room-portal-page .guide-header-actions .account-username {
+    grid-area: user;
+    justify-self: end;
+    min-height: 42px;
+    max-width: min(100%, 210px);
+    border-radius: 9px;
+  }
+  .room-portal-page .guide-header-actions .language-selector { grid-area: language; width: 100%; }
+  .room-portal-page .guide-header-actions .language-selector select {
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    min-height: 48px;
+    padding: 9px 30px 9px 12px;
+    border-radius: 9px;
+    font-size: .72rem;
+  }
+  .room-portal-page .guide-header-actions .theme-toggle {
+    grid-area: theme;
+    width: 100%;
+    min-width: 0;
+    min-height: 48px;
+    padding: 9px 11px;
+  }
+  .room-portal-page .guide-header-actions .home-navigation { grid-area: home; }
+  .room-portal-page .guide-header-actions .guide-back:not(.home-navigation) { grid-area: logout; }
+  .room-portal-page .guide-header-actions .guide-back {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    width: 100%;
+    min-width: 0;
+    min-height: 46px;
+    padding: 8px 10px;
+    overflow: hidden;
+    border-radius: 9px;
+    white-space: nowrap;
+  }
+  .room-portal-page .guide-header-actions .guide-back > span {
+    flex: 0 0 auto;
+    color: var(--ember-light);
+    font-size: .95rem;
+  }
+  .room-portal-page .guide-header-actions .guide-back > strong {
+    min-width: 0;
+    overflow: hidden;
+    font-size: .66rem;
+    text-overflow: ellipsis;
+  }
+  .room-portal-page .room-shell {
+    width: min(100% - 24px, 960px);
+    padding-top: 30px;
+  }
+  .room-portal-page .room-hero { margin-bottom: 28px; }
+  .room-portal-page .room-hero h1 {
+    margin: 10px 0 13px;
+    font-size: clamp(2.6rem, 12vw, 3.75rem);
+    line-height: 1;
+    letter-spacing: -.035em;
+  }
+  .room-portal-page .room-hero > p:last-child { margin: 0; font-size: .88rem; line-height: 1.6; }
+  .room-portal-page .room-portals { gap: 10px; }
+  .room-portal-page .room-card {
+    padding: 24px 20px;
+    border-radius: 10px;
+  }
+  .room-portal-page .room-card h2 { margin: 9px 0 18px; }
+  .room-portal-page .room-card input { min-height: 54px; border-radius: 8px; }
+  .room-portal-page .room-card button,
+  .room-portal-page .room-card-action { min-height: 54px; border-radius: 8px; }
+}
+
+/* Infection choice on phones: normal attack and infect are equal-size primary decisions. */
+@media (max-width: 760px) {
+  .narrator-page .infection-actions {
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+  .narrator-page .infection-actions > button.scene-action,
+  .narrator-page .infection-actions > button.scene-action.secondary {
+    grid-column: 1;
+    width: 100%;
+    min-height: 72px;
+    padding: 19px 20px;
+    font-size: 1.12rem;
+    line-height: 1.45;
+  }
 }

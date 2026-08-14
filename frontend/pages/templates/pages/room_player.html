@@ -9,19 +9,26 @@
     <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
   </head>
   <body class="room-page player-room-page">
-    <header class="guide-header"><a class="brand" href="{% url 'dashboard' %}">Loup <span>Garou</span></a><div class="guide-header-actions"><span class="account-username"><span aria-hidden="true">●</span>{{ request.user.username }}</span><div class="player-room-refresh-bar"><button id="player-room-refresh" type="button"><span aria-hidden="true">↻</span><strong>{{ room.refresh_role }}</strong></button><output id="player-room-refresh-status" aria-live="polite"></output></div><strong class="room-code-chip">{{ game_room.code }}</strong>{% include "pages/_language_selector.html" %}{% include "pages/_theme_toggle.html" %}<a class="guide-back home-navigation" href="{% url 'dashboard' %}"><span aria-hidden="true">←</span><strong>{{ room.back }}</strong></a><a class="guide-back" href="{% url 'logout' %}"><span aria-hidden="true">↪</span><strong>{{ ui.logout }}</strong></a></div></header>
+    <header class="guide-header"><a class="brand" href="{% url 'dashboard' %}">Loup <span>Garou</span></a><div class="guide-header-actions"><span class="account-username"><span aria-hidden="true">●</span>{{ request.user.username }}</span><strong class="room-code-chip">{{ game_room.code }}</strong>{% include "pages/_language_selector.html" %}{% include "pages/_theme_toggle.html" %}<a class="guide-back home-navigation" href="{% url 'dashboard' %}"><span aria-hidden="true">←</span><strong>{{ room.back }}</strong></a><a class="guide-back" href="{% url 'logout' %}"><span aria-hidden="true">↪</span><strong>{{ ui.logout }}</strong></a></div></header>
     <main class="room-shell compact-room-shell">
       <aside class="connection-success-banner" role="status"><span aria-hidden="true">✓</span>{{ room.connected_as }} <strong>{{ request.user.username }}</strong></aside>
       <section id="player-room-card" class="player-secret-card waiting">
-        <p class="eyebrow">{{ room.joined }}</p><h1>{{ joined_player.name }}</h1>
-        <div class="waiting-orbit"><span>…</span></div>
-        <h2>{{ room.waiting }}</h2><p>{{ room.waiting_help }}</p>
-        <small id="room-count">{{ game_room.room_players.count }} / {{ game_room.player_count }} {{ room.players_joined }}</small>
+        <div id="player-room-content" class="player-room-content">
+          <p class="eyebrow">{{ room.joined }}</p><h1>{{ joined_player.name }}</h1>
+          <div class="waiting-orbit"><span>…</span></div>
+          <h2>{{ room.waiting }}</h2><p>{{ room.waiting_help }}</p>
+          <small id="room-count">{{ game_room.room_players.count }} / {{ game_room.player_count }} {{ room.players_joined }}</small>
+        </div>
+        <div class="player-room-refresh-bar">
+          <button id="player-room-refresh" type="button"><span aria-hidden="true">↻</span><strong>{{ room.refresh_role }}</strong></button>
+          <output id="player-room-refresh-status" aria-live="polite"></output>
+        </div>
       </section>
       <a id="eliminated-history-link" class="history-home-link eliminated-history-link disabled" data-history-url="{% url 'room_history' game_room.code %}" aria-disabled="true" tabindex="-1"><span aria-hidden="true">☾</span>{{ room.eliminated_summary }} <span aria-hidden="true">→</span></a>
     </main>
     <script>
       const card = document.getElementById("player-room-card");
+      const cardContent = document.getElementById("player-room-content");
       const refreshButton = document.getElementById("player-room-refresh");
       const refreshStatus = document.getElementById("player-room-refresh-status");
       const csrfToken = "{{ csrf_token }}";
@@ -56,7 +63,7 @@
       function revealRole(role) {
         if (!card.classList.contains("revealed")) {
           card.className = "player-secret-card revealed";
-          card.innerHTML = `<div class="personal-role-panel"><div id="private-role-details"><p class="eyebrow">{{ room.your_role|escapejs }}</p><h1 id="player-role-name"></h1><button id="toggle-role-guide" class="role-guide-toggle" type="button" aria-expanded="false" aria-controls="private-role-guide"><span id="toggle-role-guide-label">{{ room.show_role_details|escapejs }}</span><i aria-hidden="true">+</i></button><div id="private-role-guide" hidden><p id="player-role-description"></p><section class="private-role-rules"><strong>{{ room.role_rules|escapejs }}</strong><ul id="player-role-rules"></ul></section></div></div><div id="private-player-identity" hidden><p class="eyebrow">{{ room.player_identity|escapejs }}</p><h1 id="private-player-name"></h1></div><button id="toggle-private-role" class="role-visibility-toggle" type="button"><span id="toggle-private-role-label">{{ room.hide_my_role|escapejs }}</span><i aria-hidden="true">↔</i></button></div><section class="alive-role-roster"><div class="alive-role-heading"><span>{{ room.roles_alive|escapejs }}</span><strong><b id="alive-role-count">0</b> {{ room.roles_alive_count|escapejs }} · <b id="dead-role-count">0</b> {{ room.roles_dead_count|escapejs }}</strong></div><div id="alive-role-list" class="alive-role-list"></div><section class="private-notes-editor"><header><div><strong>{{ room.private_notes|escapejs }}</strong><small>{{ room.private_notes_help|escapejs }}</small></div><span><b id="private-notes-count">0</b> / 600</span></header><textarea id="private-notes-input" maxlength="600" rows="6" placeholder="{{ room.private_notes_placeholder|escapejs }}"></textarea><output id="private-notes-status" aria-live="polite"></output></section></section>`;
+          cardContent.innerHTML = `<div class="personal-role-panel"><div id="private-role-details"><p class="eyebrow">{{ room.your_role|escapejs }}</p><h1 id="player-role-name"></h1><button id="toggle-role-guide" class="role-guide-toggle" type="button" aria-expanded="false" aria-controls="private-role-guide"><span id="toggle-role-guide-label">{{ room.show_role_details|escapejs }}</span><i aria-hidden="true">+</i></button><div id="private-role-guide" hidden><p id="player-role-description"></p><section class="private-role-rules"><strong>{{ room.role_rules|escapejs }}</strong><ul id="player-role-rules"></ul></section></div></div><div id="private-player-identity" hidden><p class="eyebrow">{{ room.player_identity|escapejs }}</p><h1 id="private-player-name"></h1></div><button id="toggle-private-role" class="role-visibility-toggle" type="button"><span id="toggle-private-role-label">{{ room.hide_my_role|escapejs }}</span><i aria-hidden="true">↔</i></button></div><section class="alive-role-roster"><div class="alive-role-heading"><span>{{ room.roles_alive|escapejs }}</span><strong><b id="alive-role-count">0</b> {{ room.roles_alive_count|escapejs }} · <b id="dead-role-count">0</b> {{ room.roles_dead_count|escapejs }}</strong></div><div id="alive-role-list" class="alive-role-list"></div><section class="private-notes-editor"><header><div><strong>{{ room.private_notes|escapejs }}</strong><small>{{ room.private_notes_help|escapejs }}</small></div><span><b id="private-notes-count">0</b> / 600</span></header><textarea id="private-notes-input" maxlength="600" rows="6" placeholder="{{ room.private_notes_placeholder|escapejs }}"></textarea><output id="private-notes-status" aria-live="polite"></output></section></section>`;
           document.getElementById("private-player-name").textContent = "{{ joined_player.name|escapejs }}";
           document.getElementById("toggle-role-guide").addEventListener("click", toggleRoleGuide);
           document.getElementById("toggle-private-role").addEventListener("click", togglePrivateRole);
@@ -75,7 +82,7 @@
           notesLoaded = false;
           displayedRoleCode = null;
           card.className = "player-secret-card waiting";
-          card.innerHTML = `<p class="eyebrow">{{ room.joined|escapejs }}</p><h1>{{ joined_player.name|escapejs }}</h1><div class="waiting-orbit"><span>…</span></div><h2>{{ room.waiting|escapejs }}</h2><p>{{ room.waiting_help|escapejs }}</p><small id="room-count"></small>`;
+          cardContent.innerHTML = `<p class="eyebrow">{{ room.joined|escapejs }}</p><h1>{{ joined_player.name|escapejs }}</h1><div class="waiting-orbit"><span>…</span></div><h2>{{ room.waiting|escapejs }}</h2><p>{{ room.waiting_help|escapejs }}</p><small id="room-count"></small>`;
         }
         document.getElementById("room-count")?.replaceChildren(`${data.joined_count} / ${data.player_count} {{ room.players_joined|escapejs }}`);
       }

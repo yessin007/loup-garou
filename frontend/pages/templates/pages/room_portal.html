@@ -10,10 +10,10 @@
     <title>{{ room.room_title }} | Loup Garou</title>
     <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
   </head>
-  <body class="room-page">
+  <body class="room-page room-portal-page">
     <header class="guide-header">
       <a class="brand" href="{% url 'dashboard' %}">Loup <span>Garou</span></a>
-      <div class="guide-header-actions"><span class="account-username"><span aria-hidden="true">●</span>{{ request.user.username }}</span>{% include "pages/_language_selector.html" %}{% include "pages/_theme_toggle.html" %}<a class="guide-back home-navigation" href="{% url 'dashboard' %}">← {{ ui.back_home }}</a><a class="guide-back" href="{% url 'logout' %}">{{ ui.logout }}</a></div>
+      <div class="guide-header-actions"><span class="account-username"><span aria-hidden="true">●</span>{{ request.user.username }}</span>{% include "pages/_language_selector.html" %}{% include "pages/_theme_toggle.html" %}<a class="guide-back home-navigation" href="{% url 'dashboard' %}"><span aria-hidden="true">←</span><strong>{{ ui.back_home }}</strong></a><a class="guide-back" href="{% url 'logout' %}"><span aria-hidden="true">↪</span><strong>{{ ui.logout }}</strong></a></div>
     </header>
     <main class="room-shell">
       <section class="room-hero">

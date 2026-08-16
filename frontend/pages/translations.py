@@ -284,6 +284,8 @@ GAME = {
 }
 
 GAME["fr"].update({
+    "player_search_placeholder": "Rechercher un joueur (2 lettres suffisent)",
+    "player_search_no_results": "Aucun joueur trouvé",
     "launch_normal_game": "Lancer une partie normale",
     "died_due_to_barber_player_role": "{name} · {role} (joué par le Barbier)",
     "died_due_to_hunter_player_role": "{name} · {role} (joué par le Chasseur)",
@@ -389,6 +391,8 @@ GAME["fr"].update({
     "majority_missing_help": "Le seul candidat n'a pas reçu plus de la moitié des voix des joueurs en vie.",
 })
 GAME["en"].update({
+    "player_search_placeholder": "Search for a player (2 letters are enough)",
+    "player_search_no_results": "No player found",
     "launch_normal_game": "Start a normal game",
     "died_due_to_barber_player_role": "{name} · {role} (played by the Barber)",
     "died_due_to_hunter_player_role": "{name} · {role} (played by the Hunter)",
@@ -494,6 +498,8 @@ GAME["en"].update({
     "majority_missing_help": "The only candidate did not receive more than half the votes of all living players.",
 })
 GAME["tn"].update({
+    "player_search_placeholder": "Lawwej 3la joueur (7atta b zouz 7rouf)",
+    "player_search_no_results": "Ma l9it 7atta joueur",
     "launch_normal_game": "Abda game normale",
     "died_due_to_barber_player_role": "{name} · {role} (fi joret Barbier)",
     "died_due_to_hunter_player_role": "{name} · {role} (fi joret Chasseur)",

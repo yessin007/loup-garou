@@ -530,6 +530,18 @@ button.header-action { justify-self: end; width: auto; margin: 0; padding: 8px 1
 .scene-lead { max-width: 620px; margin: 24px 0 35px; color: #929da2; line-height: 1.65; }
 .scene-panel select { width: min(100%, 560px); margin-top: 8px; padding: 16px; border: 1px solid rgba(255,255,255,.13); border-radius: 2px; outline: none; color: var(--ivory); font: 500 .85rem "DM Sans", sans-serif; background: #101820; }
 .scene-panel select:focus { border-color: var(--ember); }
+.player-search-picker { position: relative; display: grid; width: min(100%, 560px); gap: 7px; }
+.scene-panel .player-search-picker select { width: 100%; margin-top: 0; }
+.player-search-input { width: 100%; min-height: 48px; padding: 12px 16px 12px 42px; border: 1px solid rgba(199,139,69,.28); border-radius: 2px; outline: none; color: var(--ivory); font: 500 .85rem "DM Sans", sans-serif; background: #101820; }
+.player-search-picker::before { position: absolute; z-index: 1; top: 15px; left: 15px; color: var(--ember-light); font-size: .9rem; content: "⌕"; pointer-events: none; }
+.player-search-input:focus { border-color: var(--ember); box-shadow: 0 0 0 3px rgba(199,139,69,.12); }
+.player-search-input:disabled { opacity: .42; cursor: not-allowed; }
+.player-search-results { position: absolute; z-index: 20; top: 55px; left: 0; right: 0; max-height: 260px; overflow-y: auto; border: 1px solid rgba(199,139,69,.38); background: #111920; box-shadow: 0 18px 45px rgba(0,0,0,.42); }
+.player-search-results button { display: block; width: 100%; padding: 13px 15px; border: 0; border-bottom: 1px solid rgba(255,255,255,.07); color: var(--ivory); font: 500 .8rem "DM Sans", sans-serif; text-align: left; background: transparent; cursor: pointer; }
+.player-search-results button:hover, .player-search-results button:focus { color: var(--ember-light); background: rgba(199,139,69,.1); }
+.player-search-results p { margin: 0; padding: 13px 15px; color: #849096; font-size: .75rem; }
+.village-state-fields .player-search-picker { width: 100%; }
+.village-state-fields .player-search-picker select { margin: 0; }
 .scene-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 12px; align-items: stretch; margin-top: 32px; }
 button.scene-action { width: 100%; max-width: 100%; margin: 0; }
 button.scene-action.secondary { border: 1px solid rgba(255,255,255,.12); color: #a4aeb2; background: transparent; }
@@ -650,6 +662,7 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .shepherd-row:has(.shepherd-send-toggle:checked) .sheep-check { font-size: 0; }
 .shepherd-row select:disabled { opacity: .42; cursor: not-allowed; }
 .shepherd-row:has(.shepherd-send-toggle:checked) select { opacity: 1; }
+.shepherd-row > .player-search-picker { width: 100%; }
 
 .night-order-guide { width: min(100%, 660px); margin: -12px 0 26px; border: 1px solid rgba(167,197,215,.13); background: rgba(13,23,31,.72); }
 .night-order-guide summary { display: grid; grid-template-columns: auto minmax(0, 1fr); align-items: center; gap: 14px; min-height: 54px; padding: 12px 15px; cursor: pointer; list-style: none; }
@@ -1585,7 +1598,7 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
   .shepherd-toolbar { align-items: flex-start; flex-direction: column; gap: 5px; }
   .shepherd-row { grid-template-columns: 36px minmax(0, 1fr); gap: 9px; transform: none !important; }
   .shepherd-row > span { align-self: center; }
-  .shepherd-row > select { grid-column: 1 / -1; margin-top: 2px; }
+  .shepherd-row > select, .shepherd-row > .player-search-picker { grid-column: 1 / -1; margin-top: 2px; }
   .night-order-guide { width: 100%; margin: -8px 0 20px; }
   .night-order-guide summary { grid-template-columns: 1fr auto auto; gap: 8px; min-height: 50px; padding: 10px 12px; }
   .night-order-guide summary > span { font-size: .55rem; }
@@ -1987,6 +2000,10 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
   width: 100%; min-height: 52px; padding: 12px 16px; border: 1px solid rgba(199,139,69,.4); border-radius: 9px;
   color: #e2b77e; background: rgba(199,139,69,.08); font: inherit; font-weight: 800; cursor: pointer;
 }
+.user-role-form { display: grid; gap: 10px; margin-bottom: 14px; padding-bottom: 18px; border-bottom: 1px solid rgba(255,255,255,.08); }
+.user-role-form label { color: #b9c0c3; font-size: .82rem; font-weight: 700; }
+.user-role-form select { width: 100%; min-height: 52px; padding: 0 14px; border: 1px solid rgba(255,255,255,.14); border-radius: 9px; color: var(--ivory); background: #091015; font: inherit; }
+.user-role-form select:focus { border-color: var(--ember); outline: none; box-shadow: 0 0 0 3px rgba(199,139,69,.12); }
 .user-password-card { display: block; }
 .user-password-card > h2 { margin-top: 0; }
 .user-password-card > form { display: grid; gap: 18px; margin-top: 22px; }
@@ -2766,6 +2783,9 @@ html[data-theme-resolved="light"] .player-chip strong { color: #33342f; }
 html[data-theme-resolved="light"] .player-chip small,
 html[data-theme-resolved="light"] .scene-lead { color: #6d6b64; }
 html[data-theme-resolved="light"] .scene-panel select { border-color: rgba(57,46,34,.16); color: #292a27; background: rgba(255,255,255,.48); }
+html[data-theme-resolved="light"] .player-search-input,
+html[data-theme-resolved="light"] .player-search-results { border-color: rgba(112,78,38,.25); color: #292a27; background: #fffaf1; }
+html[data-theme-resolved="light"] .player-search-results button { border-color: rgba(57,46,34,.1); color: #292a27; }
 html[data-theme-resolved="light"] button.scene-action.secondary { border-color: rgba(65,49,31,.2); color: #615e56; }
 html[data-theme-resolved="light"] .scene-actions { background: linear-gradient(transparent, rgba(234,224,205,.98) 18%); }
 html[data-theme-resolved="light"] .undo-dialog,

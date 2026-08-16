@@ -669,6 +669,24 @@ def user_detail(request, user_id):
                 account.is_active = not account.is_active
                 account.save(update_fields=["is_active"])
                 success = "Le compte a été réactivé." if account.is_active else "Le compte a été désactivé."
+        elif action == "set_role":
+            role = request.POST.get("role", "")
+            if account.is_superuser:
+                error = "Le rôle d’un super-admin ne peut pas être modifié ici."
+            elif role not in {"player", "narrator"}:
+                error = "Type de compte invalide."
+            else:
+                narrator_group = Group.objects.get_or_create(name=NARRATOR_GROUP)[0]
+                if role == "narrator":
+                    account.groups.add(narrator_group)
+                    role_label = "Narrateur"
+                else:
+                    account.groups.remove(narrator_group)
+                    role_label = "Joueur"
+                if account.is_staff:
+                    account.is_staff = False
+                    account.save(update_fields=["is_staff"])
+                success = f"{account.username} est maintenant {role_label}."
         elif action == "set_password":
             password = request.POST.get("password", "")
             confirmation = request.POST.get("password_confirmation", "")
@@ -695,11 +713,13 @@ def user_detail(request, user_id):
         else "Narrateur" if any(group.name == NARRATOR_GROUP for group in account.groups.all())
         else "Joueur"
     )
+    account.account_role_value = "narrator" if account.account_role == "Narrateur" else "player"
     return render(request, "pages/user_detail.html", {
         "account": account,
         "narrated_room_count": account.narrated_rooms.count(),
         "participation_count": account.game_participations.count(),
         "can_manage_access": not account.is_superuser,
+        "can_manage_role": not account.is_superuser,
         "can_delete": not account.is_superuser and account.pk != request.user.pk,
         "error": error,
         "success": success,

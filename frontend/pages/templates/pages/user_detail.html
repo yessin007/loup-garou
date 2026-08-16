@@ -38,6 +38,17 @@
             <div><dt>Parties narrées</dt><dd>{{ narrated_room_count }}</dd></div>
             <div><dt>Participations</dt><dd>{{ participation_count }}</dd></div>
           </dl>
+          {% if can_manage_role %}
+          <form class="user-role-form" method="post">
+            {% csrf_token %}<input type="hidden" name="action" value="set_role" />
+            <label for="account-role">Type de compte</label>
+            <select id="account-role" name="role">
+              <option value="player" {% if account.account_role_value == "player" %}selected{% endif %}>Joueur — rejoint et joue uniquement</option>
+              <option value="narrator" {% if account.account_role_value == "narrator" %}selected{% endif %}>Narrateur — crée et gère ses parties</option>
+            </select>
+            <button class="admin-secondary-button" type="submit">Enregistrer le rôle</button>
+          </form>
+          {% endif %}
           {% if can_manage_access %}
           <form method="post">
             {% csrf_token %}<input type="hidden" name="action" value="toggle" />

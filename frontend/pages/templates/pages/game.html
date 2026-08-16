@@ -419,7 +419,7 @@
       }
       function populateVillageStatePlayers(selectedId = null) {
         villageStatePlayerSelect.innerHTML = state.players
-          .map(item => `<option value="${item.id}">#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)} · ${escapeHtml(roleMeta[item.role]?.name || item.role)} · ${item.alive ? L.alive : L.eliminated}</option>`)
+          .map(item => `<option value="${item.id}" data-player-option>#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)} · ${escapeHtml(roleMeta[item.role]?.name || item.role)} · ${item.alive ? L.alive : L.eliminated}</option>`)
           .join("");
         const wanted = player(selectedId) || state.players[0];
         if (wanted) villageStatePlayerSelect.value = String(wanted.id);
@@ -427,9 +427,10 @@
       function populateVillageStateWildIdols(subject) {
         const targets = state.players.filter(item => item.id !== subject.id);
         villageStateWildIdolSelect.innerHTML = `<option value="">${L.village_state_choose_wild_idol}</option>${targets
-          .map(item => `<option value="${item.id}">#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)} · ${escapeHtml(roleMeta[item.role]?.name || item.role)} · ${item.alive ? L.alive : L.eliminated}</option>`)
+          .map(item => `<option value="${item.id}" data-player-option>#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)} · ${escapeHtml(roleMeta[item.role]?.name || item.role)} · ${item.alive ? L.alive : L.eliminated}</option>`)
           .join("")}`;
         if (targets.some(item => item.id === state.wildIdolId)) villageStateWildIdolSelect.value = String(state.wildIdolId);
+        enhancePlayerSelects(villageStateDialog);
       }
       function populateVillageStatePyromaniacPlayers(subject) {
         const oiledIds = new Set((state.pyromaniacOiledIds || []).map(Number));
@@ -492,6 +493,7 @@
         if (!state.players.length) return;
         populateVillageStateRoles();
         populateVillageStatePlayers();
+        enhancePlayerSelects(villageStateDialog);
         setVillageStateMode("phase");
         if (typeof villageStateDialog.showModal === "function") villageStateDialog.showModal();
       }
@@ -1104,11 +1106,82 @@
       }
       function options(players, placeholder = L.choose_probe, _showRole = true, disabledIds = [], disabledLabel = L.protected_previous_target) {
         const disabled = new Set(disabledIds.map(Number));
-        return `<option value="">${placeholder}</option>${players.map(item => `<option value="${item.id}" ${disabled.has(item.id) ? "disabled" : ""}>#${String(item.id).padStart(2, "0")} — ${escapeHtml(item.name)} (${escapeHtml(playerRoleStatus(item))})${disabled.has(item.id) ? ` — ${disabledLabel}` : ""}</option>`).join("")}`;
+        return `<option value="">${placeholder}</option>${players.map(item => `<option value="${item.id}" data-player-option ${disabled.has(item.id) ? "disabled" : ""}>#${String(item.id).padStart(2, "0")} — ${escapeHtml(item.name)} (${escapeHtml(playerRoleStatus(item))})${disabled.has(item.id) ? ` — ${disabledLabel}` : ""}</option>`).join("")}`;
       }
       function nameOnlyOptions(players, placeholder = L.choose_probe, disabledIds = [], disabledLabel = L.protected_previous_target) {
         const disabled = new Set(disabledIds.map(Number));
-        return `<option value="">${placeholder}</option>${players.map(item => `<option value="${item.id}" ${disabled.has(item.id) ? "disabled" : ""}>#${String(item.id).padStart(2, "0")} — ${escapeHtml(item.name)}${disabled.has(item.id) ? ` — ${disabledLabel}` : ""}</option>`).join("")}`;
+        return `<option value="">${placeholder}</option>${players.map(item => `<option value="${item.id}" data-player-option ${disabled.has(item.id) ? "disabled" : ""}>#${String(item.id).padStart(2, "0")} — ${escapeHtml(item.name)}${disabled.has(item.id) ? ` — ${disabledLabel}` : ""}</option>`).join("")}`;
+      }
+
+      function normalizedPlayerSearch(value) {
+        return String(value || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLocaleLowerCase();
+      }
+
+      function enhancePlayerSelects(root = document) {
+        root.querySelectorAll("select").forEach(select => {
+          if (!select.querySelector("option[data-player-option]") || select.closest(".player-search-picker")) return;
+          const picker = document.createElement("div");
+          picker.className = "player-search-picker";
+          const search = document.createElement("input");
+          search.className = "player-search-input";
+          search.type = "search";
+          search.placeholder = L.player_search_placeholder;
+          search.setAttribute("aria-label", L.player_search_placeholder);
+          search.autocomplete = "off";
+          const results = document.createElement("div");
+          results.className = "player-search-results";
+          results.hidden = true;
+          select.parentNode.insertBefore(picker, select);
+          picker.append(search, select, results);
+
+          const syncDisabled = () => { search.disabled = select.disabled; };
+          const closeResults = () => {
+            results.hidden = true;
+            results.innerHTML = "";
+          };
+          const showMatches = () => {
+            const query = normalizedPlayerSearch(search.value.trim());
+            if (query.length < 2 || select.disabled) {
+              closeResults();
+              return;
+            }
+            const matches = [...select.querySelectorAll("option[data-player-option]")]
+              .filter(option => !option.disabled && normalizedPlayerSearch(player(option.value)?.name || option.textContent).includes(query));
+            results.innerHTML = matches.length
+              ? matches.map(option => `<button type="button" data-player-search-value="${option.value}">${option.innerHTML}</button>`).join("")
+              : `<p>${L.player_search_no_results}</p>`;
+            results.hidden = false;
+          };
+
+          search.addEventListener("input", showMatches);
+          search.addEventListener("keydown", event => {
+            if (event.key === "Escape") closeResults();
+            if (event.key === "Enter") {
+              const first = results.querySelector("button");
+              if (first) {
+                event.preventDefault();
+                first.click();
+              }
+            }
+          });
+          results.addEventListener("click", event => {
+            const button = event.target.closest("[data-player-search-value]");
+            if (!button || select.disabled) return;
+            select.value = button.dataset.playerSearchValue;
+            const selected = select.selectedOptions[0];
+            search.value = player(selected?.value)?.name || "";
+            closeResults();
+            select.dispatchEvent(new Event("change", {bubbles: true}));
+          });
+          select.addEventListener("change", () => {
+            const selected = select.selectedOptions[0];
+            if (selected?.dataset.playerOption !== undefined) search.value = player(selected.value)?.name || "";
+            else search.value = "";
+            closeResults();
+          });
+          new MutationObserver(syncDisabled).observe(select, {attributes: true, attributeFilter: ["disabled"]});
+          syncDisabled();
+        });
       }
       function actionButton(label, action, disabled = false, secondary = false, compact = false, extraClass = "", hidden = false) {
         return `<button class="scene-action ${secondary ? "secondary" : ""} ${compact ? "test-action" : ""} ${extraClass}" type="button" data-action="${action}" ${disabled ? "disabled" : ""} ${hidden ? "hidden" : ""}>${label}<span>→</span></button>`;
@@ -1888,7 +1961,7 @@
       }
 
       function voteBoard(candidates) {
-        const candidateOptions = candidates.map(item => `<option value="${item.id}">${playerText(item)}</option>`).join("");
+        const candidateOptions = candidates.map(item => `<option value="${item.id}" data-player-option>${playerText(item)}</option>`).join("");
         const silenced = effectiveSilencedPlayer();
         const availableVotes = alive().length - (silenced?.alive ? 1 : 0);
         const rows = candidates.map(item => `<article class="vote-row"><span class="vote-avatar">${String(item.id).padStart(2, "0")}</span><strong>${playerIdentity(item)}</strong><div class="vote-counter"><button type="button" data-vote-step="-1" aria-label="−">−</button><output data-candidate="${item.id}" value="0">0</output><button type="button" data-vote-step="1" aria-label="+">+</button></div></article>`).join("");
@@ -2029,6 +2102,7 @@
         renderSidebar();
         const views = { roster: renderRoster, player_reveal: renderPlayerReveal, roles: renderRoles, cupid: renderCupid, couple_reveal: renderCoupleReveal, wild_child: renderWildChild, protector: renderProtector, prostitute: renderProstitute, wolves: renderWolves, cerberus: renderCerberus, pyromaniac: renderPyromaniac, infection: renderInfection, infection_result: renderInfectionResult, white_wolf: renderWhiteWolf, bear: renderBear, shepherd: renderShepherd, shepherd_result: renderShepherdResult, judge: renderJudge, judge_result: renderJudgeResult, black_wolf: renderBlackWolf, talkative_wolf: renderTalkativeWolf, talkative_reveal: renderTalkativeReveal, barber_signal: renderBarberSignal, alien_signal: renderAlienSignal, witch: renderWitch, seer: renderSeer, dawn: renderDawn, accusation: renderAccusation, barber_shot: renderBarberShot, barber_result: renderBarberResult, alien_guess: renderAlienGuess, alien_result: renderAlienResult, final_vote: renderFinalVote, servant_choice: renderServantChoice, hunter_shot: renderHunterShot, day_end: renderDayEnd, game_over: renderGameOver };
         (views[state.stage] || renderRoster)();
+        enhancePlayerSelects(scene);
         if (signalStages.includes(state.stage) && !state.winner) renderDaySignalDock();
         if (liveDayDeathStages.includes(state.stage)) renderLiveDayDeathBilan();
         placeUndoButton();

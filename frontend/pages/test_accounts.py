@@ -74,6 +74,35 @@ class AccountFlowTests(TestCase):
         self.assertTrue(self.player.check_password("nouveau-secret"))
         self.assertFalse(self.player.check_password("secret"))
 
+    def test_super_admin_can_change_regular_user_between_player_and_narrator(self):
+        client = Client()
+        client.force_login(self.super_admin)
+        detail_url = reverse("user_detail", args=[self.player.pk])
+
+        response = client.post(detail_url, {"action": "set_role", "role": "narrator"})
+        self.assertContains(response, "sarra est maintenant Narrateur")
+        self.player.refresh_from_db()
+        self.assertTrue(self.player.groups.filter(name=NARRATOR_GROUP).exists())
+        self.assertFalse(self.player.is_staff)
+        self.assertFalse(self.player.is_superuser)
+
+        response = client.post(detail_url, {"action": "set_role", "role": "player"})
+        self.assertContains(response, "sarra est maintenant Joueur")
+        self.player.refresh_from_db()
+        self.assertFalse(self.player.groups.filter(name=NARRATOR_GROUP).exists())
+
+    def test_super_admin_role_cannot_be_changed_from_user_dashboard(self):
+        client = Client()
+        client.force_login(self.super_admin)
+        response = client.post(reverse("user_detail", args=[self.super_admin.pk]), {
+            "action": "set_role", "role": "player",
+        })
+
+        self.assertContains(response, "ne peut pas être modifié")
+        self.super_admin.refresh_from_db()
+        self.assertTrue(self.super_admin.is_superuser)
+        self.assertTrue(self.super_admin.is_staff)
+
     def test_super_admin_can_disable_enable_and_delete_regular_user(self):
         client = Client()
         client.force_login(self.super_admin)

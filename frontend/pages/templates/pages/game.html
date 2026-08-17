@@ -157,6 +157,11 @@
       const roomCode = "{{ room_code|escapejs }}";
       const websiteQrUrl = "{% url 'general_room_qr' %}";
       const csrfToken = "{{ csrf_token }}";
+      const automaticTestPlayerNames = [
+        "Marwen", "Asma", "Marwa", "Mohamed", "Houda", "Yassine", "Amine", "Ons", "Ines", "Ahmed",
+        "Sarra", "Aziz", "Rania", "Fares", "Emna", "Bilel", "Mariem", "Seif", "Cyrine", "Wael",
+        "Eya", "Nidhal", "Malek", "Imen", "Aymen", "Zeineb", "Hamza", "Rim", "Ala", "Ghassen",
+      ];
       function currentCsrfToken() {
         const cookie = document.cookie.split("; ").find(item => item.startsWith("csrftoken="));
         return cookie ? decodeURIComponent(cookie.split("=").slice(1).join("=")) : csrfToken;
@@ -1312,11 +1317,11 @@
         if (!testMode || !state.roomStarted) return;
         while (state.players.length < setup.player_count) {
           const id = state.players.length + 1;
-          let name = state.pendingManualPlayerNames[0] || `Test ${String(id).padStart(2, "0")}`;
-          let suffix = 2;
-          while (state.players.some(item => item.name.toLowerCase() === name.toLowerCase())) name = `Test ${String(id).padStart(2, "0")}-${suffix++}`;
+          const usedNames = new Set(state.players.map(item => item.name.toLowerCase()));
+          const name = state.pendingManualPlayerNames.length
+            ? state.pendingManualPlayerNames.shift()
+            : automaticTestPlayerNames.find(candidate => !usedNames.has(candidate.toLowerCase()));
           state.players.push({id, name, role: state.roleDeck[id - 1], initialRole: state.roleDeck[id - 1], alive: true});
-          if (state.pendingManualPlayerNames[0] === name) state.pendingManualPlayerNames.shift();
           state.seatingOrderIds = normalizedSeatingOrder();
         }
         state.revealVisible = false;

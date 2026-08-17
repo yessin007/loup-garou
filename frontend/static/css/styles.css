@@ -1133,7 +1133,35 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .room-card-action { display: flex; align-items: center; justify-content: space-between; min-height: 48px; margin-top: auto; padding: 14px 18px; border: 1px solid rgba(199,139,69,.38); color: var(--ivory); text-decoration: none; background: rgba(199,139,69,.08); }
 .room-code-chip { display: inline-grid; place-items: center; min-height: 34px; padding: 6px 11px; border: 1px solid rgba(199,139,69,.4); color: var(--ember-light); font: 700 .75rem "Cinzel", serif; letter-spacing: .15em; background: rgba(199,139,69,.08); }
 .player-secret-card { overflow: hidden; padding: 0; border: 1px solid rgba(255,255,255,.1); text-align: center; background: rgba(255,255,255,.025); }
-.player-secret-card.waiting { padding: clamp(28px, 7vw, 55px); }
+.player-secret-card.waiting, .player-secret-card.assigned { padding: clamp(28px, 7vw, 55px); }
+.governorate-box { position: relative; display: block; width: 238px; height: 168px; margin: 34px auto 44px; padding: 0; border: 0; color: inherit; background: transparent; cursor: pointer; transform: perspective(650px) rotateX(-2deg) rotateY(-4deg); transform-style: preserve-3d; filter: drop-shadow(13px 20px 15px rgba(0,0,0,.42)); }
+.governorate-box:focus-visible { outline: 3px solid var(--ember-light); outline-offset: 9px; }
+.governorate-box::before { position: absolute; right: -18px; bottom: -15px; left: 20px; height: 24px; border-radius: 50%; background: rgba(0,0,0,.42); filter: blur(10px); content: ""; }
+.governorate-box-lid { position: absolute; z-index: 3; top: 0; left: 0; display: block; width: 238px; height: 54px; border: 2px solid #ff4d59; border-radius: 22px 22px 7px 7px; background: linear-gradient(180deg, #ff3844 0%, #ef0716 55%, #c9000d 100%); box-shadow: inset 0 7px rgba(255,255,255,.18), inset 0 -7px rgba(119,0,7,.24), 0 5px 0 #fff; }
+.governorate-box-lid::after { position: absolute; right: 18px; bottom: 7px; left: 18px; height: 3px; border-radius: 50%; background: rgba(92,0,7,.35); content: ""; }
+.governorate-box-front { position: absolute; z-index: 2; right: 11px; bottom: 0; left: 11px; display: grid; place-items: center; height: 124px; border: 2px solid #ff4652; border-radius: 3px 3px 17px 17px; background: linear-gradient(105deg, #c9000d 0%, #fa101f 18%, #e90010 70%, #b6000b 100%); box-shadow: inset 9px 0 rgba(255,255,255,.08), inset -12px 0 rgba(99,0,5,.16), inset 0 -9px rgba(103,0,6,.18); }
+.governorate-box-front::after { position: absolute; right: 10px; bottom: 8px; left: 10px; height: 5px; border-radius: 50%; background: rgba(92,0,7,.25); content: ""; }
+.governorate-box-front strong { z-index: 1; display: grid; place-items: center; width: 174px; min-height: 76px; padding: 8px 10px; overflow-wrap: anywhere; border: 1px solid #d7d7d7; border-radius: 6px; color: #090909; font: 800 clamp(1.18rem, 5vw, 1.65rem) Georgia, serif; line-height: 1.05; background: linear-gradient(165deg, #fff 0%, #f6f6f6 72%, #dedede 100%); box-shadow: inset 0 2px 3px rgba(0,0,0,.1), 0 2px 2px rgba(97,0,5,.28); }
+.governorate-box.opening { pointer-events: none; }
+.governorate-box.opening .governorate-box-lid { transform-origin: 50% 100%; animation: governorate-box-open .72s cubic-bezier(.2,.75,.22,1) forwards; will-change: transform, filter; }
+.governorate-box.opening .governorate-box-front { animation: governorate-box-settle .72s ease-out forwards; will-change: transform, filter; }
+@keyframes governorate-box-open {
+  0% { transform: translateZ(0) rotateX(0); filter: brightness(1); }
+  42% { transform: translateY(-5px) translateZ(30px) rotateX(-52deg); filter: brightness(1.14); }
+  100% { transform: translateY(-20px) translateZ(52px) rotateX(-112deg); filter: brightness(1.22); }
+}
+@keyframes governorate-box-settle {
+  0%, 38% { transform: translateZ(0) scale(1); filter: brightness(1); }
+  62% { transform: translateZ(8px) scale(1.025); filter: brightness(1.1); }
+  100% { transform: translateZ(0) scale(1); filter: brightness(1); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .governorate-box.opening .governorate-box-lid,
+  .governorate-box.opening .governorate-box-front { animation-duration: .01ms; }
+}
+.reveal-role-button { display: inline-flex; align-items: center; justify-content: space-between; gap: 32px; min-width: min(100%, 310px); min-height: 54px; margin-top: 24px; padding: 13px 18px; border: 1px solid rgba(199,139,69,.55); color: var(--ivory); background: rgba(199,139,69,.14); }
+.reveal-role-button:hover { border-color: var(--ember-light); background: rgba(199,139,69,.22); }
+.reveal-role-button i { color: var(--ember-light); font-size: 1.1rem; font-style: normal; }
 .personal-role-panel { padding: clamp(28px, 7vw, 55px); }
 .personal-role-panel > p:not(.eyebrow) { color: #91a0a7; line-height: 1.7; }
 .personal-role-panel > strong { display: block; margin-top: 28px; color: var(--ember-light); }
@@ -3153,11 +3181,13 @@ html[data-theme-resolved="dark"] .day-mode .scene-actions { background: linear-g
 }
 .player-room-page .player-room-refresh-bar output:empty { display: none; }
 .player-room-page .player-room-content > p:not(.eyebrow) { color: #91a0a7; line-height: 1.7; }
-.player-room-page .player-secret-card.waiting > .player-room-refresh-bar {
+.player-room-page .player-secret-card.waiting > .player-room-refresh-bar,
+.player-room-page .player-secret-card.assigned > .player-room-refresh-bar {
   width: 100%;
   margin: 24px 0 0;
 }
-.player-room-page .player-secret-card.waiting > .player-room-refresh-bar button { width: 100%; min-height: 52px; }
+.player-room-page .player-secret-card.waiting > .player-room-refresh-bar button,
+.player-room-page .player-secret-card.assigned > .player-room-refresh-bar button { width: 100%; min-height: 52px; }
 .player-room-page .player-secret-card.revealed { display: grid; }
 .player-room-page .player-secret-card.revealed > .player-room-content { display: contents; }
 .player-room-page .player-secret-card.revealed .personal-role-panel { order: 1; }
@@ -3270,8 +3300,10 @@ html[data-theme-resolved="light"] .player-room-page .player-room-content > p:not
     margin-bottom: 12px;
     border-radius: 9px;
   }
-  .player-room-page .player-secret-card.waiting { padding: 30px 20px; }
-  .player-room-page .player-secret-card.waiting h1 {
+  .player-room-page .player-secret-card.waiting,
+  .player-room-page .player-secret-card.assigned { padding: 30px 20px; }
+  .player-room-page .player-secret-card.waiting h1,
+  .player-room-page .player-secret-card.assigned h1 {
     margin-bottom: 18px;
     font-size: clamp(2.35rem, 12vw, 3.7rem);
     line-height: 1;

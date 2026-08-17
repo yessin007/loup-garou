@@ -53,6 +53,13 @@
       let notesSaveTimer = null;
       let notesLoaded = false;
       let displayedRoleCode = null;
+      let pendingRole = null;
+      let pendingRoomData = null;
+      const tunisianGovernorates = [
+        "Tunis", "Ariana", "Ben Arous", "Manouba", "Nabeul", "Zaghouan", "Bizerte", "Béja",
+        "Jendouba", "Le Kef", "Siliana", "Sousse", "Monastir", "Mahdia", "Sfax", "Kairouan",
+        "Kasserine", "Sidi Bouzid", "Gabès", "Médenine", "Tataouine", "Gafsa", "Tozeur", "Kébili",
+      ];
       function safe(value) { const node = document.createElement("span"); node.textContent = value; return node.innerHTML; }
       function scheduleRoom() {
         clearTimeout(roomTimer);
@@ -76,11 +83,43 @@
         document.getElementById("player-role-rules").innerHTML = (role.rules || []).map(rule => `<li>${safe(rule)}</li>`).join("");
         displayedRoleCode = role.code;
       }
+      function renderRoleReady(role, data) {
+        pendingRole = role;
+        pendingRoomData = data;
+        if (card.classList.contains("assigned")) return;
+        const governorate = tunisianGovernorates[Math.floor(Math.random() * tunisianGovernorates.length)];
+        card.className = "player-secret-card assigned";
+        cardContent.innerHTML = `<p class="eyebrow">{{ room.joined|escapejs }}</p><h1>{{ joined_player.name|escapejs }}</h1><button id="reveal-role-box" class="governorate-box" type="button" aria-label="{{ room.reveal_my_role|escapejs }} — ${safe(governorate)}"><span class="governorate-box-lid"></span><span class="governorate-box-front"><strong>${safe(governorate)}</strong></span></button><h2>{{ room.role_ready|escapejs }}</h2><p>{{ room.role_ready_help|escapejs }}</p><button id="reveal-role-button" class="reveal-role-button" type="button"><span>{{ room.reveal_my_role|escapejs }}</span><i aria-hidden="true">→</i></button>`;
+        let roleRevealStarted = false;
+        let roleRevealFinished = false;
+        const finishRoleReveal = () => {
+          if (roleRevealFinished || !pendingRole || !pendingRoomData) return;
+          roleRevealFinished = true;
+          revealRole(pendingRole);
+          renderRoleRoster(pendingRoomData.role_roster || [], pendingRoomData.alive_count || 0, pendingRoomData.dead_count || 0);
+          renderPrivateNotes(pendingRoomData.private_notes || "");
+        };
+        const revealPendingRole = () => {
+          if (roleRevealStarted || !pendingRole || !pendingRoomData) return;
+          roleRevealStarted = true;
+          const box = document.getElementById("reveal-role-box");
+          const button = document.getElementById("reveal-role-button");
+          box.disabled = true;
+          button.disabled = true;
+          box.classList.add("opening");
+          box.querySelector(".governorate-box-lid").addEventListener("animationend", finishRoleReveal, {once: true});
+          setTimeout(finishRoleReveal, 900);
+        };
+        document.getElementById("reveal-role-box").addEventListener("click", revealPendingRole);
+        document.getElementById("reveal-role-button").addEventListener("click", revealPendingRole);
+      }
       function renderWaitingRoom(data) {
         if (!card.classList.contains("waiting")) {
           clearTimeout(notesSaveTimer);
           notesLoaded = false;
           displayedRoleCode = null;
+          pendingRole = null;
+          pendingRoomData = null;
           card.className = "player-secret-card waiting";
           cardContent.innerHTML = `<p class="eyebrow">{{ room.joined|escapejs }}</p><h1>{{ joined_player.name|escapejs }}</h1><div class="waiting-orbit"><span>…</span></div><h2>{{ room.waiting|escapejs }}</h2><p>{{ room.waiting_help|escapejs }}</p><small id="room-count"></small>`;
         }
@@ -173,9 +212,13 @@
           updateHistoryLink(data.player_alive);
           if (data.role) {
             const roleChanged = Boolean(displayedRoleCode && displayedRoleCode !== data.role.code);
-            revealRole(data.role);
-            renderRoleRoster(data.role_roster || [], data.alive_count || 0, data.dead_count || 0);
-            renderPrivateNotes(data.private_notes || "");
+            if (card.classList.contains("revealed")) {
+              revealRole(data.role);
+              renderRoleRoster(data.role_roster || [], data.alive_count || 0, data.dead_count || 0);
+              renderPrivateNotes(data.private_notes || "");
+            } else {
+              renderRoleReady(data.role, data);
+            }
             if (manual) refreshStatus.textContent = roleChanged ? "{{ room.role_refreshed|escapejs }}" : "{{ room.room_refreshed|escapejs }}";
             if (data.status !== "finished") scheduleRoom();
             return;

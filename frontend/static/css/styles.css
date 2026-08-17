@@ -1166,6 +1166,12 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .personal-role-panel > p:not(.eyebrow) { color: #91a0a7; line-height: 1.7; }
 .personal-role-panel > strong { display: block; margin-top: 28px; color: var(--ember-light); }
 .personal-role-panel [hidden] { display: none; }
+.opened-role-box { position: relative; width: min(100%, 350px); height: 280px; margin: 0 auto 28px; perspective: 800px; filter: drop-shadow(12px 22px 18px rgba(0,0,0,.38)); }
+.opened-role-box-lid { position: absolute; z-index: 1; top: 0; right: 14px; left: 14px; display: flex; align-items: center; justify-content: center; flex-direction: column; height: 211px; padding: 24px 22px 47px; border: 12px solid #ed101d; border-bottom-width: 9px; border-radius: 17px 17px 3px 3px; color: #080808; background: linear-gradient(165deg, #fff 0%, #fafafa 74%, #e2e2e2 100%); box-shadow: inset 0 3px 7px rgba(0,0,0,.1), 0 -5px #ff4852; transform: rotateX(-5deg); transform-origin: 50% 100%; }
+.opened-role-box-lid p { margin: 0 0 10px; color: #262626; font: 700 .66rem "Cinzel", serif; letter-spacing: .1em; text-transform: uppercase; }
+.opened-role-box-lid h1 { display: grid; place-items: center; max-width: 100%; min-height: 64px; margin: 0; overflow-wrap: anywhere; color: #050505; font: 800 clamp(1.75rem, 8vw, 2.7rem) Georgia, serif; line-height: 1; text-shadow: none; }
+.opened-role-box-base { position: absolute; z-index: 2; right: 0; bottom: 0; left: 0; height: 105px; border: 2px solid #ff4a55; border-radius: 3px 3px 18px 18px; background: linear-gradient(115deg, #bd000c, #f5101f 22%, #d9000e 76%, #a9000a); box-shadow: inset 0 -12px rgba(87,0,5,.2); clip-path: polygon(7% 0, 93% 0, 100% 100%, 0 100%); }
+.opened-role-box-base span { position: absolute; top: 8px; right: 25px; left: 25px; height: 58px; border: 1px solid #d6d6d6; background: linear-gradient(170deg, #fff, #e8e8e8); box-shadow: inset 0 3px 5px rgba(0,0,0,.13); clip-path: polygon(5% 0, 95% 0, 100% 100%, 0 100%); }
 #private-role-details > p:not(.eyebrow) { color: #91a0a7; line-height: 1.7; }
 .role-guide-toggle { display: inline-flex; align-items: center; justify-content: space-between; gap: 24px; min-width: min(100%, 360px); padding: 13px 16px; border: 1px solid rgba(199,139,69,.32); color: var(--ivory); font-size: .7rem; background: rgba(199,139,69,.06); }
 .role-guide-toggle:hover, .role-guide-toggle[aria-expanded="true"] { border-color: var(--ember-light); background: rgba(199,139,69,.13); }

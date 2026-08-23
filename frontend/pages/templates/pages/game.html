@@ -207,6 +207,7 @@
         judges: { short: "JU", name: setup.role_labels.judges, faction: "village", description: setup.role_descriptions.judges },
         wild_children: { short: "ES", name: setup.role_labels.wild_children, faction: "village", description: setup.role_descriptions.wild_children },
         angels: { short: "AG", name: setup.role_labels.angels, faction: "angel", description: setup.role_descriptions.angels },
+        fools: { short: "FO", name: setup.role_labels.fools, faction: "fool", description: setup.role_descriptions.fools },
         ankous: { short: "AK", name: setup.role_labels.ankous, faction: "village", description: setup.role_descriptions.ankous },
         little_girls: { short: "PF", name: setup.role_labels.little_girls, faction: "village", description: setup.role_descriptions.little_girls },
         protectors: { short: "PR", name: setup.role_labels.protectors, faction: "village", description: setup.role_descriptions.protectors },
@@ -876,17 +877,19 @@
         return isWolfPlayer(item) ? "wolf" : isAngelVillageAligned(item) || angelInCouple ? "village" : roleMeta[item.role].faction;
       }
       function coupleMembers() { return (state.coupleIds || []).map(player).filter(Boolean); }
-      function isSoloPlayer(item) { return Boolean(item && (item.role === "aliens" || item.role === "pyromaniacs" || item.role === "white_wolves" || (item.role === "angels" && !isAngelVillageAligned(item)))); }
+      function isSoloPlayer(item) { return Boolean(item && (item.role === "aliens" || item.role === "pyromaniacs" || item.role === "white_wolves" || item.role === "fools" || (item.role === "angels" && !isAngelVillageAligned(item)))); }
       function infectedSoloCouple(members = coupleMembers()) {
         if (members.length !== 2 || !members.every(item => item.alive)) return [];
         return members.some((item, index) => item.infected && isSoloPlayer(members[1 - index])) ? members : [];
       }
       function alienCouple() {
         const members = coupleMembers();
+        if (members.some(item => item.role === "fools")) return [];
         return infectedSoloCouple(members).length === 0 && members.length === 2 && members.every(item => item.alive) && members.some(item => baseFaction(item) === "alien") ? members : [];
       }
       function independentCouple() {
         const members = coupleMembers();
+        if (members.some(item => item.role === "fools")) return [];
         if (infectedSoloCouple(members).length === 2) return members;
         const whiteWolfWithPackWolf = members.length === 2 && members.every(item => item.alive && isWolfPlayer(item)) && members.some(item => item.role === "white_wolves");
         if (whiteWolfWithPackWolf) return members;
@@ -897,6 +900,7 @@
       function competitionFaction(item) { return isAlienLover(item) ? "alien" : isIndependentLover(item) ? "couple" : baseFaction(item); }
       function victoryFaction(item) {
         const faction = competitionFaction(item);
+        if (item?.role === "fools") return "fool";
         return item?.role === "white_wolves" && faction === "wolf" ? "white_wolf" : faction;
       }
       function livingBarber() { return alive().find(item => item.role === "barbers" && !villagePowerLost(item)); }
@@ -1001,8 +1005,9 @@
       function finalizeVoteDeath() {
         const eliminated = player(state.lastVote);
         const angelWon = state.round === 1 && eliminated?.role === "angels" && competitionFaction(eliminated) === "angel";
-        if (angelWon) {
-          state.winner = "angel";
+        const foolWon = !state.servantAccepted && eliminated?.role === "fools";
+        if (angelWon || foolWon) {
+          state.winner = angelWon ? "angel" : "fool";
           state.stage = "day_end";
           return;
         }
@@ -1070,6 +1075,7 @@
       function checkWinner() {
         const survivors = alive();
         if (survivors.length === 0) return "draw";
+        if (survivors.length === 1 && survivors[0].role === "fools") return "draw";
         if (survivors.length === 1 && survivors[0].role === "angels" && !isAngelVillageAligned(survivors[0])) {
           expireAngelObjective();
           return "village";
@@ -2075,6 +2081,7 @@
         const pyromaniacVictory = state.winner === "pyromaniac";
         const coupleVictory = state.winner === "couple";
         const angelVictory = state.winner === "angel";
+        const foolVictory = state.winner === "fool";
         const survivors = alive();
         const livingWolves = survivors.filter(item => victoryFaction(item) === "wolf").length;
         const livingPack = survivors.filter(isWolfPlayer).length;
@@ -2082,16 +2089,16 @@
         const livingPyromaniacs = survivors.filter(item => victoryFaction(item) === "pyromaniac").length;
         const livingCouples = coupleMembers().filter(item => item.alive).length;
         const livingVillagers = survivors.filter(item => victoryFaction(item) === "village").length;
-        const victoryLabel = draw ? L.draw_result : angelVictory ? L.angel_wins : whiteWolfVictory ? L.white_wolf_wins : coupleVictory ? L.couple_wins : alienVictory ? L.alien_wins : pyromaniacVictory ? L.pyromaniac_wins : wolfVictory ? L.wolves_win : L.village_wins;
-        const victoryTitle = draw ? L.draw_title : angelVictory ? L.angel_won : whiteWolfVictory ? L.white_wolf_won : coupleVictory ? L.couple_won : alienVictory ? L.alien_won : pyromaniacVictory ? L.pyromaniac_won : wolfVictory ? L.wolves_won : L.village_won;
-        const victoryHelp = draw ? L.draw_help : angelVictory ? L.angel_victory_help : whiteWolfVictory ? L.white_wolf_victory_help : coupleVictory ? L.couple_victory_help : alienVictory ? L.alien_victory_help : pyromaniacVictory ? L.pyromaniac_victory_help : wolfVictory ? t("wolf_score", {wolves: livingWolves, villagers: survivors.length - livingWolves}) : L.village_score;
+        const victoryLabel = draw ? L.draw_result : foolVictory ? L.fool_wins : angelVictory ? L.angel_wins : whiteWolfVictory ? L.white_wolf_wins : coupleVictory ? L.couple_wins : alienVictory ? L.alien_wins : pyromaniacVictory ? L.pyromaniac_wins : wolfVictory ? L.wolves_win : L.village_wins;
+        const victoryTitle = draw ? L.draw_title : foolVictory ? L.fool_won : angelVictory ? L.angel_won : whiteWolfVictory ? L.white_wolf_won : coupleVictory ? L.couple_won : alienVictory ? L.alien_won : pyromaniacVictory ? L.pyromaniac_won : wolfVictory ? L.wolves_won : L.village_won;
+        const victoryHelp = draw ? L.draw_help : foolVictory ? L.fool_victory_help : angelVictory ? L.angel_victory_help : whiteWolfVictory ? L.white_wolf_victory_help : coupleVictory ? L.couple_victory_help : alienVictory ? L.alien_victory_help : pyromaniacVictory ? L.pyromaniac_victory_help : wolfVictory ? t("wolf_score", {wolves: livingWolves, villagers: survivors.length - livingWolves}) : L.village_score;
         const showAlienScore = Boolean(setup.composition.aliens);
         const showCoupleScore = Boolean(state.cupidLinked);
         const showPyromaniacScore = state.players.some(item => item.role === "pyromaniacs");
         const extraScores = Number(showAlienScore) + Number(showCoupleScore) + Number(showPyromaniacScore);
         const scoreClass = extraScores >= 2 ? "four" : extraScores === 1 ? "three" : "";
         setHeading(L.game_over, victoryLabel);
-        scene.innerHTML = `<div class="end-emblem ${wolfVictory || whiteWolfVictory ? "wolf" : pyromaniacVictory ? "pyromaniac" : "village"}"><span>${angelVictory ? "AG" : whiteWolfVictory ? "LW" : coupleVictory ? "CU" : alienVictory ? "AL" : pyromaniacVictory ? "PY" : wolfVictory ? "LG" : "VI"}</span></div><div class="scene-kicker">${L.finished}</div><h1>${victoryTitle}</h1><p class="scene-lead">${victoryHelp}</p><div class="end-score ${scoreClass}"><div><strong>${livingPack}</strong><span>${L.wolves_alive}</span></div><div><strong>${livingVillagers}</strong><span>${L.villagers_alive}</span></div>${showAlienScore ? `<div><strong>${livingAliens}</strong><span>${L.aliens_alive}</span></div>` : ""}${showPyromaniacScore ? `<div><strong>${livingPyromaniacs}</strong><span>${L.pyromaniacs_alive}</span></div>` : ""}${showCoupleScore ? `<div><strong>${livingCouples}</strong><span>${L.lovers_alive}</span></div>` : ""}</div><div class="final-roster">${state.players.map(item => `<span class="${item.alive ? "alive" : "dead"}">#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)} <small>${roleMeta[item.role].name}${item.infected ? ` · ${L.infected_status}` : ""}${item.wildTurned ? ` · ${L.wild_wolf_status}` : ""}${item.id === state.wildIdolId ? ` · ${L.wild_idol_status}` : ""}${isAngelVillageAligned(item) ? ` · ${L.angel_village_status}` : ""}${state.ankouGhost?.playerId === item.id && state.ankouGhost.votesRemaining > 0 ? ` · ${t("ankou_votes_left", {count: state.ankouGhost.votesRemaining})}` : ""}${(state.coupleIds || []).includes(item.id) ? ` · ${L.couple_status}` : ""}</small></span>`).join("")}</div><div class="scene-actions">${actionButton(L.new_game, "new-game")}${actionButton(L.back_setup, "back-setup", false, true)}</div>`;
+        scene.innerHTML = `<div class="end-emblem ${wolfVictory || whiteWolfVictory ? "wolf" : pyromaniacVictory ? "pyromaniac" : "village"}"><span>${foolVictory ? "FO" : angelVictory ? "AG" : whiteWolfVictory ? "LW" : coupleVictory ? "CU" : alienVictory ? "AL" : pyromaniacVictory ? "PY" : wolfVictory ? "LG" : "VI"}</span></div><div class="scene-kicker">${L.finished}</div><h1>${victoryTitle}</h1><p class="scene-lead">${victoryHelp}</p><div class="end-score ${scoreClass}"><div><strong>${livingPack}</strong><span>${L.wolves_alive}</span></div><div><strong>${livingVillagers}</strong><span>${L.villagers_alive}</span></div>${showAlienScore ? `<div><strong>${livingAliens}</strong><span>${L.aliens_alive}</span></div>` : ""}${showPyromaniacScore ? `<div><strong>${livingPyromaniacs}</strong><span>${L.pyromaniacs_alive}</span></div>` : ""}${showCoupleScore ? `<div><strong>${livingCouples}</strong><span>${L.lovers_alive}</span></div>` : ""}</div><div class="final-roster">${state.players.map(item => `<span class="${item.alive ? "alive" : "dead"}">#${String(item.id).padStart(2, "0")} · ${escapeHtml(item.name)} <small>${roleMeta[item.role].name}${item.infected ? ` · ${L.infected_status}` : ""}${item.wildTurned ? ` · ${L.wild_wolf_status}` : ""}${item.id === state.wildIdolId ? ` · ${L.wild_idol_status}` : ""}${isAngelVillageAligned(item) ? ` · ${L.angel_village_status}` : ""}${state.ankouGhost?.playerId === item.id && state.ankouGhost.votesRemaining > 0 ? ` · ${t("ankou_votes_left", {count: state.ankouGhost.votesRemaining})}` : ""}${(state.coupleIds || []).includes(item.id) ? ` · ${L.couple_status}` : ""}</small></span>`).join("")}</div><div class="scene-actions">${actionButton(L.new_game, "new-game")}${actionButton(L.back_setup, "back-setup", false, true)}</div>`;
         if (survivors.length) scene.querySelector(".scene-actions").insertAdjacentHTML("afterbegin", actionButton(L.continue_game, "continue-game"));
       }
 

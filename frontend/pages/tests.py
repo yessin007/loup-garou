@@ -668,6 +668,33 @@ class RoomFlowTests(TestCase):
         self.assertContains(guide, "Les réponses sont vérifiées")
         self.assertContains(guide, "réponses suivantes sont ignorées")
 
+    def test_fool_role_is_solo_and_wins_only_when_voted_out(self):
+        for language in ("fr", "en", "tn"):
+            self.assertIn("fools", ROLES[language])
+            self.assertIn("fools", ROLE_GUIDES[language])
+
+        welcome = self.narrator.get(f'{reverse("welcome")}?mode=new')
+        self.assertContains(welcome, 'data-role="fools"')
+        self.assertContains(welcome, 'name="fools"')
+
+        self.composition.update({"villagers": 5, "fools": 1})
+        self.create_room()
+        game = self.narrator.get(reverse("game"))
+        self.assertContains(game, 'fools: { short: "FO"')
+        self.assertContains(game, 'const foolWon = !state.servantAccepted && eliminated?.role === "fools"')
+        self.assertContains(game, 'state.winner = angelWon ? "angel" : "fool"')
+        self.assertContains(game, 'if (item?.role === "fools") return "fool"')
+        self.assertContains(game, 'if (members.some(item => item.role === "fools")) return []')
+        self.assertContains(game, 'survivors.length === 1 && survivors[0].role === "fools"')
+        self.assertNotContains(game, 'const foolWonByVote')
+        self.assertContains(game, 'else if (state.lastVote && livingServant())')
+
+        guide = self.visitor_client("tn").get(reverse("roles_guide"))
+        self.assertContains(guide, "El Mahboul / Fou")
+        self.assertContains(guide, "Yal3ab wa7dou w yerba7 direct")
+        self.assertContains(guide, "Ynajem yetinfecta")
+        self.assertContains(guide, "ken te5ou role mte3ou")
+
     def test_night_wake_titles_include_the_players_names(self):
         self.create_room()
         game = self.narrator.get(reverse("game"))

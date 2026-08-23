@@ -5,6 +5,7 @@ ROLE_CAMPS = {
     "simple_wolves": "wolf", "infecting_fathers": "wolf", "cerberus_wolves": "wolf",
     "black_wolves": "wolf", "talkative_wolves": "wolf", "blue_wolves": "wolf",
     "white_wolves": "solo", "aliens": "solo", "pyromaniacs": "solo", "angels": "solo",
+    "fools": "solo",
     "barbers": "village", "prostitutes": "village", "servants": "village",
     "ancients": "village", "hunters": "village", "red_riding_hoods": "village", "bears": "village",
     "shepherds": "village", "cupids": "village", "judges": "village",
@@ -20,7 +21,7 @@ ROLE_CODES = {
     "white_wolves": "LW", "barbers": "BA", "aliens": "AL", "pyromaniacs": "PY", "prostitutes": "PU",
     "servants": "SE", "ancients": "AN", "hunters": "CH", "red_riding_hoods": "CR", "bears": "OU",
     "shepherds": "BE", "cupids": "CU", "judges": "JU", "wild_children": "ES",
-    "angels": "AG", "ankous": "AK", "little_girls": "PF", "seers": "VO",
+    "angels": "AG", "fools": "FO", "ankous": "AK", "little_girls": "PF", "seers": "VO",
     "witches": "SO", "protectors": "PR", "villagers": "VI",
 }
 
@@ -137,6 +138,13 @@ ROLE_GUIDES = {
             "Dès la résolution du premier vote, un échec le transforme en Simple Villageois. S'il devient seul survivant avant ce vote, son objectif échoue et les conditions normales sont appliquées.",
             "Amoureux, il abandonne immédiatement son objectif solo : avec un Villageois, le Couple reste au Village. Le Cerbère n'affecte pas cette règle et la victoire de l'Ange est prioritaire sur la Servante.",
         ),
+        "fools": (
+            "Joue seul et gagne immédiatement s'il est lui-même éliminé par un vote du Village, pendant n'importe quelle journée.",
+            "Une mort causée par les Loups, la Sorcière, le Barbier, le Chasseur, le Pyromane, le Loup Blanc ou la mort en chaîne d'un amoureux ne lui donne aucune victoire.",
+            "Il peut être infecté : il rejoint alors physiquement la meute et le Juge le détecte comme Loup, mais conserve son objectif personnel et ne partage pas la victoire des Loups.",
+            "Cupidon peut le lier, mais le Fou garde son objectif solo et ne gagne pas avec le Couple. Si un autre camp remplit sa condition avant son élimination par vote, le Fou perd.",
+            "S'il est éliminé par vote alors qu'une Servante peut agir, elle choisit d'abord : si elle prend son rôle, elle devient le nouveau Fou vivant et aucune victoire n'est déclenchée ; si elle refuse, le Fou éliminé gagne.",
+        ),
         "ankous": (
             "Après sa mort, ne parle plus mais conserve un vote secret par jour pendant exactement deux jours de vote. L'application ajoute automatiquement cette voix au total.",
             "Mort de nuit : il vote le jour même puis le suivant. Mort par vote : ses deux votes commencent les deux jours suivants. Un jour où le vote est passé consomme quand même une journée.",
@@ -190,6 +198,7 @@ ROLE_GUIDES = {
         "judges": ("Compares two different players nightly and may choose self plus another player; only learns same or different faction.", "Uses current Village, Wolf, Alien or independent Couple factions: a Village player and an infected player are in different factions.", "Cerberus reverses the verdict: matching factions appear different and different factions appear identical. An infected or coupled Judge keeps the role."),
         "wild_children": ("Chooses another player as a role model on the first night.", "Joins the physical pack whenever the model dies, regardless of the cause: night, vote, Barber, Alien, Hunter or a chained death.", "After changing or infection, Bear, Shepherd and Judge detect a Wolf, but the original Wild Child role and saved model remain. Cerberus does not cancel the model."),
         "angels": ("The game always starts on night one. Angel then plays solo until the first vote and wins alone if uniquely eliminated by it.", "On failure immediately becomes a regular Villager. As the sole survivor before that vote, the objective fails and normal victory is checked.", "A lover Angel immediately abandons the solo goal; with a Villager the Couple stays Village. Angel victory has priority over Servant inheritance."),
+        "fools": ("Plays alone and immediately wins if personally eliminated by the Village vote on any day.", "Being killed by Wolves, Witch, Barber, Hunter, Arsonist, White Wolf or a lover's chained death never grants a win.", "The Fool can be infected and then physically joins the pack and appears as a Wolf to the Judge, but keeps the personal objective and does not share the Wolves' victory.", "Cupid may link the Fool, but the solo objective remains and the Fool cannot win with the Couple. If another faction wins first, the Fool loses.", "If a Servant can act after the Fool is voted out, she chooses first: taking the role makes her the new living Fool without triggering a win; refusing lets the eliminated Fool win."),
         "ankous": ("After death, cannot speak but keeps one secret vote per day for exactly two voting days; the app adds it automatically.", "A night death allows votes that day and the next; a vote death starts on the following two days. A skipped vote still consumes a day.", "Cerberus does not cancel ghost votes. An infected Ankou joins the pack but remains Ankou and keeps both post-death votes, unless the Elder penalty disables this power."),
         "little_girls": ("May physically peek during the Wolves' turn to identify them, without screen help or narrator confirmation.", "Wolves first choose a victim, then may replace it with anyone they saw peeking, whether that person is really Little Girl or not. Only the final target is attacked.", "Cerberus acts later and neither confirms nor cancels peeking. An infected Little Girl joins the pack but keeps the original role; protection, Escort, Witch and infection use the final target."),
         "seers": ("Inspects another player every night and sees the role displayed by the interface.", "Blue Wolf produces a completely random role. For an infected target, the Seer sees only the original role and never the infection. A blocked Seer sees Cerberus.", "An infected or coupled Seer keeps the original role and all future visions; only the winning faction is recalculated."),
@@ -219,6 +228,7 @@ ROLE_GUIDES = {
         "judges": ("Kol lil y9aren zouz joueurs mo5talfin w ynajem ya5tar rou7ou m3a we7ed; ya3ref bark nafs clan wala mo5talfin.", "Yesta3mel clan actuel: Village w joueur infecte ya3tihom deux clans differents.", "Ken Cerbere blockeh, resultat yet9aleb: zouz Villageois yjiw clans mo5talfin, w Villageois m3a infecte, loup wala Alien yjiw nafs clan. Role yab9a."),
         "wild_children": ("Awel lil ya5tar joueur e5er idole mte3ou.", "Ki idole ymout, ayyan ken sabab — lil, vote, Barbier, Alien, Chasseur wala mawt en chaîne — Enfant Sauvage yod5ol physiquement m3a jme3et el loups.", "Transforme wala infecte, Ours, Berger w Juge y7esbouh loup, ama yab9a Enfant Sauvage w lien idole yab9a. Cerbere ma yfas5ch idole."),
         "angels": ("El game tebda dima b lil 1. Ba3d yal3ab solo 7atta awel vote w yerba7 ken houwa wa7dou yo5rej.", "Ken ma rba7ch, ywali Simple Villageois direct. Ken yab9a wa7dou 9bal vote, objectif yefchel w victoire normale tet7seb.", "Ken amoureux, objectif solo yetna77a direct; m3a Villageois yab9aw camp Village. Victoire Ange 9bal choix Servante."),
+        "fools": ("Yal3ab wa7dou w yerba7 direct ken el Village y5arjou houwa bel vote, fi ay nhar.", "Ken yo9tlouh el Loups, Sorciere, Barbier, Chasseur, Pyromane, Loup Blanc wala ymout 5ater amoureux mte3ou met, ma yerba7ch.", "Ynajem yetinfecta: ywali physiquement m3a el loups w Juge y7esbou Loup, ama objectif mte3ou yab9a solo w ma yerba7ch m3a el Loups.", "Cupidon ynajem yrabtou, ama Fou yab9a b objectif solo w ma yerba7ch m3a el Couple. Ken camp e5er yerba7 9bal ma yo5rej houwa bel vote, Fou yo5ser.", "Ken Fou yo5rej bel vote w fama Servante tnajem tel3ab, heya ta5tar 9bal: ken te5ou role mte3ou, twalli heya Fou jdida 3aycha w ma fama 7atta victoire; ken terfod, Fou eli 5raj yerba7."),
         "ankous": ("Ba3d ma ymout ma ya7kich, ama 3andou vote m5obi kol nhar pendant zouz votes; app tzidou automatiquement.", "Ken met fel lil ysawwet nafs nhar w elli ba3dou; ken met bel vote yabda fel zouz nharat elli ba3d. Passe yconsumi nhar.", "Cerbere ma yfas5ch votes. Ankou infecte yod5ol m3a jme3et el loups ama yab9a Ankou w ykamel zouz votes ba3d mawt, sauf ken pénalité Ancien na77at pouvoir mte3ou."),
         "little_girls": ("Tnajem t7ell 3iniha chwaya physiquement waqt tour loups bech ta3refhom, bla ecran w bla confirmation narrateur.", "Loups ya5tarou victime loula, ba3d ynajmou ybadlouha b ay joueur chefouh yetfarrej, que ce soit Petite Fille wala le. Ken cible finale wa7da tetdhareb.", "Cerbere yji ba3d. Petite Fille infectee tod5ol m3a jme3et el loups ama tab9a b role original. Protecteur, Pute, Sorciere w infection yesta3mlou cible finale."),
         "seers": ("Kol lil ta5tar joueur e5er w tchouf role eli interface twarrih.", "Loup Bleu ywarrilha role random. Ken cible infectee, tchouf ken role original w ma tchoufch infection. Ken Voyante bloquee tchouf Cerbere.", "Voyante infectee wala Couple tab9a Voyante w tkamel visions; clan bark yetbaddel."),

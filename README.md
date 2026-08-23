@@ -27,7 +27,7 @@ Depuis un telephone sur le meme reseau:
 - `http://IP_DE_TA_MACHINE:8000`
 - `http://IP_DE_TA_MACHINE:5000/api/health`
 
-## Deploiement gratuit sur Render
+## Deploiement gratuit avec Render et Neon
 
 L'application web actuelle fonctionne entierement dans le service Django. Le
 service Flask est conserve pour le developpement local, mais il n'est pas
@@ -36,13 +36,27 @@ necessaire au deploiement public actuel.
 ### Methode automatique recommandee (Blueprint)
 
 Le fichier `render.yaml` a la racine du depot configure automatiquement le
-service Docker, PostgreSQL, le health check et toutes les variables. Dans
-Render, choisir **New > Blueprint**, connecter ce depot puis confirmer avec
-**Apply**. Aucune variable d'environnement ne doit etre saisie manuellement.
+service Docker, le health check et les variables non secretes. La base de
+donnees est hebergee separement sur Neon afin d'eviter l'expiration des bases
+PostgreSQL gratuites de Render.
 
-Le Blueprint genere une cle Django aleatoire et relie automatiquement
-`DATABASE_URL` a la base PostgreSQL. L'administration est disponible sur
-`/admin/` avec le compte configure par les variables `ADMIN_*`.
+1. Creer un projet PostgreSQL gratuit sur Neon.
+2. Dans **Connect**, choisir la chaine de connexion **Pooled connection** et la
+   copier.
+3. Dans Render, choisir **New > Blueprint**, connecter ce depot puis confirmer
+   avec **Apply**.
+4. Pour un nouveau Blueprint, saisir `DATABASE_URL` et choisir un
+   `ADMIN_PASSWORD` robuste quand Render les demande.
+5. Pour le service existant, synchroniser d'abord le Blueprint. Ouvrir ensuite
+   le service **loup-garou > Environment**, remplacer `DATABASE_URL` par la
+   chaine Neon, remplacer `ADMIN_PASSWORD`, puis choisir
+   **Save, rebuild, and deploy**.
+
+`DATABASE_URL` et `ADMIN_PASSWORD` sont declarees avec `sync: false`: leurs
+valeurs restent secretes et ne doivent jamais etre ajoutees au depot Git.
+
+Le Blueprint genere une cle Django aleatoire. L'administration est disponible
+sur `/admin/` avec le compte configure par les variables `ADMIN_*`.
 
 ### Configuration manuelle alternative
 
@@ -60,7 +74,7 @@ Dans le panneau Render:
    - `DJANGO_DEBUG=0`
    - `DJANGO_ALLOWED_HOSTS=.onrender.com`
    - `DJANGO_SECRET_KEY=<une longue valeur aleatoire et privee>`
-   - `DATABASE_URL=<Internal Database URL de Render Postgres>`
+   - `DATABASE_URL=<Pooled connection string de Neon avec sslmode=require>`
    - `ADMIN_USERNAME=yessin`
    - `ADMIN_EMAIL=<adresse email admin>`
    - `ADMIN_PASSWORD=<mot de passe admin fort et prive>`
@@ -80,11 +94,10 @@ Render construit un seul conteneur a partir de `frontend/Dockerfile`. Il
 n'execute pas le fichier `docker-compose.yml`; celui-ci reste destine au
 developpement local.
 
-Creer une base Render Postgres dans la meme region que le service web et utiliser
-son URL interne pour `DATABASE_URL`. Les rooms et leurs historiques restent
-alors disponibles apres les redeploiements. Le compte configure par les
-variables `ADMIN_*` peut gerer et supprimer les historiques depuis `/admin/`.
-La consultation de `/historique/` demande maintenant une connexion et applique les droits du compte.
+Les rooms et leurs historiques sont conserves dans Neon apres les
+redeploiements. Le compte configure par les variables `ADMIN_*` peut gerer et
+supprimer les historiques depuis `/admin/`. La consultation de `/historique/`
+demande une connexion et applique les droits du compte.
 
 ## Comptes et acces
 

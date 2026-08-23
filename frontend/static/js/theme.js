@@ -7,6 +7,11 @@
     en: {dynamic: "Dynamic", dark: "Dark", light: "Light"},
     tn: {dynamic: "Dynamic", dark: "Dark", light: "Light"},
   };
+  const passwordLabels = {
+    fr: {show: "Afficher le mot de passe", hide: "Masquer le mot de passe"},
+    en: {show: "Show password", hide: "Hide password"},
+    tn: {show: "Warri el mot de passe", hide: "5abbi el mot de passe"},
+  };
   const icons = {dynamic: "🌗", dark: "🌙", light: "☀️"};
 
   function language() {
@@ -51,8 +56,44 @@
     renderControls(preference);
   }
 
+  function enhancePasswordFields() {
+    const copy = passwordLabels[language()];
+    document.querySelectorAll('input[type="password"]').forEach((input, index) => {
+      if (input.closest(".password-field")) return;
+      if (!input.id) input.id = `password-field-${index + 1}`;
+
+      const wrapper = document.createElement("div");
+      wrapper.className = "password-field";
+      input.before(wrapper);
+      wrapper.append(input);
+
+      const toggle = document.createElement("button");
+      toggle.type = "button";
+      toggle.className = "password-toggle";
+      toggle.setAttribute("aria-controls", input.id);
+      toggle.setAttribute("aria-pressed", "false");
+      toggle.setAttribute("aria-label", copy.show);
+      toggle.title = copy.show;
+      toggle.innerHTML = `<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z"></path><circle cx="12" cy="12" r="2.7"></circle><path class="password-hidden-mark" d="M4 4l16 16"></path></svg>`;
+      wrapper.append(toggle);
+
+      toggle.addEventListener("click", () => {
+        const show = input.type === "password";
+        input.type = show ? "text" : "password";
+        toggle.classList.toggle("is-visible", show);
+        toggle.setAttribute("aria-pressed", String(show));
+        toggle.setAttribute("aria-label", show ? copy.hide : copy.show);
+        toggle.title = show ? copy.hide : copy.show;
+        input.focus({preventScroll: true});
+        const end = input.value.length;
+        input.setSelectionRange?.(end, end);
+      });
+    });
+  }
+
   document.addEventListener("DOMContentLoaded", () => {
     apply(currentPreference(), false);
+    enhancePasswordFields();
     if (document.body.classList.contains("narrator-page")) {
       new MutationObserver(() => {
         if (currentPreference() === "dynamic") apply("dynamic", false);

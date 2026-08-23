@@ -1,8 +1,10 @@
 import json
+from pathlib import Path
 from unittest.mock import Mock, patch
 
 from django.contrib.auth import get_user_model
 from django.contrib.auth.models import Group
+from django.contrib.staticfiles import finders
 from django.db.utils import OperationalError
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
@@ -72,6 +74,21 @@ class RoomFlowTests(TestCase):
         home = client.get(reverse("home"))
         self.assertContains(home, "latestCsrfCookie")
         self.assertContains(home, 'input[name="csrfmiddlewaretoken"]')
+
+    def test_password_fields_receive_an_accessible_visibility_toggle(self):
+        home = self.visitor_client("fr").get(reverse("home"))
+        register = self.visitor_client("fr").get(reverse("register"))
+        self.assertContains(home, 'type="password"')
+        self.assertContains(register, 'type="password"', count=2)
+
+        script = Path(finders.find("js/theme.js")).read_text(encoding="utf-8")
+        styles = Path(finders.find("css/styles.css")).read_text(encoding="utf-8")
+        self.assertIn('document.querySelectorAll(\'input[type="password"]\')', script)
+        self.assertIn('input.type = show ? "text" : "password"', script)
+        self.assertIn('toggle.setAttribute("aria-pressed", String(show))', script)
+        self.assertIn('fr: {show: "Afficher le mot de passe"', script)
+        self.assertIn('tn: {show: "Warri el mot de passe"', script)
+        self.assertIn(".password-field > button.password-toggle", styles)
 
     def test_normal_distribution_only_shuffles_roles(self):
         roles = ["villagers", "simple_wolves", "seers"]

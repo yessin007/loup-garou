@@ -861,6 +861,9 @@
       }
       function isWolfPlayer(item) { return Boolean(item && (roleMeta[item.role].faction === "wolf" || item.infected || item.wildTurned)); }
       function isInitialWolfPlayer(item) { return Boolean(item && roleMeta[item.initialRole || item.role]?.faction === "wolf"); }
+      function isValidBarberTarget(item) {
+        return Boolean(item && !item.infected && !item.wildTurned && (isInitialWolfPlayer(item) || ["aliens", "fools"].includes(item.role)));
+      }
       function wolves() { return alive().filter(isWolfPlayer); }
       function aliens() { return alive().filter(item => roleMeta[item.role].faction === "alien"); }
       function redHoodProtectionActive(item) {
@@ -2551,7 +2554,7 @@
           state.barberPlayerId = barber.id;
           state.barberTargetId = target.id;
           state.barberShotAvailable = false;
-          state.barberHit = isInitialWolfPlayer(target);
+          state.barberHit = isValidBarberTarget(target);
           const barberDeaths = killPlayersWithLovers(state.barberHit ? [target.id] : [barber.id, target.id]);
           state.barberDeathIds = [...new Set([...(state.barberDeathIds || []), ...barberDeaths.map(item => item.id)])];
           barberDeaths.forEach(item => activateAnkouGhost(item, state.round));

@@ -158,6 +158,12 @@ ROOM_TEXT["fr"].update({
     "private_notes": "Mes notes privées", "private_notes_help": "Visibles uniquement par toi, même après la partie.",
     "private_notes_placeholder": "Écris tes observations ici…", "notes_saving": "Sauvegarde…",
     "notes_saved": "Notes enregistrées", "notes_error": "Échec — réessaie.",
+    "daily_briefing": "Bilan du jour", "daily_briefing_round": "Jour {round}",
+    "daily_briefing_empty": "Aucune information publique pour ce jour.",
+    "seer_briefing": "La Voyante a vu :", "bear_briefing": "L’Ours", "bear_growled_briefing": "a grogné", "bear_silent_briefing": "n’a pas grogné",
+    "judge_briefing": "Le Juge a vu :", "judge_same_briefing": "même clan", "judge_different_briefing": "clans différents",
+    "your_day_instruction": "Ta consigne du jour", "must_pass_today": "Tu dois dire « Passe » aujourd’hui.",
+    "must_say_word": "Tu dois placer ce mot aujourd’hui :", "no_day_instruction": "Aucune consigne spéciale aujourd’hui.",
 })
 ROOM_TEXT["en"].update({
     "roles_alive": "Player roles", "roles_alive_count": "alive",
@@ -180,6 +186,12 @@ ROOM_TEXT["en"].update({
     "private_notes": "My private notes", "private_notes_help": "Only visible to you, even after the game.",
     "private_notes_placeholder": "Write your observations here…", "notes_saving": "Saving…",
     "notes_saved": "Notes saved", "notes_error": "Failed — try again.",
+    "daily_briefing": "Daily briefing", "daily_briefing_round": "Day {round}",
+    "daily_briefing_empty": "No public information for this day.",
+    "seer_briefing": "The Seer saw:", "bear_briefing": "The Bear", "bear_growled_briefing": "growled", "bear_silent_briefing": "did not growl",
+    "judge_briefing": "The Judge saw:", "judge_same_briefing": "same faction", "judge_different_briefing": "different factions",
+    "your_day_instruction": "Your instruction today", "must_pass_today": "You must say “Pass” today.",
+    "must_say_word": "You must say this word today:", "no_day_instruction": "No special instruction today.",
 })
 ROOM_TEXT["tn"].update({
     "roles_alive": "Roles mta3 les joueurs", "roles_alive_count": "3aychin",
@@ -202,6 +214,12 @@ ROOM_TEXT["tn"].update({
     "private_notes": "Notes privées mte3i", "private_notes_help": "Ken enti tchoufhom, 7ata ba3d el game.",
     "private_notes_placeholder": "Ekteb les observations mte3ek houni…", "notes_saving": "Nsavegardi…",
     "notes_saved": "Notes tsavegardew", "notes_error": "Ma tsavegardewch — 3awed.",
+    "daily_briefing": "Bilan mta3 el nhar", "daily_briefing_round": "Nhar {round}",
+    "daily_briefing_empty": "Ma fama 7atta info publique lel nhar hedha.",
+    "seer_briefing": "El Voyante chefet :", "bear_briefing": "El Ours", "bear_growled_briefing": "garger", "bear_silent_briefing": "ma gargerch",
+    "judge_briefing": "El Juge chef :", "judge_same_briefing": "nafs el clan", "judge_different_briefing": "clans mo5talfin",
+    "your_day_instruction": "Consigne mte3ek el nhar", "must_pass_today": "Lezemek t9oul « Passe » el nhar.",
+    "must_say_word": "Lezemek t9oul el kelma hedhi el nhar :", "no_day_instruction": "Ma 3andek 7atta consigne spéciale el nhar.",
 })
 
 ROOM_DETAIL_LABELS = {
@@ -263,6 +281,10 @@ ROOM_HISTORY_TEXT = {
         "outcome_eliminated": "Joueur 5raj", "outcome_tie": "Égalité", "outcome_skipped": "Vote t3adda", "outcome_forced_transition": "Nhar tsakker manuellement", "pyro_action_douse": "Rach zit", "pyro_action_ignite": "Cha3el", "pyro_action_skipped": "Passa tour", "pyro_action_blocked": "Cerbere blockeh", "winner_wolves": "El loups", "winner_village": "El Village", "winner_white_wolf": "Loup Blanc", "winner_angel": "Ange", "winner_fool": "El Fou", "winner_alien": "Alien", "winner_pyromaniac": "Pyromane", "winner_couple": "El Couple", "winner_draw": "Égalité — 7ad ma rba7", "not_recorded": "Ma t7attetch", "archive": "Archive mta3 les games", "room_label": "Game", "narrated_by_you": "enti narritha", "narrated_by": "narreha", "narrator_unknown": "el narrateur mahouche ma3rouf",
     },
 }
+
+ROOM_HISTORY_TEXT["fr"]["story_barber_hit"] = "{actor} a tiré sur {name} : c’était une cible valide."
+ROOM_HISTORY_TEXT["en"]["story_barber_hit"] = "{actor} shot {name}: the target was valid."
+ROOM_HISTORY_TEXT["tn"]["story_barber_hit"] = "{actor} dharab {name}: tla3 cible s7i7a."
 
 
 def health(request):
@@ -1417,6 +1439,32 @@ def room_player_api(request, code):
             {"code": item_role, "name": ROLES[language][item_role][0], "alive": False}
             for _ in range(total - alive)
         )
+    latest_night = room.events.filter(event_type="night").order_by("-round_number", "-created_at").first()
+    latest_night_details = (latest_night.details or {}) if latest_night else {}
+    seer_role = latest_night_details.get("seer_role")
+    daily_briefing = {
+        "round": latest_night.round_number,
+        "seer_role": ROLES[language][seer_role][0] if seer_role in ROLE_KEYS else None,
+        "bear_growled": latest_night_details.get("bear_growled"),
+        "judge_same_clan": latest_night_details.get("judge_same_clan"),
+    } if latest_night else None
+
+    state_player = next(
+        (item for item in state_players or [] if isinstance(item, dict) and item.get("name") == joined.name),
+        None,
+    )
+    blocked_player = next(
+        (item for item in state_players or [] if isinstance(item, dict) and item.get("id") == game_state.get("blockedPlayerId")),
+        None,
+    )
+    blocked_role = blocked_player.get("role") if blocked_player else None
+    state_player_id = state_player.get("id") if state_player else None
+    if state_player_id is not None and game_state.get("silencedPlayerId") == state_player_id and blocked_role != "black_wolves":
+        day_instruction = {"kind": "pass", "word": None}
+    elif state_player_id is not None and game_state.get("talkativePlayerId") == state_player_id and blocked_role != "talkative_wolves" and game_state.get("assignedWord"):
+        day_instruction = {"kind": "word", "word": game_state.get("assignedWord")}
+    else:
+        day_instruction = {"kind": "none", "word": None}
     return JsonResponse({
         "status": effective_status,
         "joined_count": room.room_players.count(),
@@ -1433,6 +1481,8 @@ def room_player_api(request, code):
         "dead_count": sum(not item["alive"] for item in role_roster),
         "player_alive": player_alive,
         "private_notes": joined.private_notes,
+        "daily_briefing": daily_briefing,
+        "day_instruction": day_instruction,
     })
 
 

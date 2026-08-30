@@ -289,7 +289,7 @@ class RoomFlowTests(TestCase):
         self.assertContains(game, "const loverDeaths = killPlayersWithLovers([state.lastVote])")
         self.assertContains(game, 'inheritsCouple ? "servant_couple_choice_help" : "servant_choice_help"')
 
-    def test_barber_kills_only_a_wolf_or_dies_with_a_non_wolf_target(self):
+    def test_barber_kills_original_wolf_alien_or_fool_but_rejects_converted_wolves(self):
         self.create_room()
         game = self.narrator.get(reverse("game"))
         self.assertContains(game, 'const signalStages = ["dawn", "accusation", "final_vote"]')
@@ -315,7 +315,9 @@ class RoomFlowTests(TestCase):
             "state.qualifiers.map(player).filter(item => item?.alive)",
         )
         self.assertContains(game, "state.stage = daySpecialReturnStage()")
-        self.assertContains(game, "state.barberHit = isInitialWolfPlayer(target)")
+        self.assertContains(game, "state.barberHit = isValidBarberTarget(target)")
+        self.assertContains(game, "!item.infected && !item.wildTurned")
+        self.assertContains(game, '["aliens", "fools"].includes(item.role)')
         self.assertContains(
             game,
             "killPlayersWithLovers(state.barberHit ? [target.id] : [barber.id, target.id])",
@@ -845,9 +847,15 @@ class RoomFlowTests(TestCase):
         self.assertContains(player_page, 'id="private-player-name"')
         self.assertContains(player_page, 'class="language-selector"')
         self.assertContains(player_page, 'id="player-role-rules"')
-        self.assertContains(player_page, 'class="opened-role-box"')
-        self.assertContains(player_page, 'class="opened-role-box-lid"')
-        self.assertContains(player_page, 'class="opened-role-box-base"')
+        self.assertContains(player_page, 'class="revealed-role-sigil"')
+        self.assertContains(player_page, 'class="revealed-role-moon"')
+        self.assertContains(player_page, 'class="revealed-role-ornament"')
+        self.assertContains(player_page, 'id="player-day-panels"')
+        self.assertContains(player_page, 'class="daily-briefing-card"')
+        self.assertContains(player_page, 'id="day-instruction-card"')
+        self.assertContains(player_page, "renderDailyStatus")
+        self.assertContains(player_page, "Bilan du jour")
+        self.assertContains(player_page, "Ta consigne du jour")
         self.assertContains(player_page, "Règles et cas particuliers")
         self.assertContains(player_page, "role.rules || []")
         self.assertContains(player_page, "Masquer mon rôle")
@@ -859,20 +867,17 @@ class RoomFlowTests(TestCase):
         self.assertContains(player_page, "refreshRoom(true)")
         self.assertContains(player_page, "renderWaitingRoom(data)")
         self.assertContains(player_page, "renderRoleReady(data.role, data)")
-        self.assertContains(player_page, 'id="reveal-role-button"')
-        self.assertContains(player_page, 'id="reveal-role-box"')
-        self.assertContains(player_page, 'document.getElementById("reveal-role-box").addEventListener("click", revealPendingRole)')
-        self.assertContains(player_page, 'document.getElementById("reveal-role-button").addEventListener("click", revealPendingRole)')
+        self.assertContains(player_page, 'id="reveal-role-wolf"')
+        self.assertContains(player_page, 'class="wolf-reveal-trigger"')
+        self.assertContains(player_page, "images/role-reveal-wolf-3d.png")
+        self.assertContains(player_page, 'document.getElementById("reveal-role-wolf").addEventListener("click", revealPendingRole)')
         self.assertContains(player_page, "let roleRevealStarted = false")
-        self.assertContains(player_page, 'box.classList.add("opening")')
-        self.assertContains(player_page, 'addEventListener("animationend", finishRoleReveal, {once: true})')
-        self.assertContains(player_page, "setTimeout(finishRoleReveal, 900)")
+        self.assertContains(player_page, 'wolf.closest(".wolf-reveal-stage").classList.add("opening")')
+        self.assertContains(player_page, 'wolf.addEventListener("animationend", finishRoleReveal, {once: true})')
+        self.assertContains(player_page, "setTimeout(finishRoleReveal, 1100)")
         self.assertContains(player_page, "Voir mon rôle")
-        self.assertContains(player_page, "tunisianGovernorates")
-        self.assertContains(player_page, '"Tunis", "Ariana", "Ben Arous"')
-        self.assertContains(player_page, '"Gabès", "Médenine", "Tataouine"')
-        self.assertContains(player_page, 'class="governorate-box"')
-        self.assertContains(player_page, "Math.floor(Math.random() * tunisianGovernorates.length)")
+        self.assertNotContains(player_page, "tunisianGovernorates")
+        self.assertNotContains(player_page, 'class="governorate-box"')
         self.assertContains(player_page, 'card.className = "player-secret-card assigned"')
         self.assertContains(player_page, 'if (card.classList.contains("revealed"))')
         self.assertContains(player_page, "displayedRoleCode = role.code")
@@ -951,6 +956,57 @@ class RoomFlowTests(TestCase):
             [(item["code"], item["alive"]) for item in private_state["role_roster"]],
             [("simple_wolves", True), ("wild_children", True), ("villagers", False)],
         )
+
+    def test_player_daily_briefing_hides_names_and_instruction_is_personal(self):
+        room = self.create_room()
+        player = self.player_client("Daily player")
+        player.post(
+            reverse("room_portal"),
+            {"action": "join", "room_code": room.code, "player_name": "Daily player"},
+        )
+        assignment = self.narrator.post(reverse("room_start_api", args=[room.code])).json()["assignments"][0]
+        room.refresh_from_db()
+        room.game_state = {
+            "stage": "accusation",
+            "round": 2,
+            "silencedPlayerId": 7,
+            "talkativePlayerId": None,
+            "assignedWord": "",
+            "blockedPlayerId": None,
+            "players": [
+                {"id": 7, "name": assignment["name"], "role": assignment["role"], "alive": True},
+                {"id": 8, "name": "Hidden Black Wolf", "role": "black_wolves", "alive": True},
+                {"id": 9, "name": "Hidden Talkative Wolf", "role": "talkative_wolves", "alive": True},
+            ],
+        }
+        room.save(update_fields=["game_state"])
+        RoomEvent.objects.create(
+            room=room,
+            marker="night-2",
+            event_type="night",
+            round_number=2,
+            details={"seer_role": "bears", "bear_growled": True, "judge_same_clan": True},
+        )
+
+        private_state = player.get(reverse("room_player_api", args=[room.code])).json()
+        self.assertEqual(private_state["daily_briefing"], {
+            "round": 2,
+            "seer_role": ROLES["fr"]["bears"][0],
+            "bear_growled": True,
+            "judge_same_clan": True,
+        })
+        self.assertNotIn("name", private_state["daily_briefing"])
+        self.assertEqual(private_state["day_instruction"], {"kind": "pass", "word": None})
+
+        room.game_state.update({"silencedPlayerId": None, "talkativePlayerId": 7, "assignedWord": "lune"})
+        room.save(update_fields=["game_state"])
+        private_state = player.get(reverse("room_player_api", args=[room.code])).json()
+        self.assertEqual(private_state["day_instruction"], {"kind": "word", "word": "lune"})
+
+        room.game_state["blockedPlayerId"] = 9
+        room.save(update_fields=["game_state"])
+        private_state = player.get(reverse("room_player_api", args=[room.code])).json()
+        self.assertEqual(private_state["day_instruction"], {"kind": "none", "word": None})
 
     def test_only_eliminated_player_sees_and_can_open_active_game_summary(self):
         room = self.create_room()

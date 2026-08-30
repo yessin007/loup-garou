@@ -55,11 +55,6 @@
       let displayedRoleCode = null;
       let pendingRole = null;
       let pendingRoomData = null;
-      const tunisianGovernorates = [
-        "Tunis", "Ariana", "Ben Arous", "Manouba", "Nabeul", "Zaghouan", "Bizerte", "Béja",
-        "Jendouba", "Le Kef", "Siliana", "Sousse", "Monastir", "Mahdia", "Sfax", "Kairouan",
-        "Kasserine", "Sidi Bouzid", "Gabès", "Médenine", "Tataouine", "Gafsa", "Tozeur", "Kébili",
-      ];
       function safe(value) { const node = document.createElement("span"); node.textContent = value; return node.innerHTML; }
       function scheduleRoom() {
         clearTimeout(roomTimer);
@@ -70,7 +65,8 @@
       function revealRole(role) {
         if (!card.classList.contains("revealed")) {
           card.className = "player-secret-card revealed";
-          cardContent.innerHTML = `<div class="personal-role-panel"><div id="private-role-details"><div class="opened-role-box"><div class="opened-role-box-lid"><p>{{ room.your_role|escapejs }}</p><h1 id="player-role-name"></h1></div><div class="opened-role-box-base"><span></span></div></div><button id="toggle-role-guide" class="role-guide-toggle" type="button" aria-expanded="false" aria-controls="private-role-guide"><span id="toggle-role-guide-label">{{ room.show_role_details|escapejs }}</span><i aria-hidden="true">+</i></button><div id="private-role-guide" hidden><p id="player-role-description"></p><section class="private-role-rules"><strong>{{ room.role_rules|escapejs }}</strong><ul id="player-role-rules"></ul></section></div></div><div id="private-player-identity" hidden><p class="eyebrow">{{ room.player_identity|escapejs }}</p><h1 id="private-player-name"></h1></div><button id="toggle-private-role" class="role-visibility-toggle" type="button"><span id="toggle-private-role-label">{{ room.hide_my_role|escapejs }}</span><i aria-hidden="true">↔</i></button></div><section class="alive-role-roster"><div class="alive-role-heading"><span>{{ room.roles_alive|escapejs }}</span><strong><b id="alive-role-count">0</b> {{ room.roles_alive_count|escapejs }} · <b id="dead-role-count">0</b> {{ room.roles_dead_count|escapejs }}</strong></div><div id="alive-role-list" class="alive-role-list"></div><section class="private-notes-editor"><header><div><strong>{{ room.private_notes|escapejs }}</strong><small>{{ room.private_notes_help|escapejs }}</small></div><span><b id="private-notes-count">0</b> / 600</span></header><textarea id="private-notes-input" maxlength="600" rows="6" placeholder="{{ room.private_notes_placeholder|escapejs }}"></textarea><output id="private-notes-status" aria-live="polite"></output></section></section>`;
+          cardContent.innerHTML = `<div class="personal-role-panel"><div id="private-role-details"><section class="revealed-role-sigil"><div class="revealed-role-moon" aria-hidden="true"><span>☾</span></div><p>{{ room.your_role|escapejs }}</p><h1 id="player-role-name"></h1><div class="revealed-role-ornament" aria-hidden="true"><i></i><b>◆</b><i></i></div></section><button id="toggle-role-guide" class="role-guide-toggle" type="button" aria-expanded="false" aria-controls="private-role-guide"><span id="toggle-role-guide-label">{{ room.show_role_details|escapejs }}</span><i aria-hidden="true">+</i></button><div id="private-role-guide" hidden><p id="player-role-description"></p><section class="private-role-rules"><strong>{{ room.role_rules|escapejs }}</strong><ul id="player-role-rules"></ul></section></div></div><div id="private-player-identity" hidden><p class="eyebrow">{{ room.player_identity|escapejs }}</p><h1 id="private-player-name"></h1></div><button id="toggle-private-role" class="role-visibility-toggle" type="button"><span id="toggle-private-role-label">{{ room.hide_my_role|escapejs }}</span><i aria-hidden="true">↔</i></button></div><section class="alive-role-roster"><div class="alive-role-heading"><span>{{ room.roles_alive|escapejs }}</span><strong><b id="alive-role-count">0</b> {{ room.roles_alive_count|escapejs }} · <b id="dead-role-count">0</b> {{ room.roles_dead_count|escapejs }}</strong></div><div id="alive-role-list" class="alive-role-list"></div><section class="private-notes-editor"><header><div><strong>{{ room.private_notes|escapejs }}</strong><small>{{ room.private_notes_help|escapejs }}</small></div><span><b id="private-notes-count">0</b> / 600</span></header><textarea id="private-notes-input" maxlength="600" rows="6" placeholder="{{ room.private_notes_placeholder|escapejs }}"></textarea><output id="private-notes-status" aria-live="polite"></output></section></section>`;
+          cardContent.querySelector(".alive-role-roster").insertAdjacentHTML("beforebegin", `<section id="player-day-panels" class="player-day-panels"><article class="daily-briefing-card"><header><div><span aria-hidden="true">☀</span><strong>{{ room.daily_briefing|escapejs }}</strong></div><small id="daily-briefing-round"></small></header><div id="daily-briefing-items" class="daily-briefing-items"></div></article><article id="day-instruction-card" class="day-instruction-card"><header><span aria-hidden="true">!</span><strong>{{ room.your_day_instruction|escapejs }}</strong></header><div id="day-instruction-content"></div></article></section>`);
           document.getElementById("private-player-name").textContent = "{{ joined_player.name|escapejs }}";
           document.getElementById("toggle-role-guide").addEventListener("click", toggleRoleGuide);
           document.getElementById("toggle-private-role").addEventListener("click", togglePrivateRole);
@@ -87,9 +83,8 @@
         pendingRole = role;
         pendingRoomData = data;
         if (card.classList.contains("assigned")) return;
-        const governorate = tunisianGovernorates[Math.floor(Math.random() * tunisianGovernorates.length)];
         card.className = "player-secret-card assigned";
-        cardContent.innerHTML = `<p class="eyebrow">{{ room.joined|escapejs }}</p><h1>{{ joined_player.name|escapejs }}</h1><button id="reveal-role-box" class="governorate-box" type="button" aria-label="{{ room.reveal_my_role|escapejs }} — ${safe(governorate)}"><span class="governorate-box-lid"></span><span class="governorate-box-front"><strong>${safe(governorate)}</strong></span></button><h2>{{ room.role_ready|escapejs }}</h2><p>{{ room.role_ready_help|escapejs }}</p><button id="reveal-role-button" class="reveal-role-button" type="button"><span>{{ room.reveal_my_role|escapejs }}</span><i aria-hidden="true">→</i></button>`;
+        cardContent.innerHTML = `<p class="eyebrow">{{ room.joined|escapejs }}</p><h1>{{ joined_player.name|escapejs }}</h1><div class="wolf-reveal-stage"><span class="wolf-reveal-halo" aria-hidden="true"></span><button id="reveal-role-wolf" class="wolf-reveal-trigger" type="button" aria-label="{{ room.reveal_my_role|escapejs }}"><img src="{% static 'images/role-reveal-wolf-3d.png' %}" alt="" draggable="false"><span class="wolf-reveal-rune" aria-hidden="true">◆</span></button></div><h2>{{ room.role_ready|escapejs }}</h2><p>{{ room.role_ready_help|escapejs }}</p>`;
         let roleRevealStarted = false;
         let roleRevealFinished = false;
         const finishRoleReveal = () => {
@@ -97,21 +92,19 @@
           roleRevealFinished = true;
           revealRole(pendingRole);
           renderRoleRoster(pendingRoomData.role_roster || [], pendingRoomData.alive_count || 0, pendingRoomData.dead_count || 0);
+          renderDailyStatus(pendingRoomData.daily_briefing, pendingRoomData.day_instruction);
           renderPrivateNotes(pendingRoomData.private_notes || "");
         };
         const revealPendingRole = () => {
           if (roleRevealStarted || !pendingRole || !pendingRoomData) return;
           roleRevealStarted = true;
-          const box = document.getElementById("reveal-role-box");
-          const button = document.getElementById("reveal-role-button");
-          box.disabled = true;
-          button.disabled = true;
-          box.classList.add("opening");
-          box.querySelector(".governorate-box-lid").addEventListener("animationend", finishRoleReveal, {once: true});
-          setTimeout(finishRoleReveal, 900);
+          const wolf = document.getElementById("reveal-role-wolf");
+          wolf.disabled = true;
+          wolf.closest(".wolf-reveal-stage").classList.add("opening");
+          wolf.addEventListener("animationend", finishRoleReveal, {once: true});
+          setTimeout(finishRoleReveal, 1100);
         };
-        document.getElementById("reveal-role-box").addEventListener("click", revealPendingRole);
-        document.getElementById("reveal-role-button").addEventListener("click", revealPendingRole);
+        document.getElementById("reveal-role-wolf").addEventListener("click", revealPendingRole);
       }
       function renderWaitingRoom(data) {
         if (!card.classList.contains("waiting")) {
@@ -188,6 +181,26 @@
           ? roles.map(role => `<article class="${role.alive ? "alive" : "dead"}"><strong>${safe(role.name)}</strong><span>${role.alive ? "{{ room.role_alive_status|escapejs }}" : "{{ room.role_dead_status|escapejs }}"}</span></article>`).join("")
           : `<p>{{ room.roles_alive_empty|escapejs }}</p>`;
       }
+      function renderDailyStatus(briefing, instruction) {
+        const round = document.getElementById("daily-briefing-round");
+        const items = document.getElementById("daily-briefing-items");
+        const instructionCard = document.getElementById("day-instruction-card");
+        const instructionContent = document.getElementById("day-instruction-content");
+        if (!round || !items || !instructionCard || !instructionContent) return;
+        const reports = [];
+        if (briefing?.seer_role) reports.push(`<div class="daily-briefing-item seer"><span aria-hidden="true">◉</span><p>{{ room.seer_briefing|escapejs }} <strong>${safe(briefing.seer_role)}</strong></p></div>`);
+        if (typeof briefing?.bear_growled === "boolean") reports.push(`<div class="daily-briefing-item bear"><span aria-hidden="true">◆</span><p>{{ room.bear_briefing|escapejs }} <strong>${briefing.bear_growled ? "{{ room.bear_growled_briefing|escapejs }}" : "{{ room.bear_silent_briefing|escapejs }}"}</strong></p></div>`);
+        if (typeof briefing?.judge_same_clan === "boolean") reports.push(`<div class="daily-briefing-item judge"><span aria-hidden="true">⚖</span><p>{{ room.judge_briefing|escapejs }} <strong>${briefing.judge_same_clan ? "{{ room.judge_same_briefing|escapejs }}" : "{{ room.judge_different_briefing|escapejs }}"}</strong></p></div>`);
+        round.textContent = briefing?.round ? "{{ room.daily_briefing_round|escapejs }}".replace("{round}", briefing.round) : "";
+        items.innerHTML = reports.length ? reports.join("") : `<p class="daily-briefing-empty">{{ room.daily_briefing_empty|escapejs }}</p>`;
+        const kind = instruction?.kind || "none";
+        instructionCard.dataset.kind = kind;
+        instructionContent.innerHTML = kind === "pass"
+          ? `<p>{{ room.must_pass_today|escapejs }}</p>`
+          : kind === "word"
+            ? `<p>{{ room.must_say_word|escapejs }}</p><mark>${safe(instruction.word || "")}</mark>`
+            : `<p>{{ room.no_day_instruction|escapejs }}</p>`;
+      }
       function updateHistoryLink(playerAlive) {
         const link = document.getElementById("eliminated-history-link");
         const enabled = playerAlive === false;
@@ -215,6 +228,7 @@
             if (card.classList.contains("revealed")) {
               revealRole(data.role);
               renderRoleRoster(data.role_roster || [], data.alive_count || 0, data.dead_count || 0);
+              renderDailyStatus(data.daily_briefing, data.day_instruction);
               renderPrivateNotes(data.private_notes || "");
             } else {
               renderRoleReady(data.role, data);

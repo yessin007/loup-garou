@@ -780,6 +780,9 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .night-death-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 16px 18px; border: 1px solid rgba(199,75,65,.22); background: rgba(121,34,30,.12); }
 .night-death-row strong { font: 700 1.08rem "Cinzel", serif; }
 .night-death-row span { color: #e59a92; font: 700 1rem "Cinzel", serif; }
+.live-special-verdict { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 10px; padding: 12px 16px; border: 1px solid rgba(199,139,69,.3); color: #a9b3b7; background: rgba(199,139,69,.07); }
+.live-special-verdict span { font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; }
+.live-special-verdict strong { color: var(--ember-light); font: 700 .78rem "Cinzel", serif; }
 .night-death-row.alien-death {
   border-color: rgba(115,91,190,.38);
   background: linear-gradient(135deg, rgba(82,58,151,.2), rgba(121,34,30,.1));
@@ -1161,26 +1164,39 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .room-code-chip { display: inline-grid; place-items: center; min-height: 34px; padding: 6px 11px; border: 1px solid rgba(199,139,69,.4); color: var(--ember-light); font: 700 .75rem "Cinzel", serif; letter-spacing: .15em; background: rgba(199,139,69,.08); }
 .player-secret-card { overflow: hidden; padding: 0; border: 1px solid rgba(255,255,255,.1); text-align: center; background: rgba(255,255,255,.025); }
 .player-secret-card.waiting, .player-secret-card.assigned { padding: clamp(28px, 7vw, 55px); }
-.wolf-reveal-stage { position: relative; display: grid; place-items: center; width: min(82vw, 330px); aspect-ratio: 1; margin: 8px auto 2px; perspective: 900px; isolation: isolate; }
+.wolf-reveal-stage { position: relative; display: grid; place-items: center; width: min(92vw, 390px); aspect-ratio: 1.08; margin: 8px auto 2px; perspective: 900px; isolation: isolate; }
 .wolf-reveal-stage::before { position: absolute; z-index: -2; width: 76%; aspect-ratio: 1; border: 1px solid rgba(199,139,69,.3); border-radius: 50%; background: radial-gradient(circle, rgba(188,53,35,.22) 0 7%, rgba(199,139,69,.09) 8% 34%, transparent 67%); box-shadow: 0 0 70px rgba(168,48,31,.18), inset 0 0 38px rgba(199,139,69,.08); animation: wolf-reveal-orbit 12s linear infinite; content: ""; }
 .wolf-reveal-stage::after { position: absolute; z-index: -1; bottom: 12%; width: 52%; height: 10%; border-radius: 50%; background: rgba(0,0,0,.58); filter: blur(16px); content: ""; }
 .wolf-reveal-halo { position: absolute; z-index: -1; width: 90%; aspect-ratio: 1; border-radius: 50%; background: conic-gradient(from 20deg, transparent, rgba(199,139,69,.32), transparent 28%, rgba(85,141,190,.24), transparent 56%, rgba(199,139,69,.3), transparent 82%); filter: blur(1px); animation: wolf-reveal-orbit 18s linear infinite reverse; mask: radial-gradient(circle, transparent 0 57%, #000 58% 60%, transparent 61%); }
-.wolf-reveal-trigger { position: relative; display: grid; place-items: center; width: 88%; aspect-ratio: 1; padding: 0; border: 0; background: transparent; cursor: pointer; transform: rotateX(5deg) rotateY(-5deg) translateZ(18px); transform-style: preserve-3d; filter: drop-shadow(0 25px 24px rgba(0,0,0,.48)); transition: transform .35s ease, filter .35s ease; }
+.wolf-pack-member { position: absolute; z-index: 0; top: 28%; display: block; width: 43%; aspect-ratio: 1; opacity: 0; pointer-events: none; transform-style: preserve-3d; will-change: transform, opacity; }
+.wolf-pack-member.left { left: -3%; animation: wolf-pack-arrive-left 2.5s cubic-bezier(.16,.76,.2,1) .12s forwards; }
+.wolf-pack-member.right { right: -3%; animation: wolf-pack-arrive-right 2.7s cubic-bezier(.16,.76,.2,1) .28s forwards; }
+.wolf-pack-member img { display: block; width: 100%; height: 100%; object-fit: contain; opacity: .7; filter: saturate(.55) brightness(.62) drop-shadow(0 18px 15px rgba(0,0,0,.52)); transform-origin: 50% 88%; animation: wolf-pack-step 1.15s ease-in-out 2.8s infinite alternate; }
+.wolf-reveal-trigger { position: relative; z-index: 2; display: grid; place-items: center; width: 76%; aspect-ratio: 1; padding: 0; border: 0; background: transparent; cursor: pointer; transform: rotateX(5deg) rotateY(-5deg) translateZ(18px); transform-style: preserve-3d; filter: drop-shadow(0 25px 24px rgba(0,0,0,.48)); transition: transform .35s ease, filter .35s ease; }
 .wolf-reveal-trigger:hover { transform: rotateX(1deg) rotateY(4deg) translateY(-7px) translateZ(30px) scale(1.035); filter: drop-shadow(0 32px 28px rgba(0,0,0,.52)) brightness(1.08); }
 .wolf-reveal-trigger:focus-visible { outline: 2px solid var(--ember-light); outline-offset: 5px; border-radius: 50%; }
 .wolf-reveal-trigger img { display: block; width: 100%; height: 100%; object-fit: contain; pointer-events: none; user-select: none; animation: wolf-reveal-breathe 3.2s ease-in-out infinite; }
 .wolf-reveal-rune { position: absolute; bottom: 4%; left: 50%; display: grid; place-items: center; width: 40px; height: 40px; border: 1px solid rgba(239,186,112,.72); border-radius: 50%; color: #ffd59a; background: radial-gradient(circle, #94301e, #240b0a 68%); box-shadow: 0 0 24px rgba(220,78,42,.55), inset 0 0 10px rgba(255,205,132,.28); transform: translateX(-50%) translateZ(36px); animation: wolf-rune-pulse 1.7s ease-in-out infinite; }
 .wolf-reveal-stage.opening { pointer-events: none; }
 .wolf-reveal-stage.opening::before { animation: wolf-halo-open 1s cubic-bezier(.2,.75,.22,1) forwards; }
+.wolf-reveal-stage.opening .wolf-pack-member.left { animation: wolf-pack-dismiss-left .72s ease-in forwards; }
+.wolf-reveal-stage.opening .wolf-pack-member.right { animation: wolf-pack-dismiss-right .72s ease-in forwards; }
+.wolf-reveal-stage.opening .wolf-pack-member img { animation: none; }
 .wolf-reveal-stage.opening .wolf-reveal-trigger { animation: wolf-talisman-open 1s cubic-bezier(.18,.75,.18,1) forwards; }
 .wolf-reveal-stage.opening .wolf-reveal-trigger img, .wolf-reveal-stage.opening .wolf-reveal-rune { animation: none; }
 @keyframes wolf-reveal-breathe { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-5px) scale(1.012); } }
+@keyframes wolf-pack-arrive-left { 0% { opacity: 0; transform: translate3d(-125%, 20%, -130px) rotateY(28deg) scale(.68); } 52% { opacity: .3; } 78% { transform: translate3d(7%, -3%, -68px) rotateY(12deg) scale(.9); } 100% { opacity: .56; transform: translate3d(0, 0, -78px) rotateY(17deg) scale(.86); } }
+@keyframes wolf-pack-arrive-right { 0% { opacity: 0; transform: translate3d(125%, 24%, -140px) rotateY(-30deg) scale(.64); } 52% { opacity: .28; } 78% { transform: translate3d(-7%, -2%, -72px) rotateY(-10deg) scale(.88); } 100% { opacity: .52; transform: translate3d(0, 0, -84px) rotateY(-17deg) scale(.84); } }
+@keyframes wolf-pack-step { from { transform: translateY(0) rotateZ(-.7deg); } to { transform: translateY(-5px) rotateZ(.7deg); } }
+@keyframes wolf-pack-dismiss-left { to { opacity: 0; transform: translate3d(-78%, 15%, -150px) rotateY(32deg) scale(.62); } }
+@keyframes wolf-pack-dismiss-right { to { opacity: 0; transform: translate3d(78%, 15%, -150px) rotateY(-32deg) scale(.62); } }
 @keyframes wolf-rune-pulse { 0%, 100% { box-shadow: 0 0 18px rgba(220,78,42,.42), inset 0 0 10px rgba(255,205,132,.2); } 50% { box-shadow: 0 0 34px rgba(237,99,52,.75), inset 0 0 15px rgba(255,205,132,.42); } }
 @keyframes wolf-reveal-orbit { to { transform: rotate(360deg); } }
 @keyframes wolf-halo-open { 0% { opacity: 1; transform: scale(1) rotate(0); } 55% { opacity: 1; transform: scale(1.16) rotate(18deg); } 100% { opacity: 0; transform: scale(1.5) rotate(42deg); } }
 @keyframes wolf-talisman-open { 0% { opacity: 1; transform: rotateX(5deg) rotateY(-5deg) translateZ(18px) scale(1); filter: brightness(1); } 42% { opacity: 1; transform: rotateX(-4deg) rotateY(8deg) translateY(-12px) translateZ(70px) scale(1.1); filter: brightness(1.35); } 72% { opacity: 1; transform: rotateX(0) rotateY(0) translateY(-4px) translateZ(100px) scale(.92); filter: brightness(1.9) drop-shadow(0 0 34px rgba(233,120,63,.75)); } 100% { opacity: 0; transform: rotateX(0) rotateY(0) translateZ(140px) scale(1.2); filter: brightness(2.4) blur(8px); } }
 @media (prefers-reduced-motion: reduce) {
   .wolf-reveal-stage::before, .wolf-reveal-halo, .wolf-reveal-trigger img, .wolf-reveal-rune { animation: none; }
+  .wolf-pack-member { display: none; }
   .wolf-reveal-stage.opening .wolf-reveal-trigger { animation-duration: .01ms; }
 }
 .personal-role-panel { padding: clamp(28px, 7vw, 55px); }
@@ -1212,7 +1228,12 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .daily-briefing-item > span { display: grid; place-items: center; flex: 0 0 30px; width: 30px; height: 30px; border: 1px solid rgba(199,139,69,.34); border-radius: 50%; color: var(--ember-light); background: rgba(199,139,69,.08); font-size: .72rem; }
 .daily-briefing-item p { margin: 0; color: #929fa5; font-size: .7rem; line-height: 1.45; }
 .daily-briefing-item strong { display: block; color: var(--ivory); font-size: .75rem; }
+.daily-briefing-item.seer, .daily-briefing-item.bear, .daily-briefing-item.shepherd, .daily-briefing-item.judge { box-shadow: inset 3px 0 rgba(75,164,105,.72); }
+.daily-briefing-item.deaths, .daily-briefing-item.day-deaths { grid-column: 1 / -1; box-shadow: inset 3px 0 rgba(190,71,57,.78); }
+.daily-briefing-item.deaths > span, .daily-briefing-item.day-deaths > span { border-color: rgba(204,87,69,.45); color: #e29485; background: rgba(169,53,40,.12); }
+.daily-briefing-item.day-deaths { animation: daily-live-entry .45s ease-out both; }
 .daily-briefing-empty { grid-column: 1 / -1; margin: 0; padding: 18px 15px; color: #7f8d93; background: #0d151b; font-size: .7rem; }
+@keyframes daily-live-entry { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: none; } }
 .day-instruction-card { border: 1px solid rgba(224,130,45,.48); background: linear-gradient(120deg, rgba(199,100,26,.2), rgba(89,43,17,.17)); box-shadow: inset 3px 0 #d88235; }
 .day-instruction-card > header { display: flex; align-items: center; gap: 10px; padding: 12px 15px 0; color: #eeb573; }
 .day-instruction-card > header > span { display: grid; place-items: center; width: 24px; height: 24px; border: 1px solid rgba(238,181,115,.5); border-radius: 50%; font-weight: 800; }

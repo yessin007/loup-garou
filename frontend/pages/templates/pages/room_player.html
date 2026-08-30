@@ -84,7 +84,7 @@
         pendingRoomData = data;
         if (card.classList.contains("assigned")) return;
         card.className = "player-secret-card assigned";
-        cardContent.innerHTML = `<p class="eyebrow">{{ room.joined|escapejs }}</p><h1>{{ joined_player.name|escapejs }}</h1><div class="wolf-reveal-stage"><span class="wolf-reveal-halo" aria-hidden="true"></span><button id="reveal-role-wolf" class="wolf-reveal-trigger" type="button" aria-label="{{ room.reveal_my_role|escapejs }}"><img src="{% static 'images/role-reveal-wolf-3d.png' %}" alt="" draggable="false"><span class="wolf-reveal-rune" aria-hidden="true">◆</span></button></div><h2>{{ room.role_ready|escapejs }}</h2><p>{{ room.role_ready_help|escapejs }}</p>`;
+        cardContent.innerHTML = `<p class="eyebrow">{{ room.joined|escapejs }}</p><h1>{{ joined_player.name|escapejs }}</h1><div class="wolf-reveal-stage"><span class="wolf-reveal-halo" aria-hidden="true"></span><span class="wolf-pack-member left" aria-hidden="true"><img src="{% static 'images/role-reveal-wolf-3d.png' %}" alt="" draggable="false"></span><span class="wolf-pack-member right" aria-hidden="true"><img src="{% static 'images/role-reveal-wolf-3d.png' %}" alt="" draggable="false"></span><button id="reveal-role-wolf" class="wolf-reveal-trigger" type="button" aria-label="{{ room.reveal_my_role|escapejs }}"><img src="{% static 'images/role-reveal-wolf-3d.png' %}" alt="" draggable="false"><span class="wolf-reveal-rune" aria-hidden="true">◆</span></button></div><h2>{{ room.role_ready|escapejs }}</h2><p>{{ room.role_ready_help|escapejs }}</p>`;
         let roleRevealStarted = false;
         let roleRevealFinished = false;
         const finishRoleReveal = () => {
@@ -188,9 +188,13 @@
         const instructionContent = document.getElementById("day-instruction-content");
         if (!round || !items || !instructionCard || !instructionContent) return;
         const reports = [];
+        if (briefing?.night_deaths?.length) reports.push(`<div class="daily-briefing-item deaths"><span aria-hidden="true">†</span><p>{{ room.night_deaths_briefing|escapejs }} <strong>${safe(briefing.night_deaths.join(", "))}</strong></p></div>`);
         if (briefing?.seer_role) reports.push(`<div class="daily-briefing-item seer"><span aria-hidden="true">◉</span><p>{{ room.seer_briefing|escapejs }} <strong>${safe(briefing.seer_role)}</strong></p></div>`);
         if (typeof briefing?.bear_growled === "boolean") reports.push(`<div class="daily-briefing-item bear"><span aria-hidden="true">◆</span><p>{{ room.bear_briefing|escapejs }} <strong>${briefing.bear_growled ? "{{ room.bear_growled_briefing|escapejs }}" : "{{ room.bear_silent_briefing|escapejs }}"}</strong></p></div>`);
+        if (typeof briefing?.sheep_remaining === "number") reports.push(`<div class="daily-briefing-item shepherd"><span aria-hidden="true">♢</span><p>{{ room.shepherd_briefing|escapejs }} <strong>${"{{ room.sheep_remaining_value|escapejs }}".replace("{count}", briefing.sheep_remaining)}</strong></p></div>`);
         if (typeof briefing?.judge_same_clan === "boolean") reports.push(`<div class="daily-briefing-item judge"><span aria-hidden="true">⚖</span><p>{{ room.judge_briefing|escapejs }} <strong>${briefing.judge_same_clan ? "{{ room.judge_same_briefing|escapejs }}" : "{{ room.judge_different_briefing|escapejs }}"}</strong></p></div>`);
+        if (briefing?.alien_deaths?.length) reports.push(`<div class="daily-briefing-item day-deaths alien"><span aria-hidden="true">AL</span><p>{{ room.alien_deaths_briefing|escapejs }} <strong>${safe(briefing.alien_deaths.join(", "))}</strong></p></div>`);
+        if (briefing?.barber_deaths?.length) reports.push(`<div class="daily-briefing-item day-deaths barber"><span aria-hidden="true">BA</span><p>{{ room.barber_deaths_briefing|escapejs }} <strong>${briefing.barber_hit ? "{{ room.barber_hit_briefing|escapejs }}" : "{{ room.barber_miss_briefing|escapejs }}"} · ${safe(briefing.barber_deaths.join(", "))}</strong></p></div>`);
         round.textContent = briefing?.round ? "{{ room.daily_briefing_round|escapejs }}".replace("{round}", briefing.round) : "";
         items.innerHTML = reports.length ? reports.join("") : `<p class="daily-briefing-empty">{{ room.daily_briefing_empty|escapejs }}</p>`;
         const kind = instruction?.kind || "none";

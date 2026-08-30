@@ -1880,9 +1880,12 @@
           const deathLabel = cause === "hunter" ? "died_due_to_hunter_player_role" : cause === "barber" ? "died_due_to_barber_player_role" : cause === "alien" ? "died_due_to_alien_player_role" : "died_during_day_player_role";
           return `<div class="night-death-row ${cause}-death"><strong>${t(deathLabel, {name: escapeHtml(victim.name), role: escapeHtml(roleMeta[victim.role].name)})}</strong></div>`;
         }).join("");
+        const barberVerdict = barberOutIds.size && state.barberHit !== null
+          ? `<div class="live-special-verdict barber"><span>${L.barber}</span><strong>${state.barberHit ? L.barber_hit : L.barber_miss}</strong></div>`
+          : "";
         return {
           ids: orderedIds,
-          html: report ? `<section class="bilan-section night-death-section day-death-section"><h2>${L.day_death_list}</h2><div class="night-report">${report}</div></section>` : "",
+          html: report ? `<section class="bilan-section night-death-section day-death-section"><h2>${L.day_death_list}</h2>${barberVerdict}<div class="night-report">${report}</div></section>` : "",
         };
       }
 

@@ -162,6 +162,9 @@ ROOM_TEXT["fr"].update({
     "daily_briefing_empty": "Aucune information publique pour ce jour.",
     "seer_briefing": "La Voyante a vu :", "bear_briefing": "L’Ours", "bear_growled_briefing": "a grogné", "bear_silent_briefing": "n’a pas grogné",
     "judge_briefing": "Le Juge a vu :", "judge_same_briefing": "même clan", "judge_different_briefing": "clans différents",
+    "night_deaths_briefing": "Morts cette nuit :", "shepherd_briefing": "Le Berger a encore :", "sheep_remaining_value": "{count} mouton(s)",
+    "alien_deaths_briefing": "Victimes de l’Alien :", "barber_deaths_briefing": "Victimes du Barbier :",
+    "barber_hit_briefing": "tir réussi", "barber_miss_briefing": "tir raté",
     "your_day_instruction": "Ta consigne du jour", "must_pass_today": "Tu dois dire « Passe » aujourd’hui.",
     "must_say_word": "Tu dois placer ce mot aujourd’hui :", "no_day_instruction": "Aucune consigne spéciale aujourd’hui.",
 })
@@ -190,6 +193,9 @@ ROOM_TEXT["en"].update({
     "daily_briefing_empty": "No public information for this day.",
     "seer_briefing": "The Seer saw:", "bear_briefing": "The Bear", "bear_growled_briefing": "growled", "bear_silent_briefing": "did not growl",
     "judge_briefing": "The Judge saw:", "judge_same_briefing": "same faction", "judge_different_briefing": "different factions",
+    "night_deaths_briefing": "Died tonight:", "shepherd_briefing": "The Shepherd has left:", "sheep_remaining_value": "{count} sheep",
+    "alien_deaths_briefing": "Alien victims:", "barber_deaths_briefing": "Barber victims:",
+    "barber_hit_briefing": "successful shot", "barber_miss_briefing": "missed shot",
     "your_day_instruction": "Your instruction today", "must_pass_today": "You must say “Pass” today.",
     "must_say_word": "You must say this word today:", "no_day_instruction": "No special instruction today.",
 })
@@ -218,6 +224,9 @@ ROOM_TEXT["tn"].update({
     "daily_briefing_empty": "Ma fama 7atta info publique lel nhar hedha.",
     "seer_briefing": "El Voyante chefet :", "bear_briefing": "El Ours", "bear_growled_briefing": "garger", "bear_silent_briefing": "ma gargerch",
     "judge_briefing": "El Juge chef :", "judge_same_briefing": "nafs el clan", "judge_different_briefing": "clans mo5talfin",
+    "night_deaths_briefing": "Chkoun met m3ana ellila :", "shepherd_briefing": "Berger mazeloulou :", "sheep_remaining_value": "{count} 3lelech",
+    "alien_deaths_briefing": "Eli 9talhom Alien :", "barber_deaths_briefing": "Eli 9talhom Barbier :",
+    "barber_hit_briefing": "tir s7i7", "barber_miss_briefing": "tir 8alet",
     "your_day_instruction": "Consigne mte3ek el nhar", "must_pass_today": "Lezemek t9oul « Passe » el nhar.",
     "must_say_word": "Lezemek t9oul el kelma hedhi el nhar :", "no_day_instruction": "Ma 3andek 7atta consigne spéciale el nhar.",
 })
@@ -1442,12 +1451,29 @@ def room_player_api(request, code):
     latest_night = room.events.filter(event_type="night").order_by("-round_number", "-created_at").first()
     latest_night_details = (latest_night.details or {}) if latest_night else {}
     seer_role = latest_night_details.get("seer_role")
+    state_players_by_id = {
+        item.get("id"): item
+        for item in state_players or []
+        if isinstance(item, dict) and item.get("id") is not None
+    }
+    def public_state_names(player_ids):
+        return [
+            state_players_by_id[player_id].get("name")
+            for player_id in player_ids or []
+            if player_id in state_players_by_id and state_players_by_id[player_id].get("name")
+        ]
+
     daily_briefing = {
-        "round": latest_night.round_number,
+        "round": max(1, int(game_state.get("round", latest_night.round_number if latest_night else 1) or 1)),
+        "night_deaths": latest_night_details.get("deaths") or [],
         "seer_role": ROLES[language][seer_role][0] if seer_role in ROLE_KEYS else None,
         "bear_growled": latest_night_details.get("bear_growled"),
+        "sheep_remaining": latest_night_details.get("sheep_remaining"),
         "judge_same_clan": latest_night_details.get("judge_same_clan"),
-    } if latest_night else None
+        "alien_deaths": public_state_names(game_state.get("alienDeathIds")),
+        "barber_deaths": public_state_names(game_state.get("barberDeathIds")),
+        "barber_hit": game_state.get("barberHit") if game_state.get("barberTargetId") is not None else None,
+    } if latest_night or distribution_started else None
 
     state_player = next(
         (item for item in state_players or [] if isinstance(item, dict) and item.get("name") == joined.name),

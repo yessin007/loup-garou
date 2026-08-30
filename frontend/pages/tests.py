@@ -315,6 +315,8 @@ class RoomFlowTests(TestCase):
             "state.qualifiers.map(player).filter(item => item?.alive)",
         )
         self.assertContains(game, "state.stage = daySpecialReturnStage()")
+        self.assertContains(game, 'class="live-special-verdict barber"')
+        self.assertContains(game, "state.barberHit ? L.barber_hit : L.barber_miss")
         self.assertContains(game, "state.barberHit = isValidBarberTarget(target)")
         self.assertContains(game, "!item.infected && !item.wildTurned")
         self.assertContains(game, '["aliens", "fools"].includes(item.role)')
@@ -856,6 +858,10 @@ class RoomFlowTests(TestCase):
         self.assertContains(player_page, "renderDailyStatus")
         self.assertContains(player_page, "Bilan du jour")
         self.assertContains(player_page, "Ta consigne du jour")
+        self.assertContains(player_page, "Morts cette nuit")
+        self.assertContains(player_page, "Le Berger a encore")
+        self.assertContains(player_page, "Victimes de l’Alien")
+        self.assertContains(player_page, "Victimes du Barbier")
         self.assertContains(player_page, "Règles et cas particuliers")
         self.assertContains(player_page, "role.rules || []")
         self.assertContains(player_page, "Masquer mon rôle")
@@ -869,6 +875,8 @@ class RoomFlowTests(TestCase):
         self.assertContains(player_page, "renderRoleReady(data.role, data)")
         self.assertContains(player_page, 'id="reveal-role-wolf"')
         self.assertContains(player_page, 'class="wolf-reveal-trigger"')
+        self.assertContains(player_page, 'class="wolf-pack-member left"')
+        self.assertContains(player_page, 'class="wolf-pack-member right"')
         self.assertContains(player_page, "images/role-reveal-wolf-3d.png")
         self.assertContains(player_page, 'document.getElementById("reveal-role-wolf").addEventListener("click", revealPendingRole)')
         self.assertContains(player_page, "let roleRevealStarted = false")
@@ -973,10 +981,16 @@ class RoomFlowTests(TestCase):
             "talkativePlayerId": None,
             "assignedWord": "",
             "blockedPlayerId": None,
+            "alienDeathIds": [10],
+            "barberDeathIds": [11],
+            "barberTargetId": 11,
+            "barberHit": True,
             "players": [
                 {"id": 7, "name": assignment["name"], "role": assignment["role"], "alive": True},
                 {"id": 8, "name": "Hidden Black Wolf", "role": "black_wolves", "alive": True},
                 {"id": 9, "name": "Hidden Talkative Wolf", "role": "talkative_wolves", "alive": True},
+                {"id": 10, "name": "Alien victim", "role": "villagers", "alive": False},
+                {"id": 11, "name": "Barber victim", "role": "simple_wolves", "alive": False},
             ],
         }
         room.save(update_fields=["game_state"])
@@ -985,15 +999,26 @@ class RoomFlowTests(TestCase):
             marker="night-2",
             event_type="night",
             round_number=2,
-            details={"seer_role": "bears", "bear_growled": True, "judge_same_clan": True},
+            details={
+                "deaths": ["Night victim"],
+                "seer_role": "bears",
+                "bear_growled": True,
+                "sheep_remaining": 2,
+                "judge_same_clan": True,
+            },
         )
 
         private_state = player.get(reverse("room_player_api", args=[room.code])).json()
         self.assertEqual(private_state["daily_briefing"], {
             "round": 2,
+            "night_deaths": ["Night victim"],
             "seer_role": ROLES["fr"]["bears"][0],
             "bear_growled": True,
+            "sheep_remaining": 2,
             "judge_same_clan": True,
+            "alien_deaths": ["Alien victim"],
+            "barber_deaths": ["Barber victim"],
+            "barber_hit": True,
         })
         self.assertNotIn("name", private_state["daily_briefing"])
         self.assertEqual(private_state["day_instruction"], {"kind": "pass", "word": None})

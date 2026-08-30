@@ -250,6 +250,7 @@ class RoomFlowTests(TestCase):
         self.assertContains(game, "function dayDeathBilan(includeVote = false)")
         self.assertContains(game, "function renderLiveDayDeathBilan()")
         self.assertContains(game, "if (liveDayDeathStages.includes(state.stage)) renderLiveDayDeathBilan()")
+        self.assertContains(game, 'const liveDayDeathStages = ["dawn", "accusation", "barber_result", "alien_result", "final_vote", "servant_choice", "hunter_shot"]')
         self.assertContains(game, "...(includeVote ? state.voteDeathIds || [] : [])")
         self.assertContains(game, '"died_during_day_player_role"')
         self.assertContains(game, 'state.hunterCausedDeathIds = [...new Set([...(state.hunterCausedDeathIds || []), ...hunterDeaths.map(item => item.id)])]')
@@ -862,7 +863,11 @@ class RoomFlowTests(TestCase):
         self.assertContains(player_page, "renderDailyStatus")
         self.assertContains(player_page, "Bilan du jour")
         self.assertContains(player_page, "Ta consigne du jour")
+        self.assertContains(player_page, "dayPanels.hidden = !briefing")
+        self.assertContains(player_page, 'instructionCard.hidden = kind === "pending"')
+        self.assertContains(player_page, 'if (kind === "pending")')
         self.assertContains(player_page, "Morts cette nuit")
+        self.assertContains(player_page, "deathEntries(briefing.night_deaths, true)")
         self.assertContains(player_page, "Le Berger a encore")
         self.assertContains(player_page, "n’a pas grogné")
         self.assertContains(player_page, "Victimes de l’Alien")
@@ -1005,6 +1010,10 @@ class RoomFlowTests(TestCase):
             ],
         }
         room.save(update_fields=["game_state"])
+
+        private_state = player.get(reverse("room_player_api", args=[room.code])).json()
+        self.assertEqual(private_state["day_instruction"], {"kind": "pending", "word": None})
+
         RoomEvent.objects.create(
             room=room,
             marker="night-2",
@@ -1012,6 +1021,7 @@ class RoomFlowTests(TestCase):
             round_number=2,
             details={
                 "deaths": ["Night victim"],
+                "player_roles": {"Night victim": "bears"},
                 "seer_role": "bears",
                 "bear_growled": False,
                 "sheep_remaining": 2,
@@ -1022,7 +1032,11 @@ class RoomFlowTests(TestCase):
         private_state = player.get(reverse("room_player_api", args=[room.code])).json()
         self.assertEqual(private_state["daily_briefing"], {
             "round": 2,
-            "night_deaths": ["Night victim"],
+            "night_deaths": [{
+                "name": "Night victim",
+                "role": ROLES["fr"]["bears"][0],
+                "couple_with": None,
+            }],
             "seer_role": ROLES["fr"]["bears"][0],
             "bear_growled": False,
             "sheep_remaining": 2,
@@ -1047,7 +1061,13 @@ class RoomFlowTests(TestCase):
         self.assertNotIn("name", private_state["daily_briefing"])
         self.assertEqual(private_state["day_instruction"], {"kind": "pass", "word": None})
 
-        room.game_state.update({"silencedPlayerId": None, "talkativePlayerId": 7, "assignedWord": "lune"})
+        room.game_state["stage"] = "protector"
+        room.save(update_fields=["game_state"])
+        private_state = player.get(reverse("room_player_api", args=[room.code])).json()
+        self.assertIsNone(private_state["daily_briefing"])
+        self.assertEqual(private_state["day_instruction"], {"kind": "pending", "word": None})
+
+        room.game_state.update({"stage": "accusation", "silencedPlayerId": None, "talkativePlayerId": 7, "assignedWord": "lune"})
         room.save(update_fields=["game_state"])
         private_state = player.get(reverse("room_player_api", args=[room.code])).json()
         self.assertEqual(private_state["day_instruction"], {"kind": "word", "word": "lune"})

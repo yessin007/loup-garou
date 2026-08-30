@@ -2119,7 +2119,7 @@
         const stageChanged = lastRenderedStage !== state.stage;
         const dayStages = ["dawn", "accusation", "barber_shot", "barber_result", "alien_guess", "alien_result", "final_vote", "servant_choice", "hunter_shot", "day_end", "game_over"];
         const signalStages = ["dawn", "accusation", "final_vote"];
-        const liveDayDeathStages = ["accusation", "barber_result", "alien_result", "final_vote", "servant_choice", "hunter_shot"];
+        const liveDayDeathStages = ["dawn", "accusation", "barber_result", "alien_result", "final_vote", "servant_choice", "hunter_shot"];
         document.body.classList.toggle("day-mode", dayStages.includes(state.stage));
         document.body.classList.toggle("night-mode", !dayStages.includes(state.stage));
         document.body.classList.toggle("bilan-mode", state.stage === "dawn" || state.stage === "day_end");

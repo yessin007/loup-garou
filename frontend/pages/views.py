@@ -1462,6 +1462,11 @@ def room_player_api(request, code):
         for item in state_players or []
         if isinstance(item, dict) and item.get("id") is not None
     }
+    state_players_by_name = {
+        item.get("name"): item
+        for item in state_players or []
+        if isinstance(item, dict) and item.get("name")
+    }
     couple_ids = game_state.get("coupleIds") or []
     def public_death_entries(player_ids):
         entries = []
@@ -1487,6 +1492,26 @@ def room_player_api(request, code):
             })
         return entries
 
+    def public_night_death_entries(player_names):
+        event_roles = latest_night_details.get("player_roles") or {}
+        entries = []
+        for player_name in player_names or []:
+            item = state_players_by_name.get(player_name)
+            role = event_roles.get(player_name) or (item.get("role") if item else None)
+            partner_id = next((couple_id for couple_id in couple_ids if couple_id != item.get("id")), None) if item and item.get("id") in couple_ids else None
+            partner = state_players_by_id.get(partner_id)
+            partner_role = event_roles.get(partner.get("name")) if partner else None
+            partner_role = partner_role or (partner.get("role") if partner else None)
+            entries.append({
+                "name": player_name,
+                "role": ROLES[language][role][0] if role in ROLE_KEYS else None,
+                "couple_with": {
+                    "name": partner["name"],
+                    "role": ROLES[language][partner_role][0] if partner_role in ROLE_KEYS else None,
+                } if partner and partner.get("name") else None,
+            })
+        return entries
+
     day_hunter_death_ids = [
         death_id
         for record in game_state.get("hunterShotRecords") or []
@@ -1495,9 +1520,16 @@ def room_player_api(request, code):
         if death_id is not None
     ]
 
+    current_round = max(1, int(game_state.get("round", latest_night.round_number if latest_night else 1) or 1))
+    day_stages = {
+        "dawn", "accusation", "barber_shot", "barber_result", "alien_guess",
+        "alien_result", "final_vote", "servant_choice", "hunter_shot", "day_end", "game_over",
+    }
+    is_day_stage = game_state.get("stage") in day_stages
+    briefing_ready = bool(is_day_stage and latest_night and latest_night.round_number == current_round)
     daily_briefing = {
-        "round": max(1, int(game_state.get("round", latest_night.round_number if latest_night else 1) or 1)),
-        "night_deaths": latest_night_details.get("deaths") or [],
+        "round": latest_night.round_number if latest_night else current_round,
+        "night_deaths": public_night_death_entries(latest_night_details.get("deaths")),
         "seer_role": ROLES[language][seer_role][0] if seer_role in ROLE_KEYS else None,
         "bear_growled": latest_night_details.get("bear_growled"),
         "sheep_remaining": latest_night_details.get("sheep_remaining"),
@@ -1506,7 +1538,7 @@ def room_player_api(request, code):
         "barber_deaths": public_death_entries(game_state.get("barberDeathIds")),
         "hunter_deaths": public_death_entries(day_hunter_death_ids),
         "barber_hit": game_state.get("barberHit") if game_state.get("barberTargetId") is not None else None,
-    } if latest_night or distribution_started else None
+    } if is_day_stage and latest_night else None
 
     state_player = next(
         (item for item in state_players or [] if isinstance(item, dict) and item.get("name") == joined.name),
@@ -1518,7 +1550,9 @@ def room_player_api(request, code):
     )
     blocked_role = blocked_player.get("role") if blocked_player else None
     state_player_id = state_player.get("id") if state_player else None
-    if state_player_id is not None and game_state.get("silencedPlayerId") == state_player_id and blocked_role != "black_wolves":
+    if not briefing_ready:
+        day_instruction = {"kind": "pending", "word": None}
+    elif state_player_id is not None and game_state.get("silencedPlayerId") == state_player_id and blocked_role != "black_wolves":
         day_instruction = {"kind": "pass", "word": None}
     elif state_player_id is not None and game_state.get("talkativePlayerId") == state_player_id and blocked_role != "talkative_wolves" and game_state.get("assignedWord"):
         day_instruction = {"kind": "word", "word": game_state.get("assignedWord")}

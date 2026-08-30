@@ -182,19 +182,29 @@
           : `<p>{{ room.roles_alive_empty|escapejs }}</p>`;
       }
       function renderDailyStatus(briefing, instruction) {
+        const dayPanels = document.getElementById("player-day-panels");
         const round = document.getElementById("daily-briefing-round");
         const items = document.getElementById("daily-briefing-items");
         const instructionCard = document.getElementById("day-instruction-card");
         const instructionContent = document.getElementById("day-instruction-content");
-        if (!round || !items || !instructionCard || !instructionContent) return;
+        if (!dayPanels || !round || !items || !instructionCard || !instructionContent) return;
+        dayPanels.hidden = !briefing;
+        if (!briefing) {
+          round.textContent = "";
+          items.innerHTML = "";
+          instructionCard.hidden = true;
+          instructionContent.innerHTML = "";
+          return;
+        }
         const reports = [];
-        const deathEntries = entries => entries.map(entry => {
+        const deathEntries = (entries, arrow = false) => entries.map(entry => {
           const couple = entry.couple_with
             ? `<small>{{ room.couple_with_briefing|escapejs }} <b>${safe(entry.couple_with.name)}</b> (${safe(entry.couple_with.role || "—")})</small>`
             : "";
-          return `<span class="daily-death-entry"><b>${safe(entry.name)}</b> <em>(${safe(entry.role || "—")})</em>${couple}</span>`;
+          const role = arrow ? `→ ${safe(entry.role || "—")}` : `(${safe(entry.role || "—")})`;
+          return `<span class="daily-death-entry"><b>${safe(entry.name)}</b> <em>${role}</em>${couple}</span>`;
         }).join("");
-        if (briefing?.night_deaths?.length) reports.push(`<div class="daily-briefing-item deaths"><span aria-hidden="true">†</span><p>{{ room.night_deaths_briefing|escapejs }} <strong>${safe(briefing.night_deaths.join(", "))}</strong></p></div>`);
+        if (briefing?.night_deaths?.length) reports.push(`<div class="daily-briefing-item deaths"><span aria-hidden="true">†</span><p>{{ room.night_deaths_briefing|escapejs }} <strong>${deathEntries(briefing.night_deaths, true)}</strong></p></div>`);
         if (briefing?.seer_role) reports.push(`<div class="daily-briefing-item seer"><span aria-hidden="true">◉</span><p>{{ room.seer_briefing|escapejs }} <strong>${safe(briefing.seer_role)}</strong></p></div>`);
         if (typeof briefing?.bear_growled === "boolean") reports.push(`<div class="daily-briefing-item bear"><span aria-hidden="true">◆</span><p>{{ room.bear_briefing|escapejs }} <strong>${briefing.bear_growled ? "{{ room.bear_growled_briefing|escapejs }}" : "{{ room.bear_silent_briefing|escapejs }}"}</strong></p></div>`);
         if (typeof briefing?.sheep_remaining === "number") reports.push(`<div class="daily-briefing-item shepherd"><span aria-hidden="true">♢</span><p>{{ room.shepherd_briefing|escapejs }} <strong>${"{{ room.sheep_remaining_value|escapejs }}".replace("{count}", briefing.sheep_remaining)}</strong></p></div>`);
@@ -205,7 +215,12 @@
         round.textContent = briefing?.round ? "{{ room.daily_briefing_round|escapejs }}".replace("{round}", briefing.round) : "";
         items.innerHTML = reports.length ? reports.join("") : `<p class="daily-briefing-empty">{{ room.daily_briefing_empty|escapejs }}</p>`;
         const kind = instruction?.kind || "none";
+        instructionCard.hidden = kind === "pending";
         instructionCard.dataset.kind = kind;
+        if (kind === "pending") {
+          instructionContent.innerHTML = "";
+          return;
+        }
         instructionContent.innerHTML = kind === "pass"
           ? `<p>{{ room.must_pass_today|escapejs }}</p>`
           : kind === "word"

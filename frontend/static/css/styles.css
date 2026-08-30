@@ -1217,6 +1217,7 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .revealed-role-ornament b { font-size: .62rem; }
 @keyframes role-sigil-arrive { from { opacity: 0; transform: translateY(18px) scale(.96); filter: blur(8px); } to { opacity: 1; transform: none; filter: none; } }
 .player-day-panels { display: grid; gap: 12px; padding: 0 clamp(24px, 5vw, 38px) 28px; text-align: left; }
+.player-day-panels[hidden] { display: none; }
 .daily-briefing-card, .day-instruction-card { overflow: hidden; border-radius: 12px; }
 .daily-briefing-card { border: 1px solid rgba(199,139,69,.27); background: linear-gradient(135deg, rgba(199,139,69,.09), rgba(255,255,255,.025)); }
 .daily-briefing-card > header { display: flex; align-items: center; justify-content: space-between; gap: 14px; padding: 13px 15px; border-bottom: 1px solid rgba(199,139,69,.18); background: rgba(0,0,0,.12); }
@@ -1242,6 +1243,7 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .daily-briefing-empty { grid-column: 1 / -1; margin: 0; padding: 18px 15px; color: #7f8d93; background: #0d151b; font-size: .7rem; }
 @keyframes daily-live-entry { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: none; } }
 .day-instruction-card { border: 1px solid rgba(224,130,45,.48); background: linear-gradient(120deg, rgba(199,100,26,.2), rgba(89,43,17,.17)); box-shadow: inset 3px 0 #d88235; }
+.day-instruction-card[hidden] { display: none; }
 .day-instruction-card > header { display: flex; align-items: center; gap: 10px; padding: 12px 15px 0; color: #eeb573; }
 .day-instruction-card > header > span { display: grid; place-items: center; width: 24px; height: 24px; border: 1px solid rgba(238,181,115,.5); border-radius: 50%; font-weight: 800; }
 .day-instruction-card > header strong { font: 700 .68rem "Cinzel", serif; letter-spacing: .06em; text-transform: uppercase; }

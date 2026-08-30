@@ -780,6 +780,7 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .night-death-row { display: flex; align-items: center; justify-content: space-between; gap: 18px; padding: 16px 18px; border: 1px solid rgba(199,75,65,.22); background: rgba(121,34,30,.12); }
 .night-death-row strong { font: 700 1.08rem "Cinzel", serif; }
 .night-death-row span { color: #e59a92; font: 700 1rem "Cinzel", serif; }
+.night-death-row > small { color: #d69a90; font-size: .7rem; line-height: 1.45; text-align: right; }
 .live-special-verdict { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin-bottom: 10px; padding: 12px 16px; border: 1px solid rgba(199,139,69,.3); color: #a9b3b7; background: rgba(199,139,69,.07); }
 .live-special-verdict span { font-size: .68rem; letter-spacing: .08em; text-transform: uppercase; }
 .live-special-verdict strong { color: var(--ember-light); font: 700 .78rem "Cinzel", serif; }
@@ -1232,6 +1233,12 @@ button.scene-action:disabled { opacity: .3; cursor: not-allowed; }
 .daily-briefing-item.deaths, .daily-briefing-item.day-deaths { grid-column: 1 / -1; box-shadow: inset 3px 0 rgba(190,71,57,.78); }
 .daily-briefing-item.deaths > span, .daily-briefing-item.day-deaths > span { border-color: rgba(204,87,69,.45); color: #e29485; background: rgba(169,53,40,.12); }
 .daily-briefing-item.day-deaths { animation: daily-live-entry .45s ease-out both; }
+.daily-death-entry { display: block; margin-top: 7px; padding: 8px 10px; border: 1px solid rgba(255,255,255,.07); color: #aeb9bd; background: rgba(255,255,255,.025); font-weight: 400; }
+.daily-death-entry > b { color: var(--ivory); }
+.daily-death-entry > em { color: #d5a46b; font-style: normal; }
+.daily-death-entry > small { display: block; margin-top: 5px; color: #cf968d; font-size: .65rem; font-weight: 400; }
+.daily-death-entry > small b { color: #edc0b8; }
+.daily-special-result { display: inline-block; margin-top: 6px; padding: 4px 7px; border: 1px solid rgba(199,139,69,.3); color: var(--ember-light); background: rgba(199,139,69,.08); font-size: .64rem; text-transform: uppercase; }
 .daily-briefing-empty { grid-column: 1 / -1; margin: 0; padding: 18px 15px; color: #7f8d93; background: #0d151b; font-size: .7rem; }
 @keyframes daily-live-entry { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: none; } }
 .day-instruction-card { border: 1px solid rgba(224,130,45,.48); background: linear-gradient(120deg, rgba(199,100,26,.2), rgba(89,43,17,.17)); box-shadow: inset 3px 0 #d88235; }

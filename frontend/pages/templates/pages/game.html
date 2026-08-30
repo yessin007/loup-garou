@@ -1478,7 +1478,7 @@
         if (stage === "talkative_wolf") return hasAliveRole("talkative_wolves") && nightRoleHasTarget(stage);
         if (stage === "witch") return hasActiveAliveRole("witches");
         if (stage === "seer") return hasActiveAliveRole("seers") && nightRoleHasTarget(stage);
-        if (stage === "bear") return state.round === 1 && hasActiveAliveRole("bears");
+        if (stage === "bear") return hasActiveAliveRole("bears");
         if (stage === "shepherd") return hasActiveAliveRole("shepherds") && state.sheepRemaining > 0 && nightRoleHasTarget(stage);
         if (stage === "judge") return hasActiveAliveRole("judges") && nightRoleHasTarget(stage);
         return stage === "dawn";
@@ -1523,7 +1523,7 @@
           if (next === "cerberus" && (!hasAliveRole("cerberus_wolves") || !nightRoleHasTarget(next))) { index++; continue; }
           if (next === "infection" && !hasAliveRole("infecting_fathers")) { index++; continue; }
           if (next === "white_wolf" && (state.round % 2 !== 0 || !hasAliveRole("white_wolves") || wolves().filter(item => item.role !== "white_wolves").length === 0)) { index++; continue; }
-          if (next === "bear" && (state.round !== 1 || !hasActiveAliveRole("bears"))) { index++; continue; }
+          if (next === "bear" && !hasActiveAliveRole("bears")) { index++; continue; }
           if (next === "shepherd" && (!hasActiveAliveRole("shepherds") || state.sheepRemaining <= 0 || !nightRoleHasTarget(next))) { index++; continue; }
           if (next === "judge" && (!hasActiveAliveRole("judges") || !nightRoleHasTarget(next))) { index++; continue; }
           if (next === "black_wolf" && (!hasAliveRole("black_wolves") || !nightRoleHasTarget(next))) { index++; continue; }
@@ -1878,7 +1878,13 @@
           if (!victim) return "";
           const cause = hunterOutIds.has(id) ? "hunter" : barberOutIds.has(id) ? "barber" : alienOutIds.has(id) ? "alien" : "vote";
           const deathLabel = cause === "hunter" ? "died_due_to_hunter_player_role" : cause === "barber" ? "died_due_to_barber_player_role" : cause === "alien" ? "died_due_to_alien_player_role" : "died_during_day_player_role";
-          return `<div class="night-death-row ${cause}-death"><strong>${t(deathLabel, {name: escapeHtml(victim.name), role: escapeHtml(roleMeta[victim.role].name)})}</strong></div>`;
+          const lover = (state.coupleIds || []).includes(victim.id)
+            ? (state.coupleIds || []).map(player).find(item => item && item.id !== victim.id)
+            : null;
+          const coupleDetails = lover
+            ? `<small>${t("death_couple_with", {name: escapeHtml(lover.name), role: escapeHtml(roleMeta[lover.role].name)})}</small>`
+            : "";
+          return `<div class="night-death-row ${cause}-death"><strong>${t(deathLabel, {name: escapeHtml(victim.name), role: escapeHtml(roleMeta[victim.role].name)})}</strong>${coupleDetails}</div>`;
         }).join("");
         const barberVerdict = barberOutIds.size && state.barberHit !== null
           ? `<div class="live-special-verdict barber"><span>${L.barber}</span><strong>${state.barberHit ? L.barber_hit : L.barber_miss}</strong></div>`
@@ -1890,6 +1896,7 @@
       }
 
       function renderLiveDayDeathBilan() {
+        if (scene.querySelector(".day-death-section")) return;
         const deathBilan = dayDeathBilan(false).html;
         if (!deathBilan) return;
         const actions = scene.querySelector(".scene-actions");
@@ -1905,7 +1912,7 @@
         const deathText = killedByHunter ? t("hunter_died_shot", {name: escapeHtml(hunter.name)}) : state.pendingHunterSource === "night" ? t("hunter_died_night", {name: escapeHtml(hunter.name)}) : state.pendingHunterSource === "barber" ? t("hunter_died_barber", {name: escapeHtml(hunter.name)}) : t("hunter_died_vote", {name: escapeHtml(hunter.name)});
         const content = targets.length ? `<select id="night-select">${options(targets, L.choose_hunter_target, false)}</select>` : `<div class="peace-card">${L.hunter_no_target}</div>`;
         const button = targets.length ? actionButton(L.hunter_fire, "confirm-hunter-shot", true) : actionButton(L.continue_day, "finish-hunter-shot");
-        scene.innerHTML = `<div class="scene-kicker">${L.hunter_last_shot}</div><h1>${L.hunter_choose}</h1><p class="scene-lead">${deathText}</p>${content}<div class="scene-actions">${button}</div>`;
+        scene.innerHTML = `<div class="scene-kicker">${L.hunter_last_shot}</div><h1>${L.hunter_choose}</h1><p class="scene-lead">${deathText}</p>${content}${dayDeathBilan(false).html}<div class="scene-actions">${button}</div>`;
       }
 
       function barberAction() {
@@ -2016,7 +2023,7 @@
         const title = state.barberHit ? L.barber_hit : L.barber_miss;
         const message = state.barberHit ? t("barber_wolf_dies", {name: escapeHtml(target.name)}) : t("barber_miss_deaths", {barber: escapeHtml(barber.name), target: escapeHtml(target.name)});
         const nextAction = state.winner ? actionButton(L.open_day_bilan, "finish-special-day") : actionButton(L.continue_day, "continue-after-barber");
-        scene.innerHTML = `<div class="end-emblem ${state.barberHit ? "wolf" : "village"}"><span>BA</span></div><div class="scene-kicker">${L.barber_signal}</div><h1>${title}</h1><div class="verdict-card"><strong>${message}</strong>${state.barberHit ? `<small>${roleMeta[target.role].name}</small>` : ""}</div><div class="scene-actions">${nextAction}</div>`;
+        scene.innerHTML = `<div class="end-emblem ${state.barberHit ? "wolf" : "village"}"><span>BA</span></div><div class="scene-kicker">${L.barber_signal}</div><h1>${title}</h1><div class="verdict-card"><strong>${message}</strong>${state.barberHit ? `<small>${roleMeta[target.role].name}</small>` : ""}</div>${dayDeathBilan(false).html}<div class="scene-actions">${nextAction}</div>`;
       }
 
       function renderAlienGuess() {

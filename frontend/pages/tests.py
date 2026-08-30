@@ -253,6 +253,7 @@ class RoomFlowTests(TestCase):
         self.assertContains(game, "...(includeVote ? state.voteDeathIds || [] : [])")
         self.assertContains(game, '"died_during_day_player_role"')
         self.assertContains(game, 'state.hunterCausedDeathIds = [...new Set([...(state.hunterCausedDeathIds || []), ...hunterDeaths.map(item => item.id)])]')
+        self.assertContains(game, '${content}${dayDeathBilan(false).html}<div class="scene-actions">${button}</div>')
         self.assertContains(game, 'class="witch-night-result ${nightVictim ? "danger" : "safe"}"')
         self.assertContains(game, 'nightVictim ? escapeHtml(nightVictim.name) : L.witch_nobody_died')
         self.assertContains(game, 'victim && !savedByProtector && !savedByRedHood ? victim : null')
@@ -317,6 +318,9 @@ class RoomFlowTests(TestCase):
         self.assertContains(game, "state.stage = daySpecialReturnStage()")
         self.assertContains(game, 'class="live-special-verdict barber"')
         self.assertContains(game, "state.barberHit ? L.barber_hit : L.barber_miss")
+        self.assertContains(game, '${dayDeathBilan(false).html}<div class="scene-actions">${nextAction}</div>')
+        self.assertContains(game, 'if (scene.querySelector(".day-death-section")) return;')
+        self.assertContains(game, 't("death_couple_with"')
         self.assertContains(game, "state.barberHit = isValidBarberTarget(target)")
         self.assertContains(game, "!item.infected && !item.wildTurned")
         self.assertContains(game, '["aliens", "fools"].includes(item.role)')
@@ -388,11 +392,11 @@ class RoomFlowTests(TestCase):
         game = self.narrator.get(reverse("game"))
         self.assertContains(
             game,
-            'if (stage === "bear") return state.round === 1 && hasActiveAliveRole("bears");',
+            'if (stage === "bear") return hasActiveAliveRole("bears");',
         )
         self.assertContains(
             game,
-            'if (next === "bear" && (state.round !== 1 || !hasActiveAliveRole("bears")))',
+            'if (next === "bear" && !hasActiveAliveRole("bears"))',
         )
         self.assertContains(game, "seatingOrderIds: []")
         self.assertContains(game, "function normalizedSeatingOrder()")
@@ -860,8 +864,11 @@ class RoomFlowTests(TestCase):
         self.assertContains(player_page, "Ta consigne du jour")
         self.assertContains(player_page, "Morts cette nuit")
         self.assertContains(player_page, "Le Berger a encore")
+        self.assertContains(player_page, "n’a pas grogné")
         self.assertContains(player_page, "Victimes de l’Alien")
         self.assertContains(player_page, "Victimes du Barbier")
+        self.assertContains(player_page, "Emportés par le Chasseur")
+        self.assertContains(player_page, "En couple avec")
         self.assertContains(player_page, "Règles et cas particuliers")
         self.assertContains(player_page, "role.rules || []")
         self.assertContains(player_page, "Masquer mon rôle")
@@ -985,12 +992,16 @@ class RoomFlowTests(TestCase):
             "barberDeathIds": [11],
             "barberTargetId": 11,
             "barberHit": True,
+            "coupleIds": [10, 12],
+            "hunterShotRecords": [{"source": "barber", "targetId": 13, "deathIds": [13]}],
             "players": [
                 {"id": 7, "name": assignment["name"], "role": assignment["role"], "alive": True},
                 {"id": 8, "name": "Hidden Black Wolf", "role": "black_wolves", "alive": True},
                 {"id": 9, "name": "Hidden Talkative Wolf", "role": "talkative_wolves", "alive": True},
                 {"id": 10, "name": "Alien victim", "role": "villagers", "alive": False},
                 {"id": 11, "name": "Barber victim", "role": "simple_wolves", "alive": False},
+                {"id": 12, "name": "Couple partner", "role": "judges", "alive": False},
+                {"id": 13, "name": "Hunter victim", "role": "ancients", "alive": False},
             ],
         }
         room.save(update_fields=["game_state"])
@@ -1002,7 +1013,7 @@ class RoomFlowTests(TestCase):
             details={
                 "deaths": ["Night victim"],
                 "seer_role": "bears",
-                "bear_growled": True,
+                "bear_growled": False,
                 "sheep_remaining": 2,
                 "judge_same_clan": True,
             },
@@ -1013,11 +1024,24 @@ class RoomFlowTests(TestCase):
             "round": 2,
             "night_deaths": ["Night victim"],
             "seer_role": ROLES["fr"]["bears"][0],
-            "bear_growled": True,
+            "bear_growled": False,
             "sheep_remaining": 2,
             "judge_same_clan": True,
-            "alien_deaths": ["Alien victim"],
-            "barber_deaths": ["Barber victim"],
+            "alien_deaths": [{
+                "name": "Alien victim",
+                "role": ROLES["fr"]["villagers"][0],
+                "couple_with": {"name": "Couple partner", "role": ROLES["fr"]["judges"][0]},
+            }],
+            "barber_deaths": [{
+                "name": "Barber victim",
+                "role": ROLES["fr"]["simple_wolves"][0],
+                "couple_with": None,
+            }],
+            "hunter_deaths": [{
+                "name": "Hunter victim",
+                "role": ROLES["fr"]["ancients"][0],
+                "couple_with": None,
+            }],
             "barber_hit": True,
         })
         self.assertNotIn("name", private_state["daily_briefing"])
@@ -1205,13 +1229,22 @@ class RoomFlowTests(TestCase):
             notes,
         )
 
+        maximum_notes = "x" * 5000
+        accepted = player.post(
+            notes_url,
+            json.dumps({"notes": maximum_notes}),
+            content_type="application/json",
+        )
+        self.assertEqual(accepted.status_code, 200)
+        self.assertEqual(accepted.json()["length"], 5000)
+
         too_long = player.post(
             notes_url,
-            json.dumps({"notes": "x" * 601}),
+            json.dumps({"notes": "x" * 5001}),
             content_type="application/json",
         )
         self.assertEqual(too_long.status_code, 400)
-        self.assertEqual(room.room_players.get(name="Sarra-notes").private_notes, notes)
+        self.assertEqual(room.room_players.get(name="Sarra-notes").private_notes, maximum_notes)
         self.assertEqual(self.narrator.post(notes_url, json.dumps({"notes": "intrusion"}), content_type="application/json").status_code, 403)
 
         room.status = GameRoom.Status.FINISHED
@@ -1228,7 +1261,7 @@ class RoomFlowTests(TestCase):
         self.assertNotContains(narrator_history, "Partie terminée.")
 
         player_page = player.get(reverse("room_player", args=[room.code]))
-        self.assertContains(player_page, 'maxlength="600"')
+        self.assertContains(player_page, 'maxlength="5000"')
         self.assertContains(player_page, "schedulePrivateNotesSave")
         self.assertContains(player_page, "keepalive: true")
         self.assertContains(player_page, "async function csrfFetch")

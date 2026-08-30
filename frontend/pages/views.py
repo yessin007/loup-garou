@@ -164,7 +164,9 @@ ROOM_TEXT["fr"].update({
     "judge_briefing": "Le Juge a vu :", "judge_same_briefing": "même clan", "judge_different_briefing": "clans différents",
     "night_deaths_briefing": "Morts cette nuit :", "shepherd_briefing": "Le Berger a encore :", "sheep_remaining_value": "{count} mouton(s)",
     "alien_deaths_briefing": "Victimes de l’Alien :", "barber_deaths_briefing": "Victimes du Barbier :",
+    "hunter_deaths_briefing": "Emportés par le Chasseur :",
     "barber_hit_briefing": "tir réussi", "barber_miss_briefing": "tir raté",
+    "couple_with_briefing": "En couple avec",
     "your_day_instruction": "Ta consigne du jour", "must_pass_today": "Tu dois dire « Passe » aujourd’hui.",
     "must_say_word": "Tu dois placer ce mot aujourd’hui :", "no_day_instruction": "Aucune consigne spéciale aujourd’hui.",
 })
@@ -195,7 +197,9 @@ ROOM_TEXT["en"].update({
     "judge_briefing": "The Judge saw:", "judge_same_briefing": "same faction", "judge_different_briefing": "different factions",
     "night_deaths_briefing": "Died tonight:", "shepherd_briefing": "The Shepherd has left:", "sheep_remaining_value": "{count} sheep",
     "alien_deaths_briefing": "Alien victims:", "barber_deaths_briefing": "Barber victims:",
+    "hunter_deaths_briefing": "Taken by the Hunter:",
     "barber_hit_briefing": "successful shot", "barber_miss_briefing": "missed shot",
+    "couple_with_briefing": "In a couple with",
     "your_day_instruction": "Your instruction today", "must_pass_today": "You must say “Pass” today.",
     "must_say_word": "You must say this word today:", "no_day_instruction": "No special instruction today.",
 })
@@ -226,7 +230,9 @@ ROOM_TEXT["tn"].update({
     "judge_briefing": "El Juge chef :", "judge_same_briefing": "nafs el clan", "judge_different_briefing": "clans mo5talfin",
     "night_deaths_briefing": "Chkoun met m3ana ellila :", "shepherd_briefing": "Berger mazeloulou :", "sheep_remaining_value": "{count} 3lelech",
     "alien_deaths_briefing": "Eli 9talhom Alien :", "barber_deaths_briefing": "Eli 9talhom Barbier :",
+    "hunter_deaths_briefing": "Eli hezhom Chasseur m3ah :",
     "barber_hit_briefing": "tir s7i7", "barber_miss_briefing": "tir 8alet",
+    "couple_with_briefing": "Couple avec",
     "your_day_instruction": "Consigne mte3ek el nhar", "must_pass_today": "Lezemek t9oul « Passe » el nhar.",
     "must_say_word": "Lezemek t9oul el kelma hedhi el nhar :", "no_day_instruction": "Ma 3andek 7atta consigne spéciale el nhar.",
 })
@@ -1456,12 +1462,38 @@ def room_player_api(request, code):
         for item in state_players or []
         if isinstance(item, dict) and item.get("id") is not None
     }
-    def public_state_names(player_ids):
-        return [
-            state_players_by_id[player_id].get("name")
-            for player_id in player_ids or []
-            if player_id in state_players_by_id and state_players_by_id[player_id].get("name")
-        ]
+    couple_ids = game_state.get("coupleIds") or []
+    def public_death_entries(player_ids):
+        entries = []
+        seen_ids = set()
+        for player_id in player_ids or []:
+            if player_id in seen_ids:
+                continue
+            seen_ids.add(player_id)
+            item = state_players_by_id.get(player_id)
+            if not item or not item.get("name"):
+                continue
+            role = item.get("role")
+            partner_id = next((couple_id for couple_id in couple_ids if couple_id != player_id), None) if player_id in couple_ids else None
+            partner = state_players_by_id.get(partner_id)
+            partner_role = partner.get("role") if partner else None
+            entries.append({
+                "name": item["name"],
+                "role": ROLES[language][role][0] if role in ROLE_KEYS else None,
+                "couple_with": {
+                    "name": partner["name"],
+                    "role": ROLES[language][partner_role][0] if partner_role in ROLE_KEYS else None,
+                } if partner and partner.get("name") else None,
+            })
+        return entries
+
+    day_hunter_death_ids = [
+        death_id
+        for record in game_state.get("hunterShotRecords") or []
+        if isinstance(record, dict) and record.get("source") != "night"
+        for death_id in (record.get("deathIds") or [record.get("targetId")])
+        if death_id is not None
+    ]
 
     daily_briefing = {
         "round": max(1, int(game_state.get("round", latest_night.round_number if latest_night else 1) or 1)),
@@ -1470,8 +1502,9 @@ def room_player_api(request, code):
         "bear_growled": latest_night_details.get("bear_growled"),
         "sheep_remaining": latest_night_details.get("sheep_remaining"),
         "judge_same_clan": latest_night_details.get("judge_same_clan"),
-        "alien_deaths": public_state_names(game_state.get("alienDeathIds")),
-        "barber_deaths": public_state_names(game_state.get("barberDeathIds")),
+        "alien_deaths": public_death_entries(game_state.get("alienDeathIds")),
+        "barber_deaths": public_death_entries(game_state.get("barberDeathIds")),
+        "hunter_deaths": public_death_entries(day_hunter_death_ids),
         "barber_hit": game_state.get("barberHit") if game_state.get("barberTargetId") is not None else None,
     } if latest_night or distribution_started else None
 
@@ -1523,7 +1556,7 @@ def room_player_notes_api(request, code):
         notes = json.loads(request.body).get("notes", "")
     except (AttributeError, json.JSONDecodeError):
         return JsonResponse({"error": "invalid_notes"}, status=400)
-    if not isinstance(notes, str) or len(notes) > 600:
+    if not isinstance(notes, str) or len(notes) > 5000:
         return JsonResponse({"error": "notes_too_long"}, status=400)
     joined.private_notes = notes
     joined.save(update_fields=["private_notes"])

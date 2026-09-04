@@ -36,16 +36,21 @@
           <p id="join-loading-message" class="join-loading-message" role="status" aria-live="polite" {% if not retry_after %}hidden{% endif %}><span class="join-queue-spinner" aria-hidden="true"></span><span id="join-loading-text">{{ room.joining_room }}</span></p>
           <button id="join-room-button" type="submit">{% if retry_after %}{{ room.join_retry_now }}{% else %}{{ room.join }}{% endif %} <span>→</span></button>
         </form>
-        {% if narrator_mode %}<section class="room-card general-qr-card">
-          <span>02</span><h2>{{ room.general_qr }}</h2>
-          <img src="{% url 'general_room_qr' %}" alt="{{ room.general_qr }}" />
-          <p>{{ room.general_qr_help }}</p>
-        </section>{% endif %}
         <section class="room-card">
-          <span>03</span><h2>{{ room.history }}</h2>
+          <span>02</span><h2>{{ room.my_history_nav }}</h2>
           {% if room.history_intro %}<p>{{ room.history_intro }}</p>{% endif %}
           <a class="room-card-action" href="{% url 'room_history_list' %}?mine=1">Mes parties terminées <span>→</span></a>
         </section>
+        <section class="room-card league-portal-card">
+          <span>03</span><h2>{{ room.league_nav }}</h2>
+          <p>{{ room.league_intro }}</p>
+          <a class="room-card-action" href="{% url 'league' %}">{{ room.league }} <span>→</span></a>
+        </section>
+        {% if narrator_mode %}<section class="room-card general-qr-card">
+          <span>04</span><h2>{{ room.general_qr }}</h2>
+          <img src="{% url 'general_room_qr' %}" alt="{{ room.general_qr }}" />
+          <p>{{ room.general_qr_help }}</p>
+        </section>{% endif %}
       </div>
     </main>
     <script>

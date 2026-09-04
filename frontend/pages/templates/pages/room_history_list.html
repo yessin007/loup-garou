@@ -8,7 +8,7 @@
     <title>{{ room.all_histories }} | Loup Garou</title><link rel="stylesheet" href="{% static 'css/styles.css' %}" />
   </head>
   <body class="room-page history-list-page">
-    <header class="guide-header"><a class="brand" href="{% url 'dashboard' %}">Loup <span>Garou</span></a><div class="guide-header-actions"><span class="account-username"><span aria-hidden="true">●</span>{{ request.user.username }}</span>{% include "pages/_language_selector.html" %}{% include "pages/_theme_toggle.html" %}<a class="guide-back" href="{% url 'dashboard' %}"><span aria-hidden="true">←</span><strong>{{ room.back }}</strong></a></div></header>
+    <header class="guide-header"><a class="brand" href="{% url 'dashboard' %}">Loup <span>Garou</span></a><div class="guide-header-actions"><span class="account-username"><span aria-hidden="true">●</span>{{ request.user.username }}</span>{% include "pages/_language_selector.html" %}{% include "pages/_theme_toggle.html" %}<a class="guide-back" href="{% url 'league' %}"><span aria-hidden="true">♛</span><strong>{{ room.league }}</strong></a><a class="guide-back" href="{% url 'dashboard' %}"><span aria-hidden="true">←</span><strong>{{ room.back }}</strong></a></div></header>
     <main class="room-shell">
       <section class="room-hero history-hero"><div><p class="eyebrow">{{ room.archive }}</p><h1>{% if player_history %}Mes parties terminées{% else %}{{ room.all_histories }}{% endif %}</h1>{% if room.history_intro %}<p>{{ room.history_intro }}</p>{% endif %}</div></section>
       <div class="history-room-list">
@@ -16,7 +16,7 @@
           <article class="history-room-entry{% if game_room.status == 'active' %} active{% endif %}">
             <a class="history-room-link" href="{% url 'room_history' game_room.code %}">
               <span class="history-room-code">{{ game_room.code|slice:":2" }}</span>
-              <span><strong>{{ room.room_label }} {{ game_room.code }}{% if not player_history %} ({% if game_room.narrator_id == request.user.id %}{{ room.narrated_by_you }}{% elif game_room.narrator %}{{ room.narrated_by }} {{ game_room.narrator.username }}{% else %}{{ room.narrator_unknown }}{% endif %}){% endif %}</strong><small>{% if game_room.status == "active" %}{{ room.history_live }} · {% endif %}{{ game_room.event_count }} {{ room.events }} · {{ game_room.updated_at|date:"d/m/Y H:i" }}</small></span>
+              <span><strong>{{ room.room_label }} {{ game_room.code }}{% if not player_history %} ({% if game_room.narrator_id == request.user.id %}{{ room.narrated_by_you }}{% elif game_room.narrator %}{{ room.narrated_by }} {{ game_room.narrator.username }}{% else %}{{ room.narrator_unknown }}{% endif %}){% endif %}</strong><small>{% if game_room.status == "active" %}{{ room.history_live }} · {% endif %}{{ game_room.event_count }} {{ room.events }}{% if player_history %} · <b>+{{ game_room.my_score }} {{ room.points }}</b>{% endif %} · {{ game_room.updated_at|date:"d/m/Y H:i" }}</small></span>
               <span class="history-room-arrow">→</span>
             </a>
             {% if game_room.status == "active" and can_delete_history %}

@@ -9,7 +9,7 @@ from django.contrib.auth import authenticate, get_user_model, login, logout
 from django.contrib.auth.models import Group
 from django.db import transaction
 from django.db.utils import IntegrityError, OperationalError
-from django.db.models import Count, Q
+from django.db.models import Count, Q, Sum
 from django.conf import settings
 from django.core.exceptions import PermissionDenied
 from django.http import HttpResponse, JsonResponse
@@ -21,8 +21,9 @@ from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.cache import never_cache
 from django.middleware.csrf import get_token
 
-from .models import GameRoom, RoomEvent, RoomPlayer
+from .models import GameRoom, RoomEvent, RoomPlayer, ScoreAward
 from .role_guides import ROLE_CAMPS, ROLE_CODES, ROLE_GUIDES
+from .scoring import RULEBOOK, award_label, reconcile_room_scores, scoring_snapshot
 from .translations import LANGUAGES, ROLES, UI
 
 
@@ -235,6 +236,43 @@ ROOM_TEXT["tn"].update({
     "couple_with_briefing": "Couple avec",
     "your_day_instruction": "Consigne mte3ek el nhar", "must_pass_today": "Lezemek t9oul « Passe » el nhar.",
     "must_say_word": "Lezemek t9oul el kelma hedhi el nhar :", "no_day_instruction": "Ma 3andek 7atta consigne spéciale el nhar.",
+})
+
+ROOM_TEXT["fr"].update({
+    "join_room_nav": "Rejoindre une room", "my_history_nav": "Mon historique",
+    "league_nav": "Voir la ligue", "league_intro": "Classement général, tes points et toutes les règles de score.",
+    "league": "Ligue", "points": "points",
+    "league_standings": "Classement général", "league_rank": "Rang", "league_player": "Joueur",
+    "league_games": "Parties", "league_wins": "Victoires", "league_actions": "Actions",
+    "league_ranked": "joueurs classés", "league_you": "Vous", "league_survived": "jours survécus",
+    "league_waiting": "La ligue attend sa première partie.", "scoring_rules": "Règles de score",
+    "score_rule_intro": "Chaque récompense vaut seulement de +1 à +5. Aucun +100, aucun score caché.",
+    "score_integrity": "Score vérifiable", "score_integrity_help": "Les points viennent uniquement des phases terminées enregistrées par le serveur. Un retour arrière retire les points de la phase, et une synchronisation répétée ne les double jamais.",
+    "no_game_points": "Aucun point enregistré pour cette partie.", "game_label": "Partie",
+})
+ROOM_TEXT["en"].update({
+    "join_room_nav": "Join a room", "my_history_nav": "My history",
+    "league_nav": "View league", "league_intro": "Overall standings, your points and every scoring rule.",
+    "league": "League", "points": "points",
+    "league_standings": "Overall standings", "league_rank": "Rank", "league_player": "Player",
+    "league_games": "Games", "league_wins": "Wins", "league_actions": "Actions",
+    "league_ranked": "ranked players", "league_you": "You", "league_survived": "days survived",
+    "league_waiting": "The league is waiting for its first game.", "scoring_rules": "Scoring rules",
+    "score_rule_intro": "Every award is only +1 to +5. No +100 and no hidden score.",
+    "score_integrity": "Verifiable score", "score_integrity_help": "Points come only from completed phases recorded by the server. Undo removes that phase’s points, and repeated sync never duplicates them.",
+    "no_game_points": "No points recorded for this game.", "game_label": "Game",
+})
+ROOM_TEXT["tn"].update({
+    "join_room_nav": "Od5ol room", "my_history_nav": "Historique mte3i",
+    "league_nav": "Chouf el ligue", "league_intro": "Classement général, points mte3ek w les règles lkol.",
+    "league": "Ligue", "points": "points",
+    "league_standings": "Classement général", "league_rank": "Rang", "league_player": "Joueur",
+    "league_games": "Games", "league_wins": "Victoires", "league_actions": "Actions",
+    "league_ranked": "joueurs classés", "league_you": "Enti", "league_survived": "nharat 3ayech",
+    "league_waiting": "El ligue testanna fi awel game.", "scoring_rules": "Règles mta3 score",
+    "score_rule_intro": "Kol récompense men +1 lel +5 bark. Ma fama la +100 la score m5obi.",
+    "score_integrity": "Score vérifiable", "score_integrity_help": "Points yjiw ken mel phases eli kemlou w tsajlou fel serveur. Undo yna7i points w sync ma ydoubbelhomch.",
+    "no_game_points": "Ma fama 7atta point fel game hedhi.", "game_label": "Game",
 })
 
 ROOM_DETAIL_LABELS = {
@@ -464,6 +502,7 @@ def public_event_details(state, event_type):
         sheep_lost = [player_label(state, result.get("targetId")) for result in shepherd_results if not result.get("returned")]
         has_shepherd = bool(shepherd_results) or any(item.get("role") == "shepherds" for item in state.get("players", []))
         return {
+            "_scoring": scoring_snapshot(state),
             "player_roles": player_roles,
             "player_statuses": player_statuses,
             "couple_members": [name for name in (player_label(state, item) for item in state.get("coupleIds", [])) if name],
@@ -512,6 +551,7 @@ def public_event_details(state, event_type):
         if entry.get("votes") is not None and player_label(state, entry.get("targetId"))
     ] or vote_lines(vote_breakdown.get("normal", []))
     return {
+        "_scoring": scoring_snapshot(state),
         "player_roles": player_roles,
         "player_statuses": player_statuses,
         "speaker": player_label(state, state.get("speakerId")),
@@ -625,8 +665,11 @@ def register(request):
         else:
             existing_user = user_model.objects.filter(username__iexact=username).first()
             if existing_user:
+                # An exact, matching retry can happen after the first
+                # registration response was lost. A differently-cased name is
+                # still treated as an ordinary duplicate, never as a login.
                 user = authenticate(request, username=existing_user.username, password=password)
-                if user is not None and user.is_active:
+                if existing_user.username == username and user is not None and user.is_active:
                     login(request, user)
                     return redirect("room_portal")
                 error = "Ce nom d’utilisateur existe déjà."
@@ -925,12 +968,17 @@ def room_history(request, code):
         raise PermissionDenied
     language = current_language(request)
     history_player = room.room_players.filter(user=request.user).first()
+    player_awards = list(history_player.score_awards.filter(room=room)) if history_player else []
+    for award in player_awards:
+        award.display_label = award_label(award, language)
     return render(request, "pages/room_history.html", {
         "game_room": room,
         "room": room_text(request),
         "role_labels": {key: value[0] for key, value in ROLES[language].items()},
         "history_notes_available": history_player is not None,
         "history_private_notes": history_player.private_notes if history_player else None,
+        "history_score": sum(award.points for award in player_awards),
+        "history_score_awards": player_awards,
     })
 
 
@@ -961,7 +1009,15 @@ def room_history_list(request):
         rooms = rooms.filter(Q(status=GameRoom.Status.ACTIVE) | Q(status=GameRoom.Status.FINISHED))
         if not request.user.is_superuser:
             rooms = rooms.filter(Q(narrator=request.user) | Q(narrator__isnull=True))
-    rooms = rooms.order_by("-updated_at")
+    rooms = list(rooms.order_by("-updated_at"))
+    if player_history:
+        totals = {
+            item["room_id"]: item["total"] or 0
+            for item in ScoreAward.objects.filter(user=request.user, room__in=rooms)
+            .values("room_id").annotate(total=Sum("points"))
+        }
+        for history_room in rooms:
+            history_room.my_score = totals.get(history_room.code, 0)
     return render(request, "pages/room_history_list.html", {
         "history_rooms": rooms,
         "room": room_text(request),
@@ -977,6 +1033,7 @@ def room_history_finish(request, code):
         raise PermissionDenied
     room.status = GameRoom.Status.FINISHED
     room.save(update_fields=["status", "updated_at"])
+    reconcile_room_scores(room)
     return redirect("room_history_list")
 
 
@@ -1383,6 +1440,7 @@ def room_sync_api(request, code):
             marker=f"{event_type}-{round_number}",
             defaults={"event_type": event_type, "round_number": round_number, "details": public_event_details(state, event_type)},
         )
+    reconcile_room_scores(room)
     return JsonResponse({"status": "ok"})
 
 
@@ -1558,6 +1616,7 @@ def room_player_api(request, code):
         day_instruction = {"kind": "word", "word": game_state.get("assignedWord")}
     else:
         day_instruction = {"kind": "none", "word": None}
+    player_awards = list(joined.score_awards.filter(room=room).order_by("-created_at", "-id"))
     return JsonResponse({
         "status": effective_status,
         "joined_count": room.room_players.count(),
@@ -1576,6 +1635,13 @@ def room_player_api(request, code):
         "private_notes": joined.private_notes,
         "daily_briefing": daily_briefing,
         "day_instruction": day_instruction,
+        "score": {
+            "total": sum(award.points for award in player_awards),
+            "latest": [
+                {"points": award.points, "label": award_label(award, language)}
+                for award in player_awards[:3]
+            ],
+        },
     })
 
 
@@ -1613,6 +1679,7 @@ def room_history_api(request, code):
     known_dead_players = set()
     for index, event in enumerate(room_events):
         details = dict(event.details or {})
+        details.pop("_scoring", None)
         if current_player_roles and not details.get("player_roles"):
             details["player_roles"] = current_player_roles
         if event.event_type == "day":
@@ -1644,6 +1711,61 @@ def room_history_api(request, code):
             "created_at": event.created_at.isoformat(),
         })
     return JsonResponse({"status": room.status, "events": events})
+
+
+@never_cache
+def league(request):
+    if not request.user.is_authenticated:
+        return redirect("home")
+    language = current_language(request)
+    user_model = get_user_model()
+    users = list(
+        user_model.objects.filter(is_active=True)
+        .filter(Q(score_awards__isnull=False) | Q(game_participations__isnull=False) | Q(pk=request.user.pk))
+        .distinct()
+    )
+    totals = {
+        row["user_id"]: row
+        for row in ScoreAward.objects.values("user_id").annotate(
+            total=Sum("points"),
+            scored_games=Count("room", distinct=True),
+            wins=Count("room", distinct=True, filter=Q(rule_code="victory")),
+            survival=Count("id", filter=Q(rule_code="day_survived")),
+            actions=Count("id", filter=~Q(rule_code__in=["day_survived", "victory"])),
+        )
+    }
+    played = {
+        row["user_id"]: row["games"]
+        for row in RoomPlayer.objects.filter(user__in=users, room__status=GameRoom.Status.FINISHED)
+        .values("user_id").annotate(games=Count("room", distinct=True))
+    }
+    standings = []
+    for account in users:
+        stats = totals.get(account.id, {})
+        standings.append({
+            "user": account,
+            "points": stats.get("total") or 0,
+            "games": max(played.get(account.id, 0), stats.get("scored_games") or 0),
+            "wins": stats.get("wins") or 0,
+            "survival": stats.get("survival") or 0,
+            "actions": stats.get("actions") or 0,
+        })
+    standings.sort(key=lambda item: (-item["points"], -item["wins"], item["games"], item["user"].username.casefold()))
+    previous_score = None
+    display_rank = 0
+    for index, entry in enumerate(standings, 1):
+        if entry["points"] != previous_score:
+            display_rank = index
+            previous_score = entry["points"]
+        entry["rank"] = display_rank
+        entry["is_current"] = entry["user"].id == request.user.id
+    current_entry = next((entry for entry in standings if entry["is_current"]), None)
+    return render(request, "pages/league.html", {
+        "room": room_text(request),
+        "standings": standings,
+        "current_entry": current_entry,
+        "rulebook": RULEBOOK[language],
+    })
 
 
 def logout_view(request):

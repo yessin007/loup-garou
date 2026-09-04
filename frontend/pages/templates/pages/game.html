@@ -1705,9 +1705,11 @@
 
       function renderJudge() {
         setHeading(t("night", {n: state.round}), L.judge);
+        const judge = alive().find(item => item.role === "judges");
         const playerOptions = options(alive(), L.choose_judge_player, false);
         const content = `<div class="potion-grid"><label class="single-name"><span>${L.judge_first_player}</span><select id="judge-first">${playerOptions}</select></label><label class="single-name"><span>${L.judge_second_player}</span><select id="judge-second">${playerOptions}</select></label></div>`;
         scene.innerHTML = nightFrame(L.judge_night, roleWakeTitle(L.judge_wake, "judges"), L.judge_help, content, actionButton(L.compare_clans, "confirm-judge", true));
+        if (judge) document.getElementById("judge-first").value = String(judge.id);
       }
 
       function renderJudgeResult() {

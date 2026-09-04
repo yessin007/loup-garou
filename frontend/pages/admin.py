@@ -1,6 +1,6 @@
 from django.contrib import admin
 
-from .models import GameRoom, RoomEvent, RoomPlayer
+from .models import GameRoom, RoomEvent, RoomPlayer, ScoreAward
 
 
 class SuperuserDeleteOnlyMixin:
@@ -34,3 +34,12 @@ class RoomPlayerAdmin(SuperuserDeleteOnlyMixin, admin.ModelAdmin):
     list_select_related = ("room",)
     readonly_fields = ("room", "name", "token", "role", "joined_at")
     exclude = ("private_notes",)
+
+
+@admin.register(ScoreAward)
+class ScoreAwardAdmin(SuperuserDeleteOnlyMixin, admin.ModelAdmin):
+    list_display = ("user", "points", "rule_code", "room", "round_number", "created_at")
+    list_filter = ("points", "rule_code", "phase")
+    search_fields = ("user__username", "player__name", "room__code", "award_key")
+    list_select_related = ("user", "player", "room")
+    readonly_fields = ("room", "player", "user", "award_key", "rule_code", "points", "phase", "round_number", "metadata", "created_at")

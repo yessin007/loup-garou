@@ -99,6 +99,19 @@ redeploiements. Le compte configure par les variables `ADMIN_*` peut gerer et
 supprimer les historiques depuis `/admin/`. La consultation de `/historique/`
 demande une connexion et applique les droits du compte.
 
+## Ligue et score
+
+Chaque compte joueur possède un score de ligue auditable. Les récompenses vont
+uniquement de `+1` à `+5` et sont calculées depuis les bilans de nuit et de jour
+enregistrés par le serveur. Une synchronisation répétée ne duplique pas les
+points et un retour arrière retire les récompenses de la phase annulée.
+
+- `/ligue/` affiche le classement et le règlement complet.
+- chaque historique terminé affiche le détail des points du joueur connecté.
+- `python manage.py rebuild_scores` reconstruit tout le classement depuis les
+  historiques ; `--missing-only` limite le calcul aux anciennes rooms non
+  encore indexées.
+
 ## Comptes et acces
 
 - Le super-admin initial est configuré avec les variables d'environnement `ADMIN_*`.

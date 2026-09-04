@@ -9,7 +9,7 @@
     <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
   </head>
   <body class="room-page player-room-page">
-    <header class="guide-header"><a class="brand" href="{% url 'dashboard' %}">Loup <span>Garou</span></a><div class="guide-header-actions"><span class="account-username"><span aria-hidden="true">●</span>{{ request.user.username }}</span><strong class="room-code-chip">{{ game_room.code }}</strong>{% include "pages/_language_selector.html" %}{% include "pages/_theme_toggle.html" %}<a class="guide-back home-navigation" href="{% url 'dashboard' %}"><span aria-hidden="true">←</span><strong>{{ room.back }}</strong></a><a class="guide-back" href="{% url 'logout' %}"><span aria-hidden="true">↪</span><strong>{{ ui.logout }}</strong></a></div></header>
+    <header class="guide-header"><a class="brand" href="{% url 'dashboard' %}">Loup <span>Garou</span></a><div class="guide-header-actions"><span class="account-username"><span aria-hidden="true">●</span>{{ request.user.username }}</span><a id="player-score-chip" class="player-score-chip" href="{% url 'league' %}"><span>♛</span><strong>0</strong><small>{{ room.points }}</small></a><strong class="room-code-chip">{{ game_room.code }}</strong>{% include "pages/_language_selector.html" %}{% include "pages/_theme_toggle.html" %}<a class="guide-back home-navigation" href="{% url 'dashboard' %}"><span aria-hidden="true">←</span><strong>{{ room.back }}</strong></a><a class="guide-back" href="{% url 'logout' %}"><span aria-hidden="true">↪</span><strong>{{ ui.logout }}</strong></a></div></header>
     <main class="room-shell compact-room-shell">
       <aside class="connection-success-banner" role="status"><span aria-hidden="true">✓</span>{{ room.connected_as }} <strong>{{ request.user.username }}</strong></aside>
       <section id="player-room-card" class="player-secret-card waiting">
@@ -236,6 +236,10 @@
         if (enabled) link.href = link.dataset.historyUrl;
         else link.removeAttribute("href");
       }
+      function updateScore(score) {
+        const chip = document.getElementById("player-score-chip");
+        if (chip) chip.querySelector("strong").textContent = score?.total || 0;
+      }
       async function refreshRoom(manual = false) {
         clearTimeout(roomTimer);
         if (document.hidden && !manual) { scheduleRoom(); return; }
@@ -248,6 +252,7 @@
           const response = await fetch(`{% url 'room_player_api' game_room.code %}?refresh=${Date.now()}`, {cache: "no-store"});
           if (!response.ok) throw new Error("room unavailable");
           const data = await response.json();
+          updateScore(data.score);
           updateHistoryLink(data.player_alive);
           if (data.role) {
             const roleChanged = Boolean(displayedRoleCode && displayedRoleCode !== data.role.code);

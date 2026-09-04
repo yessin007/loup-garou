@@ -1,0 +1,51 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="{{ language_code }}" dir="{{ language_dir }}">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="theme-color" content="#080d12" />
+    {% include "pages/_pwa_head.html" %}{% include "pages/_theme_head.html" %}
+    <title>{{ room.league }} | Loup Garou</title>
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}" />
+  </head>
+  <body class="room-page league-page">
+    <header class="guide-header">
+      <a class="brand" href="{% url 'dashboard' %}">Loup <span>Garou</span></a>
+      <div class="guide-header-actions"><span class="account-username"><span aria-hidden="true">●</span>{{ request.user.username }}</span>{% include "pages/_language_selector.html" %}{% include "pages/_theme_toggle.html" %}<a class="guide-back" href="{% url 'room_history_list' %}?mine=1"><span aria-hidden="true">☾</span><strong>{{ room.history }}</strong></a><a class="guide-back" href="{% url 'dashboard' %}"><span aria-hidden="true">←</span><strong>{{ room.back }}</strong></a></div>
+    </header>
+    <main class="room-shell league-shell">
+      <section class="league-hero">
+        <div><p class="eyebrow">Loup Garou League</p><h1>{{ room.league }}</h1><p>{{ room.league_intro }}</p></div>
+        {% if current_entry %}<article class="my-league-card"><span>#{{ current_entry.rank }}</span><div><small>{{ request.user.username }}</small><strong>{{ current_entry.points }}</strong><b>{{ room.points }}</b></div><dl><div><dt>{{ room.league_games }}</dt><dd>{{ current_entry.games }}</dd></div><div><dt>{{ room.league_wins }}</dt><dd>{{ current_entry.wins }}</dd></div></dl></article>{% endif %}
+      </section>
+
+      <nav class="player-hub-tabs" aria-label="Player menu">
+        <a href="{% url 'room_portal' %}"><span>01</span>{{ room.join_room_nav }}</a>
+        <a href="{% url 'room_history_list' %}?mine=1"><span>02</span>{{ room.my_history_nav }}</a>
+        <a class="active" href="{% url 'league' %}"><span>03</span>{{ room.league }}</a>
+      </nav>
+
+      <section class="standings-section">
+        <header><div><p class="eyebrow">Standing</p><h2>{{ room.league_standings }}</h2></div><small>{{ standings|length }} {{ room.league_ranked }}</small></header>
+        <div class="standings-table">
+          <div class="standings-head"><span>{{ room.league_rank }}</span><span>{{ room.league_player }}</span><span>{{ room.league_games }}</span><span>{{ room.league_wins }}</span><span>{{ room.league_actions }}</span><span>{{ room.points }}</span></div>
+          {% for entry in standings %}<article class="standing-row{% if entry.is_current %} current{% endif %}">
+            <strong class="standing-rank">{% if entry.rank == 1 %}♛{% else %}{{ entry.rank }}{% endif %}</strong>
+            <div class="standing-player"><span>{{ entry.user.username|slice:":1"|upper }}</span><div><strong>{{ entry.user.username }}</strong>{% if entry.is_current %}<small>{{ room.league_you }}</small>{% else %}<small>{{ entry.survival }} {{ room.league_survived }}</small>{% endif %}</div></div>
+            <span data-label="{{ room.league_games }}">{{ entry.games }}</span><span data-label="{{ room.league_wins }}">{{ entry.wins }}</span><span data-label="{{ room.league_actions }}">{{ entry.actions }}</span><b data-label="{{ room.points }}">{{ entry.points }}</b>
+          </article>{% empty %}<p class="history-empty">{{ room.league_waiting }}</p>{% endfor %}
+        </div>
+      </section>
+
+      <section class="rules-section" id="rules">
+        <header><div><p class="eyebrow">Fair play</p><h2>{{ room.scoring_rules }}</h2></div><p>{{ room.score_rule_intro }}</p></header>
+        <div class="score-scale"><span>+1</span><span>+2</span><span>+3</span><span>+4</span><span>+5</span></div>
+        <div class="rulebook-grid">
+          {% for points, title, description in rulebook %}<article class="rule-card level-{{ points }}"><strong>+{{ points }}</strong><div><h3>{{ title }}</h3><p>{{ description }}</p></div></article>{% endfor %}
+        </div>
+        <aside class="score-integrity-note"><span>✓</span><p><strong>{{ room.score_integrity }}</strong> {{ room.score_integrity_help }}</p></aside>
+      </section>
+    </main>
+  </body>
+</html>

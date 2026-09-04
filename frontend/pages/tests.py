@@ -470,6 +470,16 @@ class RoomFlowTests(TestCase):
         guide = self.visitor_client().get(reverse("roles_guide"))
         self.assertContains(guide, "stock initial de un à dix moutons")
 
+    def test_judge_is_selected_by_default_as_first_comparison_player(self):
+        self.composition.update({"judges": 1, "villagers": 5})
+        self.create_room()
+
+        game = self.narrator.get(reverse("game"))
+
+        self.assertContains(game, 'const judge = alive().find(item => item.role === "judges")')
+        self.assertContains(game, 'document.getElementById("judge-first").value = String(judge.id)')
+        self.assertContains(game, '<select id="judge-first">${playerOptions}</select>')
+
     def test_wolves_can_skip_their_attack_without_skipping_later_night_roles(self):
         self.composition.update({"infecting_fathers": 1, "villagers": 5})
         self.create_room()

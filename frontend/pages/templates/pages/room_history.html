@@ -21,6 +21,13 @@
         <div><strong>0</strong><span>{{ room.history_days }}</span></div>
         <p>{{ room.history_updated }}</p>
       </section>
+      {% if history_notes_available %}<section class="history-score-card">
+        <header><div><span>♛</span><strong>{{ room.league }}</strong></div><b>+{{ history_score }} {{ room.points }}</b></header>
+        {% if history_score_awards %}<div class="history-score-awards">
+          {% for award in history_score_awards %}<article><span>+{{ award.points }}</span><p><strong>{{ award.display_label }}</strong><small>{% if award.round_number %}{{ award.phase|title }} {{ award.round_number }}{% else %}Game{% endif %}</small></p></article>{% endfor %}
+        </div>{% else %}<p class="history-score-empty">{{ room.no_game_points }}</p>{% endif %}
+        <a href="{% url 'league' %}">{{ room.league_nav }} →</a>
+      </section>{% endif %}
       {% if history_notes_available %}<section class="history-private-notes">
         <header><span>{{ room.private_notes }}</span><small>{{ room.private_notes_help }}</small></header>
         <p>{% if history_private_notes %}{{ history_private_notes|linebreaksbr }}{% else %}{{ room.private_notes_placeholder }}{% endif %}</p>

@@ -81,3 +81,38 @@ class RoomEvent(models.Model):
 
     def __str__(self):
         return f"{self.room_id} · {self.event_type} {self.round_number}"
+
+
+class ScoreAward(models.Model):
+    """One auditable, idempotent league award earned by an account player."""
+
+    room = models.ForeignKey(GameRoom, related_name="score_awards", on_delete=models.CASCADE)
+    player = models.ForeignKey(RoomPlayer, related_name="score_awards", on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        related_name="score_awards",
+        on_delete=models.CASCADE,
+    )
+    award_key = models.CharField(max_length=140)
+    rule_code = models.CharField(max_length=50)
+    points = models.PositiveSmallIntegerField()
+    phase = models.CharField(max_length=12, blank=True)
+    round_number = models.PositiveSmallIntegerField(null=True, blank=True)
+    metadata = models.JSONField(default=dict, blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["room__created_at", "round_number", "id"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["room", "player", "award_key"],
+                name="unique_player_score_award",
+            ),
+            models.CheckConstraint(
+                condition=models.Q(points__gte=1, points__lte=5),
+                name="score_award_points_1_to_5",
+            ),
+        ]
+
+    def __str__(self):
+        return f"{self.user} · {self.rule_code} +{self.points}"
